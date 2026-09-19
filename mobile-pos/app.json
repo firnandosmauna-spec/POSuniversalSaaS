@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "POS Universal SaaS Mobile",
+    "slug": "pos-universal-mobile",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.posuniversal.saas"
+    },
+    "android": {
+      "package": "com.posuniversal.saas",
+      "permissions": [
+        "INTERNET",
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_CONNECT",
+        "BLUETOOTH_SCAN"
+      ]
+    }
+  }
+}
