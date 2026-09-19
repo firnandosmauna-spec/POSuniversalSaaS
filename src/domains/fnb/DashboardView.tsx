@@ -225,36 +225,36 @@ export function DashboardView() {
 
   return (
     <div className="p-4 md:p-5 h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      {/* Header Ramping & Bar Filter Menyatu */}
-      <div className="mb-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-none border border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
+      {/* Header Banner Anti-Slop */}
+      <div className="mb-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-gradient-to-r from-white to-slate-50 dark:from-slate-900 dark:to-slate-800/80 p-3 md:p-4 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-sm shrink-0 transition-all">
         <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-none bg-brand/10 text-brand">
+          <div className="grid size-10 place-items-center rounded-lg bg-brand text-white shadow-md">
             <MainIconComp className="size-5" />
           </div>
           <div>
-            <h1 className="font-display text-lg font-bold text-slate-900 dark:text-white leading-tight">
+            <h1 className="font-display text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-tight tracking-tight">
               {domainConfig.title}
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {domainConfig.subtitle}
             </p>
           </div>
         </div>
 
-        {/* Filter Periode & Action Buttons (Baris Menyatu) */}
+        {/* Filter Periode & Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Synchronized Branch Switcher Dropdown */}
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 border border-slate-200 dark:border-slate-700">
-            <Building2 className="size-4 text-brand" />
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 hidden sm:inline">Pilih Cabang:</span>
+          <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm hover:border-brand/50 transition-colors">
+            <Building2 className="size-3.5 text-brand" />
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">Cabang:</span>
             <select
               value={activeBranchId}
               onChange={(e) => switchBranch(e.target.value)}
-              className="bg-transparent text-xs font-extrabold text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer"
             >
-              <option value="all" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white font-bold">📍 Semua Cabang (Konsolidasi)</option>
+              <option value="all" className="font-medium">📍 Semua Cabang</option>
               {branches.map((b) => (
-                <option key={b.id} value={b.id} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">
+                <option key={b.id} value={b.id}>
                   📍 {b.name} {b.is_main ? "(Pusat)" : ""}
                 </option>
               ))}
@@ -262,7 +262,7 @@ export function DashboardView() {
           </div>
 
           {/* Periode Selector */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-none">
+          <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md shadow-inner">
             {(["today", "yesterday", "month", "custom", "all"] as const).map((p) => {
               const labels = {
                 today: "Hari Ini",
@@ -275,10 +275,10 @@ export function DashboardView() {
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-none transition-all ${
+                  className={`px-2 py-1 text-[10px] sm:text-xs font-medium rounded transition-all ${
                     period === p 
-                      ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-bold" 
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                      ? "bg-white dark:bg-slate-700 text-brand shadow-sm font-semibold" 
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   }`}
                 >
                   {labels[p]}
@@ -288,19 +288,19 @@ export function DashboardView() {
           </div>
 
           {period === "custom" && (
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-1 rounded-none border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="px-2 py-0.5 text-xs border border-slate-300 dark:border-slate-600 rounded-none bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-brand"
+                className="px-1 py-0.5 text-xs border-none bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-0 cursor-pointer"
               />
-              <span className="text-[10px] text-slate-400 font-semibold">s/d</span>
+              <span className="text-[10px] text-slate-400 font-medium">s/d</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="px-2 py-0.5 text-xs border border-slate-300 dark:border-slate-600 rounded-none bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-brand"
+                className="px-1 py-0.5 text-xs border-none bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-0 cursor-pointer"
               />
             </div>
           )}
@@ -313,15 +313,15 @@ export function DashboardView() {
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Memuat statistik dashboard...</p>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col gap-3.5 min-h-0 overflow-y-auto">
-          {/* Menu Aplikasi POS (Android Launcher Grid Ramping) */}
-          <div className="bg-white dark:bg-slate-900 p-2 px-3 rounded-none border border-slate-200 dark:border-slate-800 shadow-xs shrink-0">
-            <div className="grid grid-cols-5 sm:grid-cols-5 lg:grid-cols-10 gap-2 sm:gap-2.5">
+        <div className="flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto">
+          {/* Menu Aplikasi POS */}
+          <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-sm shrink-0">
+            <div className="grid grid-cols-5 sm:grid-cols-5 lg:grid-cols-10 gap-2 sm:gap-3">
               {[
-                { name: user?.businessType === "PRINTING" ? "Kasir Percetakan" : "Kasir POS", icon: user?.businessType === "PRINTING" ? Printer : Calculator, to: "/app/pos", color: "from-emerald-500 to-teal-600 shadow-emerald-500/20" },
+                { name: user?.businessType === "PRINTING" ? "Kasir Cetak" : "Kasir POS", icon: user?.businessType === "PRINTING" ? Printer : Calculator, to: "/app/pos", color: "from-emerald-500 to-teal-600 shadow-emerald-500/20" },
                 { name: "Penjualan", icon: FileText, to: "/app/sales", color: "from-blue-600 to-indigo-600 shadow-blue-500/20" },
                 { name: "Shift Kasir", icon: Clock, to: "/app/shifts", color: "from-amber-500 to-orange-500 shadow-amber-500/20" },
-                { name: "Belanja", icon: Wallet, to: "/app/expenses", color: "from-rose-500 to-pink-600 shadow-rose-500/20" },
+                { name: "Pengeluaran", icon: Wallet, to: "/app/expenses", color: "from-rose-500 to-pink-600 shadow-rose-500/20" },
                 ...(user?.businessType === "FNB" || user?.businessType === "CAFE" 
                   ? [{ name: "Dapur & Bar", icon: ChefHat, to: "/app/kitchen", color: "from-orange-500 to-red-500 shadow-orange-500/20" }] 
                   : []),
@@ -332,10 +332,10 @@ export function DashboardView() {
                 { name: "Dashboard", icon: LayoutDashboard, to: "/app/dashboard", color: "from-indigo-600 to-purple-600 shadow-indigo-500/20" },
               ].map((app) => (
                 <Link key={app.to} to={app.to} className="flex flex-col items-center group py-0.5">
-                  <div className={`size-9 sm:size-9 rounded-none bg-gradient-to-br ${app.color} text-white grid place-items-center shadow-xs group-hover:shadow-md group-hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer`}>
-                    <app.icon className="size-4.5 sm:size-4.5" />
+                  <div className={`size-10 rounded-xl bg-gradient-to-br ${app.color} text-white grid place-items-center shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer`}>
+                    <app.icon className="size-4" />
                   </div>
-                  <span className="text-[10px] font-bold text-center text-slate-700 dark:text-slate-300 mt-1 line-clamp-1 group-hover:text-brand transition-colors">
+                  <span className="text-[10px] font-medium text-center text-slate-600 dark:text-slate-400 mt-1 line-clamp-1 group-hover:text-brand transition-colors">
                     {app.name}
                   </span>
                 </Link>
@@ -343,67 +343,67 @@ export function DashboardView() {
             </div>
           </div>
 
-          {/* Ramping Ultra-Compact Executive KPI Cards Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0">
+          {/* Executive KPI Cards Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
             {/* Total Omzet */}
-            <div className="bg-white dark:bg-slate-900 p-2.5 px-3 rounded-none border border-slate-200 dark:border-slate-800 shadow-xs relative overflow-hidden">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Omzet</span>
-                <div className="size-7 rounded-none bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900">
+            <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Omzet</span>
+                <div className="size-7 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100/50 group-hover:scale-110 transition-transform">
                   <DollarSign className="size-3.5" />
                 </div>
               </div>
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white leading-snug">{formatRupiah(totalRevenue)}</h2>
-              <div className="mt-0.5 flex items-center text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold gap-1">
+              <h2 className="text-lg font-bold font-mono text-slate-900 dark:text-white leading-snug tracking-tight">{formatRupiah(totalRevenue)}</h2>
+              <div className="mt-1.5 flex items-center text-[10px] text-emerald-700 bg-emerald-50 w-fit px-2 py-0.5 rounded-md font-medium gap-1">
                 <ArrowUpRight className="size-3" />
-                <span>{completedTx.length} trx selesai</span>
+                <span>{completedTx.length} pesanan</span>
               </div>
             </div>
 
             {/* Total Transaksi */}
-            <div className="bg-white dark:bg-slate-900 p-2.5 px-3 rounded-none border border-slate-200 dark:border-slate-800 shadow-xs relative overflow-hidden">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Transaksi</span>
-                <div className="size-7 rounded-none bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-900">
+            <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Transaksi</span>
+                <div className="size-7 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100/50 group-hover:scale-110 transition-transform">
                   <ShoppingBag className="size-3.5" />
                 </div>
               </div>
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white leading-snug">{totalTxCount} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">trx</span></h2>
-              <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                Hold: <span className="font-bold text-amber-600 dark:text-amber-400">{filteredTx.filter(t => t.status === "hold").length}</span> trx
+              <h2 className="text-lg font-bold font-mono text-slate-900 dark:text-white leading-snug tracking-tight">{totalTxCount} <span className="text-xs font-medium text-slate-500">trx</span></h2>
+              <div className="mt-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium bg-slate-50 w-fit px-2 py-0.5 rounded-md">
+                Tertunda: <span className="font-bold text-amber-600 dark:text-amber-400">{filteredTx.filter(t => t.status === "hold").length}</span>
               </div>
             </div>
 
             {/* Rata-rata Pembelanjaan */}
-            <div className="bg-white dark:bg-slate-900 p-2.5 px-3 rounded-none border border-slate-200 dark:border-slate-800 shadow-xs relative overflow-hidden">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Rata-rata Order</span>
-                <div className="size-7 rounded-none bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-100 dark:border-amber-900">
+            <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Rata-rata Transaksi</span>
+                <div className="size-7 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-100/50 group-hover:scale-110 transition-transform">
                   <TrendingUp className="size-3.5" />
                 </div>
               </div>
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white leading-snug">{formatRupiah(avgOrderValue)}</h2>
-              <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                AOV per transaksi
+              <h2 className="text-lg font-bold font-mono text-slate-900 dark:text-white leading-snug tracking-tight">{formatRupiah(avgOrderValue)}</h2>
+              <div className="mt-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium bg-slate-50 w-fit px-2 py-0.5 rounded-md">
+                Per pesanan
               </div>
             </div>
 
             {/* Breakdown Pembayaran */}
-            <div className="bg-white dark:bg-slate-900 p-2.5 px-3 rounded-none border border-slate-200 dark:border-slate-800 shadow-xs relative overflow-hidden">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Metode Pembayaran</span>
-                <div className="size-7 rounded-none bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-100 dark:border-purple-900">
+            <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Metode Bayar</span>
+                <div className="size-7 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-100/50 group-hover:scale-110 transition-transform">
                   <CreditCard className="size-3.5" />
                 </div>
               </div>
-              <div className="space-y-0.5 text-[10px] leading-tight">
-                <div className="flex justify-between font-bold text-slate-800 dark:text-slate-200">
-                  <span>Tunai:</span>
-                  <span>{formatRupiah(cashRevenue)}</span>
+              <div className="space-y-1.5 text-[10px]">
+                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-1 rounded px-1.5">
+                  <span className="font-medium text-slate-600">Tunai</span>
+                  <span className="font-bold font-mono text-slate-800">{formatRupiah(cashRevenue)}</span>
                 </div>
-                <div className="flex justify-between font-medium text-slate-500 dark:text-slate-400">
-                  <span>Non-Tunai:</span>
-                  <span>{formatRupiah(nonCashRevenue)}</span>
+                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-1 rounded px-1.5">
+                  <span className="font-medium text-slate-600">Non-Tunai</span>
+                  <span className="font-bold font-mono text-slate-800">{formatRupiah(nonCashRevenue)}</span>
                 </div>
               </div>
             </div>
@@ -416,14 +416,14 @@ export function DashboardView() {
             <div className="lg:col-span-2 flex flex-col gap-3.5 min-h-0 overflow-hidden">
               
               {/* Produk Terlaris */}
-              <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-none border border-slate-200 dark:border-slate-800 shadow-sm p-4 flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between mb-3 border-b border-slate-100 dark:border-slate-800 pb-2 shrink-0">
+              <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-sm p-4 flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between mb-3 border-b border-slate-100 dark:border-slate-800 pb-2.5 shrink-0">
                   <div className="flex items-center gap-2">
                     <Award className="size-4 text-amber-500" />
                     <h2 className="font-display font-bold text-sm text-slate-900 dark:text-white">{domainConfig.topProductsTitle}</h2>
                   </div>
-                  <Link to="/app/products" className="text-[11px] text-brand font-bold hover:underline flex items-center gap-0.5">
-                    Lihat Semua <ChevronRight className="size-3" />
+                  <Link to="/app/products" className="text-[11px] text-brand font-semibold hover:text-brand/80 flex items-center gap-1 transition-colors">
+                    Katalog <ChevronRight className="size-3" />
                   </Link>
                 </div>
 
@@ -435,18 +435,18 @@ export function DashboardView() {
                     </div>
                   ) : (
                     topProducts.map((prod, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2.5 rounded-none border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                         <div className="flex items-center gap-2.5">
-                          <span className={`size-6 rounded-none font-bold text-[10px] flex items-center justify-center ${
-                            idx === 0 ? "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800" :
+                          <span className={`size-6 rounded-md font-bold text-[10px] flex items-center justify-center shadow-sm ${
+                            idx === 0 ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300" :
                             idx === 1 ? "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300" :
                             idx === 2 ? "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                           }`}>
                             {idx + 1}
                           </span>
                           <div>
-                            <p className="font-bold text-slate-800 dark:text-slate-200 text-xs">{prod.name}</p>
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400">Terjual: <span className="font-bold text-brand">{prod.qty} {domainConfig.unitLabel}</span></p>
+                            <p className="font-semibold text-slate-800 dark:text-slate-200 text-xs group-hover:text-brand transition-colors">{prod.name}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Terjual: <span className="font-medium text-slate-700">{prod.qty} {domainConfig.unitLabel}</span></p>
                           </div>
                         </div>
                         <div className="text-right font-extrabold text-slate-900 dark:text-white text-xs">
