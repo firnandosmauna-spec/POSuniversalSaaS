@@ -289,16 +289,16 @@ export function ShiftsView() {
     <div className="p-6 h-full flex flex-col">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-slate-900">
-            Laporan & Shift Kasir
+          <h1 className="font-display text-2xl font-bold text-slate-900 tracking-tight">
+            Shift Kasir
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Buka/tutup shift kasir, pantau saldo laci, dan cetak struk laporan shift.
+            Buka shift, pantau uang di laci, dan tutup kas harian.
           </p>
         </div>
         {!activeShift && !isLoading && (
-          <Button onClick={() => setIsOpenShiftModalOpen(true)} className="bg-brand text-white hover:bg-brand/90">
-            <Plus className="size-4 mr-2" /> Buka Shift Baru
+          <Button onClick={() => setIsOpenShiftModalOpen(true)} className="bg-brand text-white hover:bg-brand/90 transition-all shadow-sm hover:shadow">
+            <Plus className="size-4 mr-2" /> Mulai Shift
           </Button>
         )}
       </div>
@@ -307,7 +307,7 @@ export function ShiftsView() {
         {/* Kolom Kiri: Status Shift Aktif */}
         <div className="col-span-1 flex flex-col gap-6">
           {activeShift ? (
-            <div className="bg-white rounded-xl border border-brand/20 shadow-sm p-6 relative overflow-hidden">
+            <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:shadow-md transition-all">
               <div className="absolute top-0 right-0 p-4">
                 <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
                   <span className="relative flex h-2 w-2">
@@ -340,21 +340,23 @@ export function ShiftsView() {
                 </div>
               </div>
               
-              <Button onClick={prepareCloseShift} className="w-full bg-slate-800 hover:bg-slate-900 text-white">
+              <Button onClick={prepareCloseShift} className="w-full bg-slate-800 hover:bg-slate-900 text-white transition-all shadow-sm hover:shadow">
                 <LogOut className="size-4 mr-2" /> Tutup Shift
               </Button>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center flex flex-col items-center justify-center h-64">
-              <Clock className="mx-auto mb-4 size-12 text-slate-300" />
-              <h2 className="mb-2 font-display text-lg font-semibold text-slate-700">
-                Belum Ada Shift Aktif
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center flex flex-col items-center justify-center h-64 transition-all hover:shadow-md">
+              <div className="p-3 bg-slate-50 rounded-full mb-4">
+                <Clock className="size-8 text-slate-400" />
+              </div>
+              <h2 className="mb-2 font-display text-lg font-semibold text-slate-800">
+                Kasir Belum Buka
               </h2>
-              <p className="text-sm max-w-[250px] mx-auto text-slate-500 mb-6">
-                Buka shift dan masukkan modal kas awal untuk mulai mencatat penjualan.
+              <p className="text-sm max-w-[250px] mx-auto text-slate-500 mb-6 leading-relaxed">
+                Masukkan uang modal awal di laci kasir untuk mulai transaksi hari ini.
               </p>
-              <Button onClick={() => setIsOpenShiftModalOpen(true)} className="bg-brand text-white hover:bg-brand/90">
-                <Plus className="size-4 mr-2" /> Buka Shift Sekarang
+              <Button onClick={() => setIsOpenShiftModalOpen(true)} className="bg-brand text-white hover:bg-brand/90 transition-all shadow-sm hover:shadow">
+                Mulai Shift
               </Button>
             </div>
           )}
@@ -362,7 +364,7 @@ export function ShiftsView() {
 
         {/* Kolom Kanan: Riwayat Shift */}
         <div className="col-span-2 flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 bg-slate-50">
+          <div className="p-5 border-b border-slate-100 bg-white/50 backdrop-blur-sm">
             <h2 className="font-display font-bold text-slate-800">Riwayat Shift Kasir</h2>
           </div>
           <div className="flex-1 overflow-auto p-0">
@@ -374,7 +376,7 @@ export function ShiftsView() {
               <div className="text-center p-8 text-slate-500">Belum ada riwayat shift.</div>
             ) : (
               <table className="w-full text-left text-sm">
-                <thead className="bg-white border-b border-slate-200 text-slate-600 sticky top-0">
+                <thead className="bg-slate-50/80 backdrop-blur-sm border-b border-slate-200 text-slate-600 sticky top-0 z-10">
                   <tr>
                     <th className="p-4 font-semibold">Waktu Shift</th>
                     <th className="p-4 font-semibold">Kasir</th>
@@ -432,7 +434,7 @@ export function ShiftsView() {
                               variant="ghost" 
                               size="sm" 
                               onClick={() => openShiftReportPrint(shift)} 
-                              className="text-brand hover:bg-brand/10"
+                              className="text-brand hover:bg-brand/10 transition-colors"
                               title="Cetak Laporan Shift"
                             >
                               <Receipt className="size-4" />
