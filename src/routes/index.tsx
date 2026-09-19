@@ -163,99 +163,27 @@ function Index() {
         <div className="pointer-events-none absolute -right-40 -top-40 size-[520px] rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-52 -left-32 size-[440px] rounded-full bg-accent/20" />
         <div className="relative mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
-          <div className="grid items-center gap-12 lg:grid-cols-12">
-            <div className="lg:col-span-6">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
-                <span className="size-1.5 rounded-full bg-accent" />
-                {cms.hero.badgeText}
-              </span>
-              <h1 className="mt-6 font-display text-5xl font-extrabold leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                {cms.hero.headingLine1}
-                <br />
-                {cms.hero.headingLine2}
-              </h1>
-              <p className="mt-7 max-w-md text-lg leading-relaxed text-white/70">
-                {cms.hero.subtitle}
-              </p>
-              <div className="mt-9 flex flex-wrap items-center gap-4">
-                <Button
-                  size="lg"
-                  className="rounded-full bg-white px-7 text-base font-semibold text-ink hover:bg-mist"
-                  asChild
-                >
-                  <Link to="/register">{cms.hero.ctaText}</Link>
-                </Button>
-              </div>
-            </div>
-
-            {/* Dashboard mockup */}
-            <div className="lg:col-span-6">
-              <div className="rounded-2xl bg-white p-3 shadow-2xl shadow-ink/30">
-                <div className="rounded-xl bg-mist p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Penjualan hari ini
-                      </p>
-                      <p className="mt-1 font-display text-3xl font-bold text-ink">
-                        {cms.hero.mockupSalesAmount}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
-                      {cms.hero.mockupSalesGrowth}
-                    </span>
-                  </div>
-                  <div className="mt-6 grid grid-cols-3 gap-3">
-                    <div className="rounded-lg border border-border bg-white p-3">
-                      <p className="text-[11px] text-muted-foreground">
-                        Transaksi
-                      </p>
-                      <p className="mt-0.5 font-display text-lg font-semibold text-ink">
-                        {cms.hero.mockupTxCount}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-border bg-white p-3">
-                      <p className="text-[11px] text-muted-foreground">
-                        Item terjual
-                      </p>
-                      <p className="mt-0.5 font-display text-lg font-semibold text-ink">
-                        {cms.hero.mockupItemsCount}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-border bg-white p-3">
-                      <p className="text-[11px] text-muted-foreground">
-                        Rata-rata
-                      </p>
-                      <p className="mt-0.5 font-display text-lg font-semibold text-ink">
-                        {cms.hero.mockupAvgAmount}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-6 rounded-lg border border-border bg-white p-4">
-                    <div className="flex items-end justify-between gap-1.5 h-20">
-                      {[45, 60, 52, 72, 88, 100, 94].map((h, i) => (
-                        <div
-                          key={i}
-                          className="w-full rounded-t bg-brand"
-                          style={{
-                            height: `${h}%`,
-                            opacity: i === 6 ? 1 : 0.15 + i * 0.12,
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <div className="mt-3 flex justify-between text-[10px] text-muted-foreground">
-                      <span>Sen</span>
-                      <span>Sel</span>
-                      <span>Rab</span>
-                      <span>Kam</span>
-                      <span>Jum</span>
-                      <span>Sab</span>
-                      <span>Min</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+              <span className="size-1.5 rounded-full bg-accent" />
+              {cms.hero.badgeText}
+            </span>
+            <h1 className="mt-6 font-display text-5xl font-extrabold leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl">
+              {cms.hero.headingLine1}
+              <br />
+              {cms.hero.headingLine2}
+            </h1>
+            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-white/70">
+              {cms.hero.subtitle}
+            </p>
+            <div className="mt-9 flex flex-wrap justify-center items-center gap-4">
+              <Button
+                size="lg"
+                className="rounded-full bg-white px-7 text-base font-semibold text-ink hover:bg-mist"
+                asChild
+              >
+                <Link to="/register">{cms.hero.ctaText}</Link>
+              </Button>
             </div>
           </div>
         </div>

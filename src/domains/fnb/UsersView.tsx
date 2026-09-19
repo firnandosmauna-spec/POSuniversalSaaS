@@ -196,7 +196,7 @@ export function UsersView() {
             email: formEmail.trim(),
             pin_code: formPin.trim(),
             role: formRole,
-            branch_id: formBranchId,
+            branch_id: formBranchId || null,
             branch_name: branchName,
             status: formStatus
           })
@@ -228,7 +228,7 @@ export function UsersView() {
           email: newStaffItem.email,
           pin_code: newStaffItem.pin_code,
           role: newStaffItem.role,
-          branch_id: newStaffItem.branch_id,
+          branch_id: newStaffItem.branch_id || null,
           branch_name: newStaffItem.branch_name,
           status: newStaffItem.status
         });
