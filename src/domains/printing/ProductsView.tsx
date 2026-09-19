@@ -315,7 +315,7 @@ export function PrintingProductsView() {
               Total Jenis Bahan
             </span>
             <span className="text-base font-extrabold font-mono text-slate-900 dark:text-white mt-0.5 block">
-              {materials.length} Material
+              {filteredMaterials.length} Material
             </span>
           </div>
           <div className="size-8 bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-900 grid place-items-center">
