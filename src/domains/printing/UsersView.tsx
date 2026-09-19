@@ -45,57 +45,6 @@ export interface PrintingStaffUser {
   createdAt: string;
 }
 
-const DEFAULT_PRINTING_STAFF: PrintingStaffUser[] = [
-  {
-    id: "staf_1",
-    tenant_id: "tenant_demo",
-    name: "Rudi Haryanto",
-    email: "rudi.manager@percetakan.com",
-    pin_code: "123456",
-    role: "Manager Percetakan",
-    branch_name: "Outlet Utama",
-    status: "ACTIVE",
-    assignedMachine: "Semua Armada Mesin",
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "staf_2",
-    tenant_id: "tenant_demo",
-    name: "Siti Rahmawati",
-    email: "siti.kasir@percetakan.com",
-    pin_code: "223344",
-    role: "Kasir POS",
-    branch_name: "Outlet Utama",
-    status: "ACTIVE",
-    assignedMachine: "Kasir Front Desk",
-    createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
-  },
-  {
-    id: "staf_3",
-    tenant_id: "tenant_demo",
-    name: "Ahmad Desainer",
-    email: "ahmad.desain@percetakan.com",
-    pin_code: "334455",
-    role: "Desainer Grafis",
-    branch_name: "Outlet Utama",
-    status: "ACTIVE",
-    assignedMachine: "Studio Pre-Press & Proofing",
-    createdAt: new Date(Date.now() - 86400000 * 7).toISOString()
-  },
-  {
-    id: "staf_4",
-    tenant_id: "tenant_demo",
-    name: "Bambang Operator",
-    email: "bambang.print@percetakan.com",
-    pin_code: "556677",
-    role: "Operator Mesin Cetak",
-    branch_name: "Outlet Utama",
-    status: "ACTIVE",
-    assignedMachine: "Outdoor Flexi Banner 3.2m",
-    createdAt: new Date(Date.now() - 86400000 * 10).toISOString()
-  }
-];
-
 export function PrintingUsersView() {
   const { user } = useAuth();
   const [staffList, setStaffList] = useState<PrintingStaffUser[]>([]);
@@ -185,7 +134,7 @@ export function PrintingUsersView() {
           };
           list = [initialOwner];
         } else {
-          list = DEFAULT_PRINTING_STAFF;
+          list = [];
         }
         localStorage.setItem(tenantStorageKey, JSON.stringify(list));
       }
@@ -193,11 +142,7 @@ export function PrintingUsersView() {
       setStaffList(list);
     } catch (e) {
       console.error("Error loading printing staff:", e);
-      if (!user || user.id === "tenant_demo") {
-        setStaffList(DEFAULT_PRINTING_STAFF);
-      } else {
-        setStaffList([]);
-      }
+      setStaffList([]);
     } finally {
       setIsLoading(false);
     }

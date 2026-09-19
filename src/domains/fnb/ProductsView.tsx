@@ -247,12 +247,20 @@ export function ProductsView() {
 
       try {
         if (editingProduct) {
-          await supabase.from("products").update(productData).eq("id", editingProduct.id);
+          const { error } = await supabase.from("products").update(productData).eq("id", editingProduct.id);
+          if (error) {
+            console.error("Update error:", error);
+            alert("Data tersimpan lokal, namun gagal sinkronisasi ke cloud.");
+          }
         } else {
-          await supabase.from("products").insert([productData]);
+          const { error } = await supabase.from("products").insert([productData]);
+          if (error) {
+            console.error("Insert error:", error);
+            alert("Data tersimpan lokal, namun gagal sinkronisasi ke cloud.");
+          }
         }
       } catch (err) {
-        console.warn("Supabase product sync error (saved locally):", err);
+        console.warn("Supabase product sync exception (saved locally):", err);
       }
       
       // Reset form

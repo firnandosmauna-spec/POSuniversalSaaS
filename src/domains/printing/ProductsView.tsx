@@ -25,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 export interface PrintingMaterial {
   id: string;
   name: string;
-  category: "OUTDOOR" | "INDOOR" | "SHEET_DOC" | "MERCHANDISE";
+  category: string;
   unitType: "m²" | "lembar" | "pcs" | "box" | "roll";
   costPrice: number; // HPP
   price: number; // Harga Jual
@@ -39,99 +39,7 @@ export interface PrintingMaterial {
   createdAt?: string;
 }
 
-const DEFAULT_MATERIALS: PrintingMaterial[] = [
-  {
-    id: "mat_1",
-    name: "Flexi China Standard 280g",
-    category: "OUTDOOR",
-    unitType: "m²",
-    costPrice: 12000,
-    price: 20000,
-    stock: 500,
-    minOrder: 1,
-    description: "Bahan spanduk banner standar outdoor ekonomis tahan cuaca",
-    finishingsAllowed: ["Mata Ayam (Ring)", "Lipat Pres / Lem", "Kolong Kayu"],
-    isAvailable: true
-  },
-  {
-    id: "mat_2",
-    name: "Flexi Korchin High Resolution 380g",
-    category: "OUTDOOR",
-    unitType: "m²",
-    costPrice: 18000,
-    price: 35000,
-    stock: 350,
-    minOrder: 1,
-    description: "Bahan baliho tebal serat rapat warna tajam hasil cetak cetar",
-    finishingsAllowed: ["Mata Ayam (Ring)", "Lipat Pres / Lem"],
-    isAvailable: true
-  },
-  {
-    id: "mat_3",
-    name: "Albatros Synthetic Film 180g",
-    category: "INDOOR",
-    unitType: "m²",
-    costPrice: 30000,
-    price: 60000,
-    stock: 120,
-    minOrder: 1,
-    description: "Bahan halus matte indoor cocok untuk Roll Up Banner & X-Banner",
-    finishingsAllowed: ["Laminasi Glossy", "Laminasi Doff"],
-    isAvailable: true
-  },
-  {
-    id: "mat_4",
-    name: "Stiker Vinyl Camel Glossy",
-    category: "INDOOR",
-    unitType: "m²",
-    costPrice: 35000,
-    price: 75000,
-    stock: 200,
-    minOrder: 1,
-    description: "Stiker vinyl tahan air perekat kuat cocok cetak label & dekorasi",
-    finishingsAllowed: ["Laminasi Glossy", "Laminasi Doff", "Potong Kiss Cut", "Potong Die Cut"],
-    isAvailable: true
-  },
-  {
-    id: "mat_5",
-    name: "Art Paper 150g A3+",
-    category: "SHEET_DOC",
-    unitType: "lembar",
-    costPrice: 800,
-    price: 2500,
-    stock: 2000,
-    minOrder: 5,
-    description: "Kertas licin brosur / poster A3+ cetak digital press warna hidup",
-    finishingsAllowed: ["Laminasi Glossy", "Laminasi Doff", "Lipat Brosur"],
-    isAvailable: true
-  },
-  {
-    id: "mat_6",
-    name: "Art Carton 260g A3+",
-    category: "SHEET_DOC",
-    unitType: "lembar",
-    costPrice: 1200,
-    price: 4000,
-    stock: 1500,
-    minOrder: 5,
-    description: "Kertas tebal cocok untuk kartu nama, cover buku, & hanger tag",
-    finishingsAllowed: ["Laminasi Glossy", "Laminasi Doff", "Potong Die Cut", "Rel / Creasing"],
-    isAvailable: true
-  },
-  {
-    id: "mat_7",
-    name: "Mug Coating Keramik Standard",
-    category: "MERCHANDISE",
-    unitType: "pcs",
-    costPrice: 10000,
-    price: 25000,
-    stock: 80,
-    minOrder: 1,
-    description: "Mug keramik putih sablon press sublimasi warna tahan cuci",
-    finishingsAllowed: ["Kemasan Dus Box Single"],
-    isAvailable: true
-  }
-];
+
 
 export function PrintingProductsView() {
   const { user, activeBranchId, activeBranchName } = useAuth();
@@ -139,6 +47,7 @@ export function PrintingProductsView() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [categories, setCategories] = useState<any[]>([]);
 
   // Modal State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -146,7 +55,7 @@ export function PrintingProductsView() {
 
   // Form State
   const [formName, setFormName] = useState("");
-  const [formCategory, setFormCategory] = useState<PrintingMaterial["category"]>("OUTDOOR");
+  const [formCategory, setFormCategory] = useState<string>("");
   const [formUnitType, setFormUnitType] = useState<PrintingMaterial["unitType"]>("m²");
   const [formCostPrice, setFormCostPrice] = useState<number>(0);
   const [formPrice, setFormPrice] = useState<number>(0);
@@ -164,11 +73,11 @@ export function PrintingProductsView() {
       const savedStr = localStorage.getItem("pos_printing_materials");
       let list: PrintingMaterial[] = savedStr ? JSON.parse(savedStr) : [];
 
-      // Remove mock data if real user
-      if (user && user.id !== "tenant_demo") {
-        const mockIds = ["mat_1", "mat_2", "mat_3", "mat_4", "mat_5", "mat_6", "mat_7"];
-        list = list.filter(m => !mockIds.includes(m.id));
-      }
+
+
+      const catStr = localStorage.getItem("pos_printing_categories");
+      const loadedCategories = catStr ? JSON.parse(catStr) : [];
+      setCategories(loadedCategories);
 
       // 2. Fallback to Supabase products table
       if (user) {
@@ -182,7 +91,7 @@ export function PrintingProductsView() {
           const remoteMaterials: PrintingMaterial[] = dbProducts.map((p) => ({
             id: p.id,
             name: p.name,
-            category: (p.category as any) || "OUTDOOR",
+            category: p.category || (loadedCategories.length > 0 ? loadedCategories[0].code : "UMUM"),
             unitType: p.unit_type || "m²",
             costPrice: Number(p.cost_price) || 0,
             price: Number(p.price) || 0,
@@ -205,16 +114,13 @@ export function PrintingProductsView() {
       }
 
       if (list.length === 0) {
-        if (!user || user.id === "tenant_demo") {
-          list = DEFAULT_MATERIALS;
-        }
         localStorage.setItem("pos_printing_materials", JSON.stringify(list));
       }
 
       setMaterials(list);
     } catch (e) {
       console.error("Error loading materials:", e);
-      setMaterials(DEFAULT_MATERIALS);
+      setMaterials([]);
     } finally {
       setIsLoading(false);
     }
@@ -237,7 +143,7 @@ export function PrintingProductsView() {
   const handleOpenAdd = () => {
     setEditingMaterial(null);
     setFormName("");
-    setFormCategory("OUTDOOR");
+    setFormCategory(categories.length > 0 ? categories[0].code : "UMUM");
     setFormUnitType("m²");
     setFormCostPrice(15000);
     setFormPrice(30000);
@@ -275,6 +181,7 @@ export function PrintingProductsView() {
       .filter((s) => s.length > 0);
 
     let updated: PrintingMaterial[];
+    const currentId = editingMaterial ? editingMaterial.id : `mat_${Date.now()}`;
 
     if (editingMaterial) {
       // Edit
@@ -299,7 +206,7 @@ export function PrintingProductsView() {
     } else {
       // Create new
       const newMat: PrintingMaterial = {
-        id: `mat_${Date.now()}`,
+        id: currentId,
         name: formName,
         category: formCategory,
         unitType: formUnitType,
@@ -318,10 +225,10 @@ export function PrintingProductsView() {
     saveMaterials(updated);
 
     // Sync optional with Supabase
-    if (user) {
+    if (user && user.id !== "tenant_demo") {
       try {
-        await supabase.from("products").upsert({
-          id: editingMaterial ? editingMaterial.id : undefined,
+        const { error } = await supabase.from("products").upsert({
+          id: currentId,
           tenant_id: user.id,
           name: formName,
           cost_price: Number(formCostPrice) || 0,
@@ -330,7 +237,14 @@ export function PrintingProductsView() {
           category: formCategory,
           status: formIsAvailable ? "active" : "inactive"
         });
-      } catch (e) {}
+        
+        if (error) {
+          console.error("Supabase upsert error:", error);
+          alert("Data tersimpan lokal, namun gagal sinkronisasi ke cloud (Supabase).");
+        }
+      } catch (e) {
+        console.error("Supabase sync exception:", e);
+      }
     }
 
     setIsDialogOpen(false);
@@ -409,33 +323,7 @@ export function PrintingProductsView() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-3 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-              Outdoor / Indoor ($m^2$)
-            </span>
-            <span className="text-base font-extrabold font-mono text-indigo-600 dark:text-indigo-400 mt-0.5 block">
-              {materials.filter((m) => m.category === "OUTDOOR" || m.category === "INDOOR").length} Jenis
-            </span>
-          </div>
-          <div className="size-8 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900 grid place-items-center">
-            <Ruler className="size-4" />
-          </div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 p-3 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-              Digital Sheet A3+
-            </span>
-            <span className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block">
-              {materials.filter((m) => m.category === "SHEET_DOC").length} Jenis
-            </span>
-          </div>
-          <div className="size-8 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 grid place-items-center">
-            <Printer className="size-4" />
-          </div>
-        </div>
 
         <div className="bg-white dark:bg-slate-900 p-3 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-xs">
           <div>
@@ -472,10 +360,13 @@ export function PrintingProductsView() {
             className="h-9 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2.5 font-medium text-slate-700 dark:text-slate-200 focus:outline-hidden"
           >
             <option value="ALL">Semua Kategori Bahan</option>
-            <option value="OUTDOOR">Outdoor Banner ($m^2$)</option>
-            <option value="INDOOR">Indoor & Stiker ($m^2$)</option>
-            <option value="SHEET_DOC">Digital Press A3+ (Lembar)</option>
-            <option value="MERCHANDISE">Merchandise (Pcs/Box)</option>
+            {categories.length > 0 ? (
+              categories.map((c) => (
+                <option key={c.code} value={c.code}>{c.name}</option>
+              ))
+            ) : (
+              <option value="UMUM">Umum</option>
+            )}
           </select>
         </div>
       </div>
@@ -649,10 +540,13 @@ export function PrintingProductsView() {
                     onChange={(e: any) => setFormCategory(e.target.value)}
                     className="w-full h-9 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 font-semibold text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden"
                   >
-                    <option value="OUTDOOR">Outdoor Banner ($m^2$)</option>
-                    <option value="INDOOR">Indoor & Stiker ($m^2$)</option>
-                    <option value="SHEET_DOC">Digital Press A3+ (Lembar)</option>
-                    <option value="MERCHANDISE">Merchandise (Pcs/Box)</option>
+                    {categories.length > 0 ? (
+                      categories.map((c) => (
+                        <option key={c.code} value={c.code}>{c.name}</option>
+                      ))
+                    ) : (
+                      <option value="UMUM">Kategori Umum (Atur di Pengaturan)</option>
+                    )}
                   </select>
                 </div>
 

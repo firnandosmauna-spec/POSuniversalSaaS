@@ -72,15 +72,15 @@ export function PrintingDashboardView() {
         if (txData && txData.length > 0) {
           const remoteJobs: PrintingJob[] = txData.map((t, idx) => ({
             id: t.id,
-            invoiceNo: `SPK-${new Date(t.created_at).getTime().toString().substring(6)}-${idx + 1}`,
-            customerName: t.customer_name_custom || t.order_type || "Pelanggan Percetakan",
+            invoiceNo: t.invoice_no || `SPK-${new Date(t.created_at).getTime().toString().substring(6)}-${idx + 1}`,
+            customerName: t.customer_name || t.customer_name_custom || t.order_type || "Pelanggan Percetakan",
             totalAmount: Number(t.total_amount) || 0,
-            dpAmount: Number(t.total_amount) || 0,
-            remainingAmount: 0,
-            paymentStatus: "Lunas",
-            jobStatus: idx % 2 === 0 ? "Selesai" : "Proses Cetak",
+            dpAmount: Number(t.dp_amount) || Number(t.total_amount) || 0,
+            remainingAmount: Number(t.remaining_amount) || 0,
+            paymentStatus: t.payment_status || "Lunas",
+            jobStatus: t.job_status || "Selesai",
             branchId: t.branch_id || "main",
-            branchName: "Cabang Utama",
+            branchName: t.branch_name || "Cabang Utama",
             createdAt: t.created_at
           }));
 
@@ -95,39 +95,10 @@ export function PrintingDashboardView() {
         }
       }
 
-      // Default mock data if completely empty
-      if (localJobs.length === 0) {
-        localJobs = [
-          {
-            id: "spk_1",
-            invoiceNo: "SPK-2026-001",
-            customerName: "PT Sinar Merdeka",
-            materialName: "Flexi High-Res Korea 440g (300x100 cm)",
-            totalAmount: 165000,
-            dpAmount: 100000,
-            remainingAmount: 65000,
-            paymentStatus: "DP (Kurang Bayar)",
-            jobStatus: "Proses Cetak",
-            branchId: "main",
-            branchName: "Cabang Utama (Pusat)",
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "spk_2",
-            invoiceNo: "SPK-2026-002",
-            customerName: "Warung Kopi Kenangan",
-            materialName: "Stiker Vinyl Outdoor Ritrama (200x100 cm)",
-            totalAmount: 240000,
-            dpAmount: 240000,
-            remainingAmount: 0,
-            paymentStatus: "Lunas",
-            jobStatus: "Siap Diambil",
-            branchId: "main",
-            branchName: "Cabang Utama (Pusat)",
-            createdAt: new Date().toISOString()
-          }
-        ];
-        localStorage.setItem("pos_printing_jobs", JSON.stringify(localJobs));
+      // Filter out mock data if real user
+      if (user && user.id !== "tenant_demo") {
+        const mockIds = ["spk_1", "spk_2"];
+        localJobs = localJobs.filter(j => !mockIds.includes(j.id));
       }
 
       setJobs(localJobs);
@@ -399,13 +370,7 @@ export function PrintingDashboardView() {
           </div>
 
           <div className="space-y-2 flex-1 overflow-y-auto">
-            {[
-              { name: "Flexi Standar 280g", category: "Outdoor Banner", volume: "142 m²", total: 3550000 },
-              { name: "Flexi High-Res Korea 440g", category: "Outdoor Premium", volume: "98 m²", total: 5390000 },
-              { name: "Art Carton 260g A3+", category: "Sheet & Brosur", volume: "650 lembar", total: 2925000 },
-              { name: "Stiker Vinyl Outdoor (Ritrama)", category: "Stiker Branding", volume: "45 m²", total: 3825000 },
-              { name: "Albatros Synthetic Paper", category: "Roll Up Banner", volume: "24 m²", total: 1800000 }
-            ].map((mat, i) => (
+              {[].map((mat: any, i) => (
               <div key={i} className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-950 rounded-lg border border-slate-100 dark:border-slate-800 hover:border-brand/30 hover:shadow-sm transition-all group">
                 <div>
                   <p className="font-semibold text-xs text-slate-800 dark:text-slate-100 group-hover:text-brand transition-colors">{mat.name}</p>

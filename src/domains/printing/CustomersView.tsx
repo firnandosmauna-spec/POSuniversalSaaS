@@ -46,58 +46,6 @@ export interface PrintingCustomer {
   createdAt?: string;
 }
 
-const DEFAULT_CUSTOMERS: PrintingCustomer[] = [
-  {
-    id: "cust_1",
-    name: "Budi Santoso",
-    companyName: "PT Sinar Merdeka Utama",
-    customerType: "CORPORATE",
-    phone: "0812-9876-5432",
-    email: "budi@sinarmerdeka.co.id",
-    address: "Jl. Industri Raya No. 45, Jakarta Barat",
-    npwp: "01.234.567.8-012.000",
-    tier: "VIP_CORPORATE",
-    discountPercent: 10,
-    totalSpkCount: 14,
-    totalSpent: 8500000,
-    unpaidDpBalance: 74000,
-    notes: "Langganan spanduk event bulanan, butuh nota resmi NPWP",
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "cust_2",
-    name: "Siti Rahmawati",
-    companyName: "Warung Kopi Jaya EO",
-    customerType: "AGENCY",
-    phone: "0856-1122-3344",
-    email: "siti.eo@gmail.com",
-    address: "Ruko Sentra Bisnis Blok B3, Jakarta Selatan",
-    tier: "RESELLER",
-    discountPercent: 5,
-    totalSpkCount: 8,
-    totalSpent: 3200000,
-    unpaidDpBalance: 0,
-    notes: "Reseller brosur A3+ & tumbler merchandise",
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
-  },
-  {
-    id: "cust_3",
-    name: "Agus Prasetyo",
-    companyName: "-",
-    customerType: "INDIVIDUAL",
-    phone: "0878-5544-3322",
-    email: "agus.pras@gmail.com",
-    address: "Jl. Mangga Dua Raya No. 12",
-    tier: "REGULAR",
-    discountPercent: 0,
-    totalSpkCount: 2,
-    totalSpent: 350000,
-    unpaidDpBalance: 0,
-    notes: "Cetak stiker vinyl & kartu nama pribadi",
-    createdAt: new Date(Date.now() - 86400000 * 12).toISOString()
-  }
-];
-
 export function PrintingCustomersView() {
   const { user, activeBranchId, activeBranchName } = useAuth();
   const [customers, setCustomers] = useState<PrintingCustomer[]>([]);
@@ -137,10 +85,6 @@ export function PrintingCustomersView() {
       const savedStr = localStorage.getItem("pos_printing_customers");
       let list: PrintingCustomer[] = savedStr ? JSON.parse(savedStr) : [];
       
-      // Remove mock data if real user
-      if (user && user.id !== "tenant_demo") {
-        list = list.filter(c => !["cust_1", "cust_2", "cust_3"].includes(c.id));
-      }
 
       // 2. Fetch from Supabase as fallback
       if (user) {
@@ -184,9 +128,6 @@ export function PrintingCustomersView() {
 
       const isInitialized = localStorage.getItem("pos_printing_customers_initialized");
       if (list.length === 0 && !isInitialized) {
-        if (!user || user.id === "tenant_demo") {
-          list = DEFAULT_CUSTOMERS.filter((c) => !deletedIds.includes(c.id));
-        }
         localStorage.setItem("pos_printing_customers_initialized", "true");
         localStorage.setItem("pos_printing_customers", JSON.stringify(list));
       }

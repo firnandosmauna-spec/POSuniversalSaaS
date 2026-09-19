@@ -61,22 +61,9 @@ export interface PrintingCategorySetting {
   isAvailable: boolean;
 }
 
-const DEFAULT_FINISHINGS: PrintingFinishingSetting[] = [
-  { id: "fin_eyelet", name: "Mata Ayam (Ring Seng 4 Sudut)", price: 2000, isPerM2: false, isAvailable: true },
-  { id: "fin_sew", name: "Lipat Pas / Pres Keliling", price: 3000, isPerM2: false, isAvailable: true },
-  { id: "fin_lam_doff", name: "Laminasi Doff (Per m² / Lembar)", price: 15000, isPerM2: true, isAvailable: true },
-  { id: "fin_lam_glossy", name: "Laminasi Glossy (Per m² / Lembar)", price: 15000, isPerM2: true, isAvailable: true },
-  { id: "fin_cut_die", name: "Potong Rapi (Cut to Size / Die Cut)", price: 2000, isPerM2: false, isAvailable: true },
-  { id: "fin_spiral", name: "Jilid Spiral Kawat", price: 10000, isPerM2: false, isAvailable: true }
-];
+const DEFAULT_FINISHINGS: PrintingFinishingSetting[] = [];
 
-const DEFAULT_CATEGORIES: PrintingCategorySetting[] = [
-  { id: "cat_outdoor", name: "Outdoor Banner (m²)", code: "OUTDOOR", description: "Bahan Flexi, Spanduk, Baliho, Cloth", isAvailable: true },
-  { id: "cat_indoor", name: "Indoor & Stiker (m²)", code: "INDOOR", description: "Stiker Vinyl, Albatros, Transparan, Luster", isAvailable: true },
-  { id: "cat_sheet", name: "Digital Press A3+ (Lembar)", code: "SHEET_DOC", description: "Art Paper, Art Carton, Jasmine, HVS", isAvailable: true },
-  { id: "cat_merch", name: "Merchandise & Souvenir", code: "MERCHANDISE", description: "Mug, Pin, Tumbler, Kaos Sublim, Topi", isAvailable: true },
-  { id: "cat_display", name: "Akrilik & Display Rigids", code: "DISPLAY", description: "Impraboard, Akrilik, Foamboard Display", isAvailable: true }
-];
+const DEFAULT_CATEGORIES: PrintingCategorySetting[] = [];
 
 export interface PrintingDesignFeeTier {
   id: string;
@@ -88,13 +75,7 @@ export interface PrintingDesignFeeTier {
   isAvailable: boolean;
 }
 
-const DEFAULT_DESIGN_TIERS: PrintingDesignFeeTier[] = [
-  { id: "dt_ready", name: "File Siap Cetak (Ready to Print)", price: 0, feeType: "FLAT", estimatedMinutes: 0, description: "Bawa file sendiri dalam format PDF/TIFF/JPG CMYK 300 DPI", isAvailable: true },
-  { id: "dt_edit", name: "Edit Ringan & Ganti Teks", price: 15000, feeType: "FLAT", estimatedMinutes: 15, description: "Perbaikan nomor HP, ganti tanggal, atau ganti alamat", isAvailable: true },
-  { id: "dt_standard", name: "Desain Standard (Banner / Stiker)", price: 35000, feeType: "FLAT", estimatedMinutes: 30, description: "Desain spanduk/banner baru dengan background & foto produk", isAvailable: true },
-  { id: "dt_premium", name: "Desain Premium / Redesain Full", price: 75000, feeType: "FLAT", estimatedMinutes: 90, description: "Redesain ulang dari sketsa, tracing logo, atau layout brosur rumit", isAvailable: true },
-  { id: "dt_impose", name: "Setting Impose / Layout A3+", price: 10000, feeType: "FLAT", estimatedMinutes: 10, description: "Perbanyak stiker/kartu nama dalam 1 lembar A3+ (Multi-Up)", isAvailable: true }
-];
+const DEFAULT_DESIGN_TIERS: PrintingDesignFeeTier[] = [];
 
 export function PrintingSettingsView() {
   const { user, branches, addBranch, deleteBranch, switchBranch, activeBranchId, editBranch, setMainBranch } = useAuth();
@@ -131,12 +112,7 @@ export function PrintingSettingsView() {
   } | null>(null);
 
   // Printing Machines State
-  const [machines, setMachines] = useState<PrintingMachine[]>([
-    { id: "m1", name: "Roland Soljet Outdoor 3.2m", type: "Outdoor Banner", maxPrintWidthCm: 320, status: "Ready" },
-    { id: "m2", name: "Fuji Xerox Iridesse A3+", type: "Digital Press A3+", maxPrintWidthCm: 33, status: "Ready" },
-    { id: "m3", name: "Mimaki CG-130FX Cutting Plotter", type: "Plotter Cutting", maxPrintWidthCm: 130, status: "Ready" },
-    { id: "m4", name: "Flora UV Flatbed 2513", type: "UV Flatbed", maxPrintWidthCm: 250, status: "Ready" }
-  ]);
+  const [machines, setMachines] = useState<PrintingMachine[]>([]);
   const [newMachineName, setNewMachineName] = useState("");
   const [newMachineType, setNewMachineType] = useState("Outdoor Banner");
   const [newMachineWidth, setNewMachineWidth] = useState(320);
@@ -603,9 +579,9 @@ export function PrintingSettingsView() {
   return (
     <div className="flex flex-col h-full w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-3 md:p-5 space-y-4 overflow-y-auto font-sans">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 md:p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 md:p-4 border border-slate-200 dark:border-slate-800 shadow-md shadow-slate-200/50 dark:shadow-none rounded-2xl">
         <div className="flex items-center gap-3">
-          <div className="size-10 bg-brand text-white grid place-items-center font-bold shadow-xs">
+          <div className="size-10 bg-brand text-white grid place-items-center font-bold shadow-md shadow-brand/20 dark:shadow-none rounded-xl">
             <Settings className="size-5" />
           </div>
           <div>
@@ -622,14 +598,29 @@ export function PrintingSettingsView() {
           <Link to="/app/pos">
             <Button
               variant="outline"
-              className="h-8 text-xs font-bold gap-1.5 rounded-none border-slate-300 shadow-xs text-slate-700 hover:bg-slate-100"
+              className="h-8 text-xs font-bold gap-1.5 rounded-xl border-slate-300 shadow-md shadow-slate-200/50 dark:shadow-none text-slate-700 hover:bg-slate-100"
             >
               <ArrowLeft className="size-4" /> Kembali ke Kasir
             </Button>
           </Link>
           <Button
+            onClick={() => {
+              if(confirm('Yakin ingin mereset/mengosongkan seluruh data Bahan, Kategori, Finishing, dan Mesin? Ini akan menghapus semua data mock yang tersisa.')) {
+                localStorage.removeItem('pos_printing_finishing_options');
+                localStorage.removeItem('pos_printing_categories');
+                localStorage.removeItem('pos_printing_materials');
+                localStorage.setItem('pos_tenant_'+user?.id+'_printing_settings', '{}');
+                window.location.reload();
+              }
+            }}
+            variant="outline"
+            className="h-8 text-xs font-bold gap-1.5 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 shadow-md shadow-slate-200/50 dark:shadow-none"
+          >
+            <Trash2 className="size-4" /> Kosongkan Data
+          </Button>
+          <Button
             onClick={savePrintingSettings}
-            className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1.5 rounded-none shadow-xs"
+            className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1.5 rounded-xl shadow-md shadow-brand/20 dark:shadow-none"
           >
             <Check className="size-4" /> Simpan Pengaturan
           </Button>
@@ -639,7 +630,7 @@ export function PrintingSettingsView() {
       {/* Main Container: Left Sidebar + Right Content Area */}
       <div className="flex flex-col md:flex-row gap-4 flex-1">
         {/* Sidebar Navigation */}
-        <div className="w-full md:w-64 shrink-0 bg-white dark:bg-slate-900 p-2 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1 h-fit">
+        <div className="w-full md:w-64 shrink-0 bg-white dark:bg-slate-900 p-2 border border-slate-200 dark:border-slate-800 shadow-md shadow-slate-200/50 dark:shadow-none rounded-2xl space-y-1 h-fit">
           <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 mb-1">
             Menu Pengaturan
           </div>
@@ -660,9 +651,9 @@ export function PrintingSettingsView() {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id as any)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold transition-all rounded-none cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold transition-all rounded-xl cursor-pointer ${
                   isActive
-                    ? "bg-brand text-white shadow-xs"
+                    ? "bg-brand text-white shadow-md shadow-slate-200/50 dark:shadow-none"
                     : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                 }`}
               >
@@ -686,13 +677,13 @@ export function PrintingSettingsView() {
       {/* TAB PRINTER KASIR */}
       {activeTab === "printer_kasir" && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-md shadow-slate-200/50 dark:shadow-none">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <Printer className="size-4 text-brand" /> Daftar Koneksi Printer Kasir (Struk & Nota)
             </h3>
 
             {/* Form Tambah Printer Kasir */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
               <div className="sm:col-span-1">
                 <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Nama Printer
@@ -702,7 +693,7 @@ export function PrintingSettingsView() {
                   placeholder="Misal: Epson TM-T82X, Kassen..."
                   value={newReceiptPrinterName}
                   onChange={(e) => setNewReceiptPrinterName(e.target.value)}
-                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
@@ -741,7 +732,7 @@ export function PrintingSettingsView() {
                 <Button
                   onClick={handleAddReceiptPrinter}
                   disabled={!newReceiptPrinterName.trim()}
-                  className="w-full h-8 text-xs bg-brand text-white font-bold rounded-none hover:bg-brand/90"
+                  className="w-full h-8 text-xs bg-brand text-white font-bold rounded-xl hover:bg-brand/90"
                 >
                   <Plus className="size-3 mr-1" /> Tambah
                 </Button>
@@ -775,7 +766,7 @@ export function PrintingSettingsView() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteReceiptPrinter(p.id)}
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-none h-8 px-2"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-xl h-8 px-2"
                     >
                       <Trash2 className="size-4" />
                     </Button>
@@ -796,13 +787,13 @@ export function PrintingSettingsView() {
       {/* TAB 1: Armada Mesin Cetak */}
       {activeTab === "printing_calc" && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-md shadow-slate-200/50 dark:shadow-none">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <Printer className="size-4 text-brand" /> Daftar Armada Mesin Produksi Percetakan
             </h3>
 
             {/* Form Tambah Mesin */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
               <div className="sm:col-span-1">
                 <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Nama Mesin / Printer
@@ -812,7 +803,7 @@ export function PrintingSettingsView() {
                   placeholder="Misal: Roland Soljet 3.2m..."
                   value={newMachineName}
                   onChange={(e) => setNewMachineName(e.target.value)}
-                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
@@ -841,14 +832,14 @@ export function PrintingSettingsView() {
                   type="number"
                   value={newMachineWidth}
                   onChange={(e) => setNewMachineWidth(Number(e.target.value))}
-                  className="h-8 font-mono text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-8 font-mono text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
               <div className="flex items-end">
                 <Button
                   onClick={handleAddMachine}
-                  className="w-full h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1 rounded-none"
+                  className="w-full h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1 rounded-xl"
                 >
                   <Plus className="size-3.5" /> Tambah Mesin
                 </Button>
@@ -889,7 +880,7 @@ export function PrintingSettingsView() {
                       size="sm"
                       variant="outline"
                       onClick={() => handleDeleteMachine(m.id)}
-                      className="h-7 px-1.5 text-[10px] border-rose-200 dark:border-rose-900 text-rose-600 rounded-none"
+                      className="h-7 px-1.5 text-[10px] border-rose-200 dark:border-rose-900 text-rose-600 rounded-xl"
                     >
                       <Trash2 className="size-3" />
                     </Button>
@@ -904,7 +895,7 @@ export function PrintingSettingsView() {
       {/* TAB 2: Kategori Bahan & Produk */}
       {activeTab === "printing_categories" && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-md shadow-slate-200/50 dark:shadow-none">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
@@ -917,14 +908,14 @@ export function PrintingSettingsView() {
 
               <Button
                 onClick={handleOpenCategoryAdd}
-                className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1.5 rounded-none shadow-xs"
+                className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1.5 rounded-xl shadow-md shadow-slate-200/50 dark:shadow-none"
               >
                 <Plus className="size-4" /> Tambah Kategori Baru
               </Button>
             </div>
 
             {/* List Categories Table */}
-            <div className="border border-slate-200 dark:border-slate-800 shadow-xs overflow-x-auto">
+            <div className="border border-slate-200 dark:border-slate-800 shadow-md shadow-slate-200/50 dark:shadow-none overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
@@ -966,7 +957,7 @@ export function PrintingSettingsView() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleOpenCategoryEdit(cat)}
-                            className="h-7 px-2 text-[10px] border-slate-300 rounded-none"
+                            className="h-7 px-2 text-[10px] border-slate-300 rounded-xl"
                           >
                             <Pencil className="size-3" /> Edit
                           </Button>
@@ -974,7 +965,7 @@ export function PrintingSettingsView() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleDeleteCategory(cat.id)}
-                            className="h-7 px-1.5 text-[10px] border-rose-200 text-rose-600 rounded-none"
+                            className="h-7 px-1.5 text-[10px] border-rose-200 text-rose-600 rounded-xl"
                           >
                             <Trash2 className="size-3" />
                           </Button>
@@ -992,7 +983,7 @@ export function PrintingSettingsView() {
       {/* TAB 3: Pilihan Finishing Tambahan */}
       {activeTab === "printing_finishing" && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-md shadow-slate-200/50 dark:shadow-none">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
@@ -1005,14 +996,14 @@ export function PrintingSettingsView() {
 
               <Button
                 onClick={handleOpenFinishingAdd}
-                className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1.5 rounded-none shadow-xs"
+                className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1.5 rounded-xl shadow-md shadow-slate-200/50 dark:shadow-none"
               >
                 <Plus className="size-4" /> Tambah Finishing Baru
               </Button>
             </div>
 
             {/* List Finishing Options Table */}
-            <div className="border border-slate-200 dark:border-slate-800 shadow-xs overflow-x-auto">
+            <div className="border border-slate-200 dark:border-slate-800 shadow-md shadow-slate-200/50 dark:shadow-none overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
@@ -1056,7 +1047,7 @@ export function PrintingSettingsView() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleOpenFinishingEdit(fin)}
-                            className="h-7 px-2 text-[10px] border-slate-300 rounded-none"
+                            className="h-7 px-2 text-[10px] border-slate-300 rounded-xl"
                           >
                             <Pencil className="size-3" /> Edit
                           </Button>
@@ -1064,7 +1055,7 @@ export function PrintingSettingsView() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleDeleteFinishing(fin.id)}
-                            className="h-7 px-1.5 text-[10px] border-rose-200 text-rose-600 rounded-none"
+                            className="h-7 px-1.5 text-[10px] border-rose-200 text-rose-600 rounded-xl"
                           >
                             <Trash2 className="size-3" />
                           </Button>
@@ -1082,7 +1073,7 @@ export function PrintingSettingsView() {
       {/* TAB 4: Alur SPK & DP Minimal */}
       {activeTab === "printing_spk" && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-md shadow-slate-200/50 dark:shadow-none">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <FileText className="size-4 text-brand" /> Pengaturan Alur Pembayaran & SPK Operator
             </h3>
@@ -1099,7 +1090,7 @@ export function PrintingSettingsView() {
                     max={100}
                     value={minDpPercentage}
                     onChange={(e) => setMinDpPercentage(Number(e.target.value))}
-                    className="h-9 font-mono font-extrabold text-sm w-32 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none text-brand"
+                    className="h-9 font-mono font-extrabold text-sm w-32 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl text-brand"
                   />
                   <span className="font-bold text-slate-500">% Tagihan SPK</span>
                 </div>
@@ -1129,7 +1120,7 @@ export function PrintingSettingsView() {
             </div>
 
             <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3">
-              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div>
                   <h4 className="font-bold text-xs text-slate-900 dark:text-white">
                     Verifikasi Proofing File Desain Pelanggan
@@ -1140,7 +1131,7 @@ export function PrintingSettingsView() {
                 </div>
                 <button
                   onClick={() => setEnableFileProofing(!enableFileProofing)}
-                  className={`px-3 py-1 text-xs font-bold border rounded-none cursor-pointer ${
+                  className={`px-3 py-1 text-xs font-bold border rounded-xl cursor-pointer ${
                     enableFileProofing
                       ? "bg-emerald-600 text-white border-emerald-700"
                       : "bg-slate-200 dark:bg-slate-800 text-slate-600 border-slate-300"
@@ -1158,7 +1149,7 @@ export function PrintingSettingsView() {
                   type="text"
                   value={defaultSpkNotes}
                   onChange={(e) => setDefaultSpkNotes(e.target.value)}
-                  className="h-9 text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-9 text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
             </div>
@@ -1170,7 +1161,7 @@ export function PrintingSettingsView() {
       {activeTab === "design_fee_calc" && (
         <div className="space-y-4">
           {/* Header Description */}
-          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 shadow-md shadow-slate-200/50 dark:shadow-none flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div>
               <h2 className="font-extrabold text-sm md:text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <Sparkles className="size-5 text-amber-500" /> Kalkulator & Pengaturan Biaya Desain Grafis
@@ -1193,7 +1184,7 @@ export function PrintingSettingsView() {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Realtime Design Fee Calculator Simulator Card */}
-            <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
+            <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 shadow-md shadow-slate-200/50 dark:shadow-none space-y-3.5">
               <div className="flex items-center justify-between border-b pb-2.5 border-slate-200 dark:border-slate-800">
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
                   <Zap className="size-4 text-amber-500" /> Simulator Kalkulator Biaya Desain
@@ -1295,7 +1286,7 @@ export function PrintingSettingsView() {
                   <Button
                     onClick={handleSaveCalculatedTier}
                     size="sm"
-                    className="w-full h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1.5 rounded-none"
+                    className="w-full h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1.5 rounded-xl"
                   >
                     <Plus className="size-3.5" /> Tambah ke Opsi Preset Kasir
                   </Button>
@@ -1304,7 +1295,7 @@ export function PrintingSettingsView() {
             </div>
 
             {/* List Preset Opsi Biaya Desain Table */}
-            <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+            <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 shadow-md shadow-slate-200/50 dark:shadow-none space-y-3">
               <div className="flex items-center justify-between border-b pb-2 border-slate-200 dark:border-slate-800">
                 <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
                   <Layers className="size-4 text-brand" /> Daftar Preset Opsi Biaya Desain Kasir
@@ -1357,7 +1348,7 @@ export function PrintingSettingsView() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleDeleteDesignTier(tier.id)}
-                            className="h-6 w-6 p-0 text-rose-600 border-rose-200 rounded-none"
+                            className="h-6 w-6 p-0 text-rose-600 border-rose-200 rounded-xl"
                           >
                             <Trash2 className="size-3" />
                           </Button>
@@ -1375,13 +1366,13 @@ export function PrintingSettingsView() {
       {/* TAB 5: Outlet & Cabang */}
       {activeTab === "cabang" && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-md shadow-slate-200/50 dark:shadow-none">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <Building2 className="size-4 text-brand" /> Daftar Outlet & Workshop Produksi Percetakan
             </h3>
 
             {/* Form Tambah Cabang */}
-            <form onSubmit={handleAddBranchSubmit} className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800">
+            <form onSubmit={handleAddBranchSubmit} className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Nama Outlet / Workshop
@@ -1391,7 +1382,7 @@ export function PrintingSettingsView() {
                   placeholder="Misal: Workshop Percetakan Barat..."
                   value={branchName}
                   onChange={(e) => setBranchName(e.target.value)}
-                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
@@ -1404,7 +1395,7 @@ export function PrintingSettingsView() {
                   placeholder="Jl. Raya Cetak No. 12..."
                   value={branchAddress}
                   onChange={(e) => setBranchAddress(e.target.value)}
-                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
@@ -1417,14 +1408,14 @@ export function PrintingSettingsView() {
                   placeholder="081234567890"
                   value={branchPhone}
                   onChange={(e) => setBranchPhone(e.target.value)}
-                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
               <div className="flex items-end">
                 <Button
                   type="submit"
-                  className="w-full h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1 rounded-none"
+                  className="w-full h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 gap-1 rounded-xl"
                 >
                   <Plus className="size-3.5" /> Tambah Outlet
                 </Button>
@@ -1467,7 +1458,7 @@ export function PrintingSettingsView() {
                           size="sm"
                           variant="outline"
                           onClick={() => switchBranch(b.id)}
-                          className="h-7 px-2 text-[10px] border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-none font-bold"
+                          className="h-7 px-2 text-[10px] border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl font-bold"
                         >
                           Switch ke Outlet Ini
                         </Button>
@@ -1478,7 +1469,7 @@ export function PrintingSettingsView() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleSetMainBranch(b.id)}
-                          className="h-7 px-2 text-[10px] border-slate-300 text-slate-700 hover:bg-slate-100 rounded-none"
+                          className="h-7 px-2 text-[10px] border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl"
                         >
                           Jadikan Utama
                         </Button>
@@ -1488,7 +1479,7 @@ export function PrintingSettingsView() {
                         size="sm"
                         variant="outline"
                         onClick={() => handleOpenEditBranch(b)}
-                        className="h-7 px-2 text-[10px] border-slate-300 text-slate-700 rounded-none"
+                        className="h-7 px-2 text-[10px] border-slate-300 text-slate-700 rounded-xl"
                       >
                         <Pencil className="size-3" /> Edit
                       </Button>
@@ -1498,7 +1489,7 @@ export function PrintingSettingsView() {
                           size="sm"
                           variant="outline"
                           onClick={() => deleteBranch(b.id)}
-                          className="h-7 px-1.5 text-[10px] border-rose-200 text-rose-600 hover:bg-rose-50 rounded-none"
+                          className="h-7 px-1.5 text-[10px] border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl"
                         >
                           <Trash2 className="size-3" />
                         </Button>
@@ -1515,7 +1506,7 @@ export function PrintingSettingsView() {
       {/* TAB 6: Format Kode SPK */}
       {activeTab === "invoice" && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-md shadow-slate-200/50 dark:shadow-none">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <Receipt className="size-4 text-brand" /> Format Awalan Nomor SPK & Struk Nota Percetakan
             </h3>
@@ -1529,7 +1520,7 @@ export function PrintingSettingsView() {
                   type="text"
                   value={invoiceConfig.invoicePrefix}
                   onChange={(e) => setInvoiceConfig({ ...invoiceConfig, invoicePrefix: e.target.value.toUpperCase() })}
-                  className="h-9 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 rounded-none"
+                  className="h-9 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 rounded-xl"
                 />
               </div>
 
@@ -1543,14 +1534,14 @@ export function PrintingSettingsView() {
                   max={6}
                   value={invoiceConfig.invoiceCounterDigits}
                   onChange={(e) => setInvoiceConfig({ ...invoiceConfig, invoiceCounterDigits: Number(e.target.value) })}
-                  className="h-9 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 rounded-none"
+                  className="h-9 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 rounded-xl"
                 />
               </div>
 
               <div className="flex items-end">
                 <Button
                   onClick={handleSaveInvoiceConfig}
-                  className="w-full h-9 text-xs bg-brand text-white font-bold hover:bg-brand/90 rounded-none"
+                  className="w-full h-9 text-xs bg-brand text-white font-bold hover:bg-brand/90 rounded-xl"
                 >
                   Simpan Format SPK
                 </Button>
@@ -1568,12 +1559,12 @@ export function PrintingSettingsView() {
       {/* TAB 7: Status Paket SaaS */}
       {activeTab === "langganan" && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-md shadow-slate-200/50 dark:shadow-none">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <Crown className="size-4 text-amber-500" /> Status Langganan POS Percetakan Digital SaaS
             </h3>
 
-            <div className="bg-slate-50 dark:bg-slate-950 p-4 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-xs text-slate-500 block">Tipe Paket Aktif:</span>
                 <span className="text-lg font-extrabold text-brand font-mono">
@@ -1600,7 +1591,7 @@ export function PrintingSettingsView() {
       {/* Modal Add / Edit Category */}
       {isCategoryModalOpen && (
         <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
-          <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 text-slate-900 dark:text-slate-100 rounded-none font-sans">
+          <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 text-slate-900 dark:text-slate-100 rounded-xl font-sans">
             <DialogHeader className="p-4 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800">
               <DialogTitle className="text-sm font-bold flex items-center gap-2">
                 <FolderPlus className="size-4 text-indigo-600" />
@@ -1618,7 +1609,7 @@ export function PrintingSettingsView() {
                   placeholder="Misal: Outdoor Banner, Digital Press A3+, Merchandise..."
                   value={formCatName}
                   onChange={(e) => setFormCatName(e.target.value)}
-                  className="h-9 font-semibold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-9 font-semibold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
@@ -1631,7 +1622,7 @@ export function PrintingSettingsView() {
                   placeholder="OUTDOOR / SHEET_DOC / DISPLAY..."
                   value={formCatCode}
                   onChange={(e) => setFormCatCode(e.target.value)}
-                  className="h-9 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none text-brand uppercase"
+                  className="h-9 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl text-brand uppercase"
                 />
               </div>
 
@@ -1644,7 +1635,7 @@ export function PrintingSettingsView() {
                   placeholder="Daftar bahan yang termasuk di kategori ini..."
                   value={formCatDesc}
                   onChange={(e) => setFormCatDesc(e.target.value)}
-                  className="h-9 text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-9 text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
@@ -1668,14 +1659,14 @@ export function PrintingSettingsView() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsCategoryModalOpen(false)}
-                className="h-8 text-xs border-slate-300 rounded-none"
+                className="h-8 text-xs border-slate-300 rounded-xl"
               >
                 Batal
               </Button>
               <Button
                 size="sm"
                 onClick={handleSaveCategory}
-                className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 rounded-none"
+                className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 rounded-xl"
               >
                 Simpan Kategori
               </Button>
@@ -1687,7 +1678,7 @@ export function PrintingSettingsView() {
       {/* Modal Add / Edit Finishing Option */}
       {isFinishingModalOpen && (
         <Dialog open={isFinishingModalOpen} onOpenChange={setIsFinishingModalOpen}>
-          <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 text-slate-900 dark:text-slate-100 rounded-none font-sans">
+          <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 text-slate-900 dark:text-slate-100 rounded-xl font-sans">
             <DialogHeader className="p-4 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800">
               <DialogTitle className="text-sm font-bold flex items-center gap-2">
                 <Scissors className="size-4 text-purple-600" />
@@ -1705,7 +1696,7 @@ export function PrintingSettingsView() {
                   placeholder="Misal: Laminasi Doff, Mata Ayam, Potong Die Cut..."
                   value={formFinName}
                   onChange={(e) => setFormFinName(e.target.value)}
-                  className="h-9 font-semibold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-9 font-semibold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
@@ -1717,7 +1708,7 @@ export function PrintingSettingsView() {
                   type="number"
                   value={formFinPrice}
                   onChange={(e) => setFormFinPrice(Number(e.target.value))}
-                  className="h-9 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none text-brand"
+                  className="h-9 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl text-brand"
                 />
               </div>
 
@@ -1755,14 +1746,14 @@ export function PrintingSettingsView() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsFinishingModalOpen(false)}
-                className="h-8 text-xs border-slate-300 rounded-none"
+                className="h-8 text-xs border-slate-300 rounded-xl"
               >
                 Batal
               </Button>
               <Button
                 size="sm"
                 onClick={handleSaveFinishing}
-                className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 rounded-none"
+                className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 rounded-xl"
               >
                 Simpan Opsi Finishing
               </Button>
@@ -1774,7 +1765,7 @@ export function PrintingSettingsView() {
       {/* Modal Edit Branch Outlet */}
       {isEditBranchModalOpen && (
         <Dialog open={isEditBranchModalOpen} onOpenChange={setIsEditBranchModalOpen}>
-          <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 text-slate-900 dark:text-slate-100 rounded-none font-sans">
+          <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 text-slate-900 dark:text-slate-100 rounded-xl font-sans">
             <DialogHeader className="p-4 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800">
               <DialogTitle className="text-sm font-bold flex items-center gap-2">
                 <Building2 className="size-4 text-brand" />
@@ -1792,7 +1783,7 @@ export function PrintingSettingsView() {
                   placeholder="Misal: Workshop Cetak Cabang Barat..."
                   value={editBranchName}
                   onChange={(e) => setEditBranchName(e.target.value)}
-                  className="h-9 font-semibold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-9 font-semibold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
@@ -1805,7 +1796,7 @@ export function PrintingSettingsView() {
                   placeholder="Jl. Raya Cetak No. 12..."
                   value={editBranchAddress}
                   onChange={(e) => setEditBranchAddress(e.target.value)}
-                  className="h-9 text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-9 text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
 
@@ -1818,7 +1809,7 @@ export function PrintingSettingsView() {
                   placeholder="081234567890"
                   value={editBranchPhone}
                   onChange={(e) => setEditBranchPhone(e.target.value)}
-                  className="h-9 font-mono text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none"
+                  className="h-9 font-mono text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl"
                 />
               </div>
             </div>
@@ -1828,14 +1819,14 @@ export function PrintingSettingsView() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditBranchModalOpen(false)}
-                className="h-8 text-xs border-slate-300 rounded-none"
+                className="h-8 text-xs border-slate-300 rounded-xl"
               >
                 Batal
               </Button>
               <Button
                 size="sm"
                 onClick={handleSaveEditedBranch}
-                className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 rounded-none"
+                className="h-8 text-xs bg-brand text-white font-bold hover:bg-brand/90 rounded-xl"
               >
                 Simpan Perubahan Outlet
               </Button>

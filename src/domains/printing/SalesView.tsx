@@ -116,33 +116,18 @@ export function PrintingSalesView() {
             const total = Number(t.total_amount) || 0;
             return {
               id: t.id,
-              invoiceNo: `SPK-${new Date(t.created_at).getTime().toString().substring(6)}-${idx + 1}`,
-              customerName: t.customer_name_custom || "Pelanggan General",
-              customerPhone: "081234567890",
-              items: (t.transaction_items || []).map((item: any, i: number) => ({
-                id: `item_${i}`,
-                category: "OUTDOOR_INDOOR",
-                jobTitle: item.product_name || "Banner Cetak",
-                material: { id: "m1", name: item.product_name || "Flexi Standard", unitName: "m²" },
-                widthCm: 100,
-                heightCm: 100,
-                areaM2: 1.0,
-                quantity: item.qty || 1,
-                unitPrice: Number(item.price) || 0,
-                finishings: [],
-                finishingCost: 0,
-                totalPrice: (Number(item.price) || 0) * (item.qty || 1),
-                notes: "Spesifikasi standar",
-                fileStatus: "Ready"
-              })),
+              invoiceNo: t.invoice_no || `SPK-${new Date(t.created_at).getTime().toString().substring(6)}-${idx + 1}`,
+              customerName: t.customer_name || t.customer_name_custom || "Pelanggan General",
+              customerPhone: t.customer_phone || "-",
+              items: t.items ? (typeof t.items === 'string' ? JSON.parse(t.items) : t.items) : [],
               totalAmount: total,
-              dpAmount: total,
-              remainingAmount: 0,
-              paymentStatus: "Lunas",
+              dpAmount: Number(t.dp_amount) || total,
+              remainingAmount: Number(t.remaining_amount) || 0,
+              paymentStatus: t.payment_status || "Lunas",
               paymentMethod: t.payment_method || "cash",
-              jobStatus: idx % 2 === 0 ? "Selesai" : "Proses Cetak",
-              cashierName: "Kasir Operator",
-              branchName: "Outlet Utama",
+              jobStatus: t.job_status || "Selesai",
+              cashierName: t.cashier_name || "Kasir Operator",
+              branchName: t.branch_name || "Outlet Utama",
               createdAt: t.created_at
             };
           });
@@ -158,147 +143,10 @@ export function PrintingSalesView() {
         }
       }
 
-      // Default mock SPK list if completely empty
-      if (localJobs.length === 0) {
-        localJobs = [
-          {
-            id: "spk_demo_1",
-            invoiceNo: "SPK-2026-001",
-            customerName: "PT Sinar Merdeka",
-            customerPhone: "0812-9876-5432",
-            items: [
-              {
-                id: "i1",
-                category: "OUTDOOR_INDOOR",
-                jobTitle: "Spanduk Baliho Pilkada 3x1m",
-                material: { id: "mat_flexi", name: "Flexi China 340g", unitName: "m²" },
-                widthCm: 300,
-                heightCm: 100,
-                areaM2: 3.0,
-                quantity: 2,
-                unitPrice: 25000,
-                finishings: [{ id: "f1", name: "Mata Ayam (Ring 4 Sudut)", price: 4000 }],
-                finishingCost: 4000,
-                totalPrice: 154000,
-                notes: "Gunakan ring kuningan anti karat di tiap sudut",
-                fileStatus: "Ready"
-              }
-            ],
-            totalAmount: 154000,
-            dpAmount: 80000,
-            remainingAmount: 74000,
-            paymentStatus: "DP (Kurang Bayar)",
-            paymentMethod: "cash",
-            jobStatus: "Proses Cetak",
-            cashierName: "Ahmad Percetakan",
-            branchId: "main",
-            branchName: "Cabang Utama",
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: "spk_demo_2",
-            invoiceNo: "SPK-2026-002",
-            customerName: "Warung Kopi Jaya",
-            customerPhone: "0856-1122-3344",
-            items: [
-              {
-                id: "i2",
-                category: "SHEET_DOC",
-                jobTitle: "Brosur Menu Cafe A4 Glossy",
-                material: { id: "mat_ap150", name: "Art Paper 150g A3+", unitName: "lembar" },
-                widthCm: 21,
-                heightCm: 29.7,
-                areaM2: 0,
-                quantity: 100,
-                unitPrice: 1500,
-                finishings: [{ id: "f2", name: "Laminasi Glossy 2 Sisi", price: 500 }],
-                finishingCost: 50000,
-                totalPrice: 200000,
-                notes: "Potong bersih lipat 3 bagian",
-                fileStatus: "Ready"
-              }
-            ],
-            totalAmount: 200000,
-            dpAmount: 200000,
-            remainingAmount: 0,
-            paymentStatus: "Lunas",
-            paymentMethod: "qris",
-            jobStatus: "Siap Diambil",
-            cashierName: "Siti Kasir",
-            branchId: "main",
-            branchName: "Cabang Utama",
-            createdAt: new Date(Date.now() - 3600000 * 4).toISOString()
-          },
-          {
-            id: "spk_demo_3",
-            invoiceNo: "SPK-SUB-001",
-            customerName: "PT Surabaya Event Nusantara",
-            customerPhone: "0813-8899-7766",
-            items: [
-              {
-                id: "i3",
-                category: "OUTDOOR_INDOOR",
-                jobTitle: "Giant Banner Pameran Expo 6x3m",
-                material: { id: "mat_korchin", name: "Flexi Korchin 380g", unitName: "m²" },
-                widthCm: 600,
-                heightCm: 300,
-                areaM2: 18.0,
-                quantity: 1,
-                unitPrice: 35000,
-                finishings: [{ id: "f1", name: "Mata Ayam (Ring Keliling)", price: 20000 }],
-                finishingCost: 20000,
-                totalPrice: 650000,
-                notes: "Pemasangan di Hall Grand City Surabaya",
-                fileStatus: "Ready"
-              }
-            ],
-            totalAmount: 650000,
-            dpAmount: 650000,
-            remainingAmount: 0,
-            paymentStatus: "Lunas",
-            paymentMethod: "transfer",
-            jobStatus: "Selesai",
-            cashierName: "Rudi Cabang Surabaya",
-            branchId: "branch_surabaya",
-            branchName: "Cabang Surabaya",
-            createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
-          },
-          {
-            id: "spk_demo_4",
-            invoiceNo: "SPK-BDG-001",
-            customerName: "Distro Creative Dago",
-            customerPhone: "0857-4433-2211",
-            items: [
-              {
-                id: "i4",
-                category: "MERCHANDISE",
-                jobTitle: "Cetak Stiker Label Vektor 500 pcs",
-                material: { id: "mat_stiker", name: "Stiker Vinyl Camel", unitName: "lembar" },
-                widthCm: 32,
-                heightCm: 48,
-                areaM2: 0,
-                quantity: 25,
-                unitPrice: 15000,
-                finishings: [{ id: "f3", name: "Potong Die Cut", price: 25000 }],
-                finishingCost: 25000,
-                totalPrice: 400000,
-                notes: "Kirim via ekspedisi lokal Bandung",
-                fileStatus: "Ready"
-              }
-            ],
-            totalAmount: 400000,
-            dpAmount: 200000,
-            remainingAmount: 200000,
-            paymentStatus: "DP (Kurang Bayar)",
-            paymentMethod: "qris",
-            jobStatus: "Proses Desain",
-            cashierName: "Maya Cabang Bandung",
-            branchId: "branch_bandung",
-            branchName: "Cabang Bandung",
-            createdAt: new Date(Date.now() - 3600000 * 12).toISOString()
-          }
-        ];
-        localStorage.setItem("pos_printing_jobs", JSON.stringify(localJobs));
+      // Filter out mock data if real user
+      if (user && user.id !== "tenant_demo") {
+        const mockIds = ["spk_demo_1", "spk_demo_2", "spk_demo_3", "spk_demo_4"];
+        localJobs = localJobs.filter(j => !mockIds.includes(j.id));
       }
 
       setJobs(localJobs);
@@ -800,7 +648,7 @@ export function PrintingSalesView() {
                   {/* Items Summary */}
                   <td className="p-3 align-top">
                     <div className="space-y-1 max-w-xs">
-                      {job.items.map((item, idx) => (
+                      {(job.items || []).map((item, idx) => (
                         <div key={idx} className="text-[11px] leading-tight">
                           <span className="font-bold text-slate-800 dark:text-slate-200">
                             {item.quantity}x {item.jobTitle}
@@ -956,7 +804,7 @@ export function PrintingSalesView() {
                   Daftar Spesifikasi Cetakan SPK
                 </h4>
                 <div className="border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800">
-                  {selectedJob.items.map((item, idx) => (
+                  {(selectedJob.items || []).map((item, idx) => (
                     <div key={idx} className="p-3 space-y-1.5">
                       <div className="flex items-center justify-between font-bold">
                         <span className="text-slate-900 dark:text-white">
@@ -1297,7 +1145,7 @@ export function PrintingSalesView() {
                             {new Date(j.createdAt).toLocaleDateString("id-ID")}
                           </td>
                           <td className="p-2.5 text-slate-700 dark:text-slate-300">
-                            {j.items.map((it) => it.jobTitle).join(", ")}
+                            {(j.items || []).map((it) => it.jobTitle).join(", ")}
                           </td>
                           <td className="p-2.5 text-right font-mono font-bold text-slate-900 dark:text-white">
                             {formatRupiah(j.totalAmount)}

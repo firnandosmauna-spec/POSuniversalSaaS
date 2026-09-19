@@ -36,7 +36,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 // Types for Printing POS
-export type PrintCategory = "OUTDOOR_INDOOR" | "SHEET_DOC" | "MERCHANDISE";
+export type PrintCategory = string;
 
 export interface MaterialOption {
   id: string;
@@ -92,45 +92,25 @@ export interface PrintingJobOrder {
   createdAt: string;
 }
 
-// Preset Material Items
-const MATERIALS: MaterialOption[] = [
-  // Outdoor / Indoor Banner & Vinyl (Per m²)
-  { id: "mat_flexi280", name: "Flexi Standar 280g", category: "OUTDOOR_INDOOR", pricePerUnit: 25000, unitName: "m²", description: "Bahan spanduk outdoor standar ekonomis" },
-  { id: "mat_flexi440", name: "Flexi High-Res Korea 440g", category: "OUTDOOR_INDOOR", pricePerUnit: 55000, unitName: "m²", description: "Bahan tebal tahan cuaca & warna tajam" },
-  { id: "mat_albatros", name: "Albatros Synthetic Paper", category: "OUTDOOR_INDOOR", pricePerUnit: 75000, unitName: "m²", description: "Bahan halus matte cocok untuk Roll Up Banner" },
-  { id: "mat_vinyl", name: "Stiker Vinyl Outdoor (Ritrama)", category: "OUTDOOR_INDOOR", pricePerUnit: 85000, unitName: "m²", description: "Stiker anti air & elastis untuk label / branding" },
-  { id: "mat_transp", name: "Stiker Transparan UV", category: "OUTDOOR_INDOOR", pricePerUnit: 90000, unitName: "m²", description: "Stiker kaca bening cetak tinta tajam" },
-  
-  // Sheet & Document (Per Lembar / Box)
-  { id: "mat_a3_art260", name: "Art Carton 260g (A3+)", category: "SHEET_DOC", pricePerUnit: 4500, unitName: "lembar", description: "Kertas tebal glossy ideal untuk Sertifikat & Cover" },
-  { id: "mat_a3_art150", name: "Art Paper 150g (A3+)", category: "SHEET_DOC", pricePerUnit: 3500, unitName: "lembar", description: "Kertas brosur kilap sedang" },
-  { id: "mat_a3_chromo", name: "Stiker Chromo A3+ (Cetak + Kiss Cut)", category: "SHEET_DOC", pricePerUnit: 12000, unitName: "lembar", description: "Stiker kertas kilap untuk label produk" },
-  { id: "mat_kartunama", name: "Kartu Nama Box (Art 260g + Box)", category: "SHEET_DOC", pricePerUnit: 35000, unitName: "box", description: "Isi 100 lembar kartu nama full color" },
 
-  // Merchandise & Merchandise (Per Unit)
-  { id: "mat_xbanner", name: "Stand X-Banner (Ukuran 60x160cm)", category: "MERCHANDISE", pricePerUnit: 45000, unitName: "pcs", description: "Rangka X-Banner fiber hitam tebal" },
-  { id: "mat_rollup", name: "Stand Roll Up Banner Aluminium (60x160)", category: "MERCHANDISE", pricePerUnit: 165000, unitName: "pcs", description: "Rangka stainless rollup kokoh + sarung" },
-  { id: "mat_stempel", name: "Stempel Otomatis (Flash Stamp)", category: "MERCHANDISE", pricePerUnit: 65000, unitName: "pcs", description: "Stempel warna tanpa bantalan tinta" },
-  { id: "mat_mug", name: "Mug Sublim Kustom + Kotak", category: "MERCHANDISE", pricePerUnit: 28000, unitName: "pcs", description: "Mug keramik putih sablon foto/logo" },
-];
-
-// Preset Finishing Options
-const FINISHINGS: FinishingOption[] = [
-  { id: "fin_eyelet", name: "Mata Ayam (Ring Seng 4 Sudut)", price: 2000 },
-  { id: "fin_sew", name: "Lipat Pas / Pres Keliling", price: 3000 },
-  { id: "fin_lam_doff", name: "Laminasi Doff (Per m² / Lembar)", price: 15000, isPerM2: true },
-  { id: "fin_lam_glossy", name: "Laminasi Glossy (Per m² / Lembar)", price: 15000, isPerM2: true },
-  { id: "fin_cut_die", name: "Potong Rapi (Cut to Size)", price: 2000 },
-  { id: "fin_spiral", name: "Jilid Spiral Kawat", price: 10000 },
-];
 
 export default function PrintingPOSView() {
   const { user, activeBranchId, activeBranchName } = useAuth();
 
-  // Active Category Tab
-  const [activeTab, setActiveTab] = useState<PrintCategory>("OUTDOOR_INDOOR");
+  const [categories, setCategories] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("pos_printing_categories");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [{ code: "UMUM", name: "Kategori Umum" }];
+  });
 
-  // Dynamic Finishing Options List
+  // Active Category Tab
+  const [activeTab, setActiveTab] = useState<PrintCategory>(categories[0].code);
+
   const [finishingOptions, setFinishingOptions] = useState<FinishingOption[]>(() => {
     try {
       const saved = localStorage.getItem("pos_printing_finishing_options");
@@ -139,7 +119,7 @@ export default function PrintingPOSView() {
         return parsed.filter((f: any) => f.isAvailable !== false);
       }
     } catch (e) {}
-    return FINISHINGS;
+    return [];
   });
 
   useEffect(() => {
@@ -151,6 +131,27 @@ export default function PrintingPOSView() {
       }
     } catch (e) {}
   }, []);
+
+  const [materialsList, setMaterialsList] = useState<MaterialOption[]>(() => {
+    try {
+      const saved = localStorage.getItem("pos_printing_materials");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.filter((m: any) => m.isAvailable !== false).map((m: any) => {
+          let cat: PrintCategory = m.category || "UMUM";
+          return {
+            id: m.id,
+            name: m.name,
+            category: cat,
+            pricePerUnit: m.price || 0,
+            unitName: m.unitType || "pcs",
+            description: m.description || ""
+          };
+        });
+      }
+    } catch (e) {}
+    return [];
+  });
 
   // Design Fee Tiers State
   const [designTiers, setDesignTiers] = useState<any[]>(() => {
@@ -181,7 +182,7 @@ export default function PrintingPOSView() {
   const [posCalcAddon, setPosCalcAddon] = useState<number>(0);
 
   // Calculator Form State
-  const [selectedMaterial, setSelectedMaterial] = useState<MaterialOption>(MATERIALS[0]!);
+  const [selectedMaterial, setSelectedMaterial] = useState<MaterialOption | null>(materialsList[0] || null);
   const [jobTitle, setJobTitle] = useState("");
   const [widthCm, setWidthCm] = useState<number>(300);
   const [heightCm, setHeightCm] = useState<number>(100);
@@ -208,11 +209,7 @@ export default function PrintingPOSView() {
         const savedStr = localStorage.getItem("pos_printing_customers");
         let list = savedStr ? JSON.parse(savedStr) : [];
         if (list.length === 0) {
-          list = [
-            { id: "cust_1", name: "Budi Santoso", companyName: "PT Sinar Merdeka Utama", phone: "081298765432", discountPercent: 10, tier: "VIP_CORPORATE" },
-            { id: "cust_2", name: "Siti Rahmawati", companyName: "Warung Kopi Jaya EO", phone: "085611223344", discountPercent: 5, tier: "RESELLER" },
-            { id: "cust_3", name: "Agus Prasetyo", companyName: "-", phone: "087855443322", discountPercent: 0, tier: "REGULAR" }
-          ];
+          list = [];
           localStorage.setItem("pos_printing_customers", JSON.stringify(list));
         }
 
@@ -286,16 +283,19 @@ export default function PrintingPOSView() {
 
   // Update default material when changing tab
   useEffect(() => {
-    const firstOfTab = MATERIALS.find((m) => m.category === activeTab);
+    const firstOfTab = materialsList.find((m) => m.category === activeTab);
     if (firstOfTab) {
       setSelectedMaterial(firstOfTab);
       setSelectedFinishings([]);
+    } else {
+      setSelectedMaterial(null);
     }
-  }, [activeTab]);
+  }, [activeTab, materialsList]);
 
   // Dynamic Area Calculation (m²)
   const calculatedAreaM2 = useMemo(() => {
-    if (selectedMaterial.category !== "OUTDOOR_INDOOR") return 1;
+    if (!selectedMaterial) return 1;
+    if (selectedMaterial.unitName.toLowerCase() !== "m²" && selectedMaterial.unitName.toLowerCase() !== "mÂ²") return 1;
     const rawArea = (widthCm / 100) * (heightCm / 100);
     // Minimum 1 m² order size rounding for banner
     return Math.max(1, parseFloat(rawArea.toFixed(2)));
@@ -303,10 +303,12 @@ export default function PrintingPOSView() {
 
   // Dynamic Price Calculation
   const currentItemPricing = useMemo(() => {
+    if (!selectedMaterial) return { baseTotal: 0, finishingTotal: 0, chosenDesignFee: 0, finalTotal: 0, chosenFinishingsObj: [] };
+
     let unitBase = selectedMaterial.pricePerUnit;
     let baseTotal = 0;
 
-    if (selectedMaterial.category === "OUTDOOR_INDOOR") {
+    if (selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²") {
       baseTotal = calculatedAreaM2 * unitBase * quantity;
     } else {
       baseTotal = unitBase * quantity;
@@ -320,7 +322,7 @@ export default function PrintingPOSView() {
       const fObj = finishingOptions.find((f) => f.id === fId);
       if (fObj) {
         chosenFinishingsObj.push(fObj);
-        if (fObj.isPerM2 && selectedMaterial.category === "OUTDOOR_INDOOR") {
+        if (fObj.isPerM2 && (selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²")) {
           finishingTotal += fObj.price * calculatedAreaM2 * quantity;
         } else {
           finishingTotal += fObj.price * quantity;
@@ -356,16 +358,18 @@ export default function PrintingPOSView() {
 
   // Add Item to Cart
   const handleAddToCart = () => {
-    const title = jobTitle.trim() || `${selectedMaterial.name} (${selectedMaterial.category === "OUTDOOR_INDOOR" ? `${widthCm}x${heightCm}cm` : "Unit"})`;
+    if (!selectedMaterial) return alert("Silakan pilih produk/bahan terlebih dahulu.");
+
+    const title = jobTitle.trim() || `${selectedMaterial.name} ${(selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²") ? `${widthCm}x${heightCm}cm` : "Unit"}`;
 
     const newItem: PrintingCartItem = {
       id: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       category: selectedMaterial.category,
       jobTitle: title,
       material: selectedMaterial,
-      widthCm: selectedMaterial.category === "OUTDOOR_INDOOR" ? widthCm : 0,
-      heightCm: selectedMaterial.category === "OUTDOOR_INDOOR" ? heightCm : 0,
-      areaM2: selectedMaterial.category === "OUTDOOR_INDOOR" ? calculatedAreaM2 : 0,
+      widthCm: (selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²") ? widthCm : 0,
+      heightCm: (selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²") ? heightCm : 0,
+      areaM2: (selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²") ? calculatedAreaM2 : 0,
       quantity,
       unitPrice: selectedMaterial.pricePerUnit,
       finishings: currentItemPricing.chosenFinishingsObj,
@@ -590,40 +594,20 @@ export default function PrintingPOSView() {
           </div>
         </div>
 
-        {/* Category Tabs */}
-        <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-800">
-          <button
-            onClick={() => setActiveTab("OUTDOOR_INDOOR")}
-            className={`py-1.5 px-2 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all rounded-none ${
-              activeTab === "OUTDOOR_INDOOR"
-                ? "bg-brand text-white shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800"
-            }`}
-          >
-            <Ruler className="size-3.5" /> Spanduk / Banner ($m^2$)
-          </button>
-
-          <button
-            onClick={() => setActiveTab("SHEET_DOC")}
-            className={`py-1.5 px-2 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all rounded-none ${
-              activeTab === "SHEET_DOC"
-                ? "bg-brand text-white shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800"
-            }`}
-          >
-            <FileText className="size-3.5" /> Dokumen & A3+ (Lembar)
-          </button>
-
-          <button
-            onClick={() => setActiveTab("MERCHANDISE")}
-            className={`py-1.5 px-2 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all rounded-none ${
-              activeTab === "MERCHANDISE"
-                ? "bg-brand text-white shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800"
-            }`}
-          >
-            <Box className="size-3.5" /> Stand & Merchandise
-          </button>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-1 bg-slate-100 dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-800">
+          {categories.map((cat) => (
+            <button
+              key={cat.code}
+              onClick={() => setActiveTab(cat.code)}
+              className={`py-1.5 px-2 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all rounded-none ${
+                activeTab === cat.code
+                  ? "bg-brand text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800"
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
         </div>
 
         {/* Compact Calculator Main Box */}
@@ -634,11 +618,17 @@ export default function PrintingPOSView() {
               <Layers className="size-3.5 text-brand" /> Pilih Bahan / Media Cetak
             </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {MATERIALS.filter((m) => m.category === activeTab).map((mat) => {
-                const isSelected = selectedMaterial.id === mat.id;
-                return (
-                  <div
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {materialsList.length === 0 ? (
+                  <div className="col-span-full p-4 border border-dashed rounded-lg text-center text-slate-500">
+                    Belum ada produk untuk kategori ini. <br/>
+                    <span className="text-xs">Silakan tambahkan di menu Produk.</span>
+                  </div>
+                ) : (
+                  materialsList.filter((m) => m.category === activeTab).map((mat) => {
+                  const isSelected = selectedMaterial?.id === mat.id;
+                  return (
+                    <div
                     key={mat.id}
                     onClick={() => setSelectedMaterial(mat)}
                     className={`p-2 border cursor-pointer transition-all rounded-none relative ${
@@ -662,7 +652,8 @@ export default function PrintingPOSView() {
                     </div>
                   </div>
                 );
-              })}
+              })
+            )}
             </div>
           </div>
 
@@ -683,7 +674,7 @@ export default function PrintingPOSView() {
               </div>
 
               {/* Outdoor Dimensions Input */}
-              {selectedMaterial.category === "OUTDOOR_INDOOR" ? (
+                {(selectedMaterial?.unitName.toLowerCase() === "m²" || selectedMaterial?.unitName.toLowerCase() === "mÂ²") && (
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
                     Dimensi Ukuran Cetak (Centimeter / cm)
@@ -720,7 +711,7 @@ export default function PrintingPOSView() {
                     </span>
                   </div>
                 </div>
-              ) : null}
+                )}
 
               {/* Quantity Input */}
               <div>
