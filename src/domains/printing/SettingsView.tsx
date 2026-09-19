@@ -99,7 +99,7 @@ const DEFAULT_DESIGN_TIERS: PrintingDesignFeeTier[] = [
 export function PrintingSettingsView() {
   const { user, branches, addBranch, deleteBranch, switchBranch, activeBranchId, editBranch, setMainBranch } = useAuth();
   const [activeTab, setActiveTab] = useState<
-    "printing_calc" | "printing_categories" | "printing_finishing" | "printing_spk" | "design_fee_calc" | "cabang" | "invoice" | "langganan"
+    "printing_calc" | "printing_categories" | "printing_finishing" | "printing_spk" | "design_fee_calc" | "cabang" | "invoice" | "langganan" | "printer_kasir"
   >("printing_calc");
 
   // Design Fee Settings & Calculator State
@@ -140,6 +140,12 @@ export function PrintingSettingsView() {
   const [newMachineName, setNewMachineName] = useState("");
   const [newMachineType, setNewMachineType] = useState("Outdoor Banner");
   const [newMachineWidth, setNewMachineWidth] = useState(320);
+
+  // Receipt Printers State
+  const [receiptPrinters, setReceiptPrinters] = useState<{ id: string; name: string; type: string; connection: string; status: string }[]>([]);
+  const [newReceiptPrinterName, setNewReceiptPrinterName] = useState("");
+  const [newReceiptPrinterType, setNewReceiptPrinterType] = useState("Thermal 80mm");
+  const [newReceiptPrinterConnection, setNewReceiptPrinterConnection] = useState("USB");
 
   // Finishing Options State
   const [finishings, setFinishings] = useState<PrintingFinishingSetting[]>(DEFAULT_FINISHINGS);
@@ -224,6 +230,12 @@ export function PrintingSettingsView() {
         setCategories(JSON.parse(savedCat));
       }
 
+      // Receipt Printers
+      const savedReceipt = localStorage.getItem(`pos_tenant_${user.id}_receipt_printers`);
+      if (savedReceipt) {
+        setReceiptPrinters(JSON.parse(savedReceipt));
+      }
+
       // 5. Invoice Config
       const currentConfig = getInvoiceSettings();
       setInvoiceConfig(currentConfig);
@@ -259,9 +271,42 @@ export function PrintingSettingsView() {
 
   // Delete Machine
   const handleDeleteMachine = (id: string) => {
-    if (confirm("Apakah Anda yakin ingin menghapus mesin ini dari daftar?")) {
-      setMachines(machines.filter((m) => m.id !== id));
+    if (confirm("Apakah Anda yakin ingin menghapus mesin ini dari daftar armada?")) {
+      const updated = machines.filter((m) => m.id !== id);
+      setMachines(updated);
+      try {
+        const savedSettings = JSON.parse(localStorage.getItem(`pos_tenant_${user?.id}_printing_settings`) || "{}");
+        savedSettings.machines = updated;
+        localStorage.setItem(`pos_tenant_${user?.id}_printing_settings`, JSON.stringify(savedSettings));
+      } catch (e) {}
     }
+  };
+
+  // Receipt Printer Handlers
+  const handleAddReceiptPrinter = () => {
+    if (!newReceiptPrinterName.trim() || !user) return alert("Nama printer tidak boleh kosong!");
+    const newPrinter = {
+      id: `rp_${Date.now()}`,
+      name: newReceiptPrinterName,
+      type: newReceiptPrinterType,
+      connection: newReceiptPrinterConnection,
+      status: "Ready",
+    };
+    const updated = [...receiptPrinters, newPrinter];
+    setReceiptPrinters(updated);
+    setNewReceiptPrinterName("");
+    try {
+      localStorage.setItem(`pos_tenant_${user.id}_receipt_printers`, JSON.stringify(updated));
+    } catch(e) {}
+  };
+
+  const handleDeleteReceiptPrinter = (id: string) => {
+    if (!user || !confirm("Apakah Anda yakin ingin menghapus printer kasir ini?")) return;
+    const updated = receiptPrinters.filter(p => p.id !== id);
+    setReceiptPrinters(updated);
+    try {
+      localStorage.setItem(`pos_tenant_${user.id}_receipt_printers`, JSON.stringify(updated));
+    } catch(e) {}
   };
 
   // Toggle Machine Status
@@ -604,6 +649,7 @@ export function PrintingSettingsView() {
             { id: "printing_finishing", label: "Pilihan Finishing Tambahan", icon: Scissors, badge: `${finishings.length} Opsi` },
             { id: "printing_spk", label: "Alur SPK & DP Minimal", icon: FileText, badge: `DP ${minDpPercentage}%` },
             { id: "design_fee_calc", label: "Biaya & Kalkulator Desain", icon: Sparkles, badge: `${designTiers.length} Preset` },
+            { id: "printer_kasir", label: "Koneksi Printer Struk", icon: Printer, badge: `${receiptPrinters.length} Aktif` },
             { id: "cabang", label: "Outlet & Cabang", icon: Building2, badge: `${branches.length} Outlet` },
             { id: "invoice", label: "Format Kode SPK", icon: Receipt, badge: invoiceConfig.invoicePrefix },
             { id: "langganan", label: "Status Paket SaaS", icon: Crown, badge: "PRO" }
@@ -636,6 +682,116 @@ export function PrintingSettingsView() {
 
         {/* Content Area */}
         <div className="flex-1 min-w-0 space-y-4">
+
+      {/* TAB PRINTER KASIR */}
+      {activeTab === "printer_kasir" && (
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <Printer className="size-4 text-brand" /> Daftar Koneksi Printer Kasir (Struk & Nota)
+            </h3>
+
+            {/* Form Tambah Printer Kasir */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800">
+              <div className="sm:col-span-1">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Nama Printer
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Misal: Epson TM-T82X, Kassen..."
+                  value={newReceiptPrinterName}
+                  onChange={(e) => setNewReceiptPrinterName(e.target.value)}
+                  className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Tipe / Ukuran Kertas
+                </label>
+                <select
+                  value={newReceiptPrinterType}
+                  onChange={(e) => setNewReceiptPrinterType(e.target.value)}
+                  className="w-full h-8 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 px-2 font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                >
+                  <option value="Thermal 58mm">Thermal 58mm</option>
+                  <option value="Thermal 80mm">Thermal 80mm</option>
+                  <option value="Dot Matrix 76mm">Dot Matrix 76mm</option>
+                  <option value="A4 / A5">A4 / A5 (Standard)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Metode Koneksi
+                </label>
+                <select
+                  value={newReceiptPrinterConnection}
+                  onChange={(e) => setNewReceiptPrinterConnection(e.target.value)}
+                  className="w-full h-8 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 px-2 font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                >
+                  <option value="USB">Kabel USB</option>
+                  <option value="Bluetooth">Bluetooth / Wireless</option>
+                  <option value="LAN / Ethernet">LAN / Ethernet (IP)</option>
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <Button
+                  onClick={handleAddReceiptPrinter}
+                  disabled={!newReceiptPrinterName.trim()}
+                  className="w-full h-8 text-xs bg-brand text-white font-bold rounded-none hover:bg-brand/90"
+                >
+                  <Plus className="size-3 mr-1" /> Tambah
+                </Button>
+              </div>
+            </div>
+
+            {/* List */}
+            {receiptPrinters.length > 0 ? (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800 border-t border-slate-200 dark:border-slate-800 mt-4">
+                {receiptPrinters.map((p) => (
+                  <div key={p.id} className="py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 grid place-items-center">
+                        <Printer className="size-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                            {p.name}
+                          </h4>
+                          <span className="bg-emerald-100 text-emerald-800 text-[9px] uppercase font-black px-1.5 py-0.5 tracking-wider">
+                            {p.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Tipe: <span className="font-semibold text-slate-700 dark:text-slate-300">{p.type}</span> &bull; Koneksi: <span className="font-semibold text-slate-700 dark:text-slate-300">{p.connection}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteReceiptPrinter(p.id)}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-none h-8 px-2"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center bg-slate-50 dark:bg-slate-900/50 border border-dashed border-slate-200 dark:border-slate-800 mt-4">
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                  Belum ada printer kasir / struk yang ditambahkan.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: Armada Mesin Cetak */}
       {activeTab === "printing_calc" && (
