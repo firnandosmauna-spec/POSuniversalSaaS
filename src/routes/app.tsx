@@ -165,6 +165,18 @@ function AppLayout() {
             colorClass: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/50 group-hover:bg-blue-600 group-hover:text-white group-[.active]:bg-blue-600 group-[.active]:text-white group-[.active]:shadow-md" 
           },
           { 
+            name: "Shift Kasir", 
+            icon: Clock, 
+            to: "/app/shifts",
+            colorClass: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/50 group-hover:bg-amber-600 group-hover:text-white group-[.active]:bg-amber-600 group-[.active]:text-white group-[.active]:shadow-md" 
+          },
+          { 
+            name: "Belanja & Pengeluaran", 
+            icon: Wallet, 
+            to: "/app/expenses",
+            colorClass: "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 border border-rose-200/50 group-hover:bg-rose-600 group-hover:text-white group-[.active]:bg-rose-600 group-[.active]:text-white group-[.active]:shadow-md" 
+          },
+          { 
             name: "Bahan & Material Cetak", 
             icon: Package, 
             to: "/app/products",

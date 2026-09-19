@@ -35,9 +35,43 @@ export function ShiftsView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Forms
-  const [cashierName, setCashierName] = useState("");
+  const [cashierName, setCashierName] = useState(user?.name || "");
   const [startingCash, setStartingCash] = useState("");
   const [actualEndingCash, setActualEndingCash] = useState("");
+  const [staffList, setStaffList] = useState<{id: string, name: string, role: string}[]>([]);
+
+  useEffect(() => {
+    if (user?.name && staffList.length === 0) {
+      setCashierName(user.name);
+    }
+  }, [user, staffList]);
+
+  // Fetch staff users
+  useEffect(() => {
+    const fetchStaff = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from("store_users")
+          .select("id, name, role")
+          .eq("tenant_id", user.id);
+        
+        if (!error && data) {
+          setStaffList(data);
+          // Set default selected to current user if found, or first staff
+          const currentStaff = data.find(s => s.name === user.name);
+          if (currentStaff) {
+            setCashierName(currentStaff.name);
+          } else if (data.length > 0) {
+            setCashierName(data[0].name);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching staff:", err);
+      }
+    };
+    fetchStaff();
+  }, [user]);
 
   // Close shift data
   const [cashSales, setCashSales] = useState<number>(0);
@@ -426,12 +460,21 @@ export function ShiftsView() {
           <form onSubmit={handleOpenShift} className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Nama Kasir</label>
-              <Input 
-                required 
-                placeholder="Cth: Siti, Budi..." 
+              <select 
+                required
                 value={cashierName}
                 onChange={(e) => setCashierName(e.target.value)}
-              />
+                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950"
+              >
+                <option value="" disabled>Pilih Kasir</option>
+                {staffList.length > 0 ? (
+                  staffList.map(staff => (
+                    <option key={staff.id} value={staff.name}>{staff.name} ({staff.role})</option>
+                  ))
+                ) : (
+                  <option value={user?.name || "Kasir"}>{user?.name || "Kasir"}</option>
+                )}
+              </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Uang Kas Awal (Rp)</label>
