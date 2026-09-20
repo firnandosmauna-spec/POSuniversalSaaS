@@ -235,6 +235,9 @@ export function PrintingProductsView() {
           price: Number(formPrice) || 0,
           stock: Number(formStock) || 0,
           category: formCategory,
+          unit_type: formUnitType,
+          description: formDescription,
+          finishings_allowed: finishingsArr,
           status: formIsAvailable ? "active" : "inactive"
         });
         
