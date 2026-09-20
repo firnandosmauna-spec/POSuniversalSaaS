@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+﻿import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { supabase } from "@/shared/lib/supabase";
 import { generateInvoiceCode, getInvoiceSettings } from "@/shared/utils/invoiceGenerator";
@@ -43,7 +43,7 @@ export interface MaterialOption {
   name: string;
   category: PrintCategory;
   pricePerUnit: number; // Price per m2 for OUTDOOR, price per sheet/unit for SHEET/MERCH
-  unitName: string; // "m²", "lembar", "box", "pcs"
+  unitName: string; // "mÂ²", "lembar", "box", "pcs"
   description: string;
 }
 
@@ -95,6 +95,20 @@ export interface PrintingJobOrder {
 
 
 export default function PrintingPOSView() {
+
+  // Helper to determine if a material uses dimension (m2) calculation
+  const isMaterialDimensionBased = (material: PrintingMaterial | null) => {
+    if (!material) return false;
+    const unit = (material.unitName || "").toLowerCase();
+    const cat = (material.category || "").toLowerCase();
+    
+    if (unit.includes("m") && (unit.includes("2") || unit.includes("Â²") || unit.includes("Ã‚Â²") || unit.includes("Ãƒâ€šÃ‚Â²"))) return true;
+    if (unit.includes("meter persegi") || unit === "m") return true;
+    if (cat.includes("banner") || cat.includes("spanduk") || cat.includes("outdoor") || cat.includes("baliho") || cat.includes("stiker") || cat.includes("sticker")) return true;
+    
+    return false;
+  };
+
   const { user, activeBranchId, activeBranchName } = useAuth();
 
   const [categories, setCategories] = useState<any[]>(() => {
@@ -292,12 +306,12 @@ export default function PrintingPOSView() {
     }
   }, [activeTab, materialsList]);
 
-  // Dynamic Area Calculation (m²)
+  // Dynamic Area Calculation (mÂ²)
   const calculatedAreaM2 = useMemo(() => {
     if (!selectedMaterial) return 1;
-    if (selectedMaterial.unitName.toLowerCase() !== "m²" && selectedMaterial.unitName.toLowerCase() !== "mÂ²") return 1;
+    if (!isMaterialDimensionBased(selectedMaterial)) return 1;
     const rawArea = (widthCm / 100) * (heightCm / 100);
-    // Minimum 1 m² order size rounding for banner
+    // Minimum 1 mÂ² order size rounding for banner
     return Math.max(1, parseFloat(rawArea.toFixed(2)));
   }, [widthCm, heightCm, selectedMaterial]);
 
@@ -308,7 +322,7 @@ export default function PrintingPOSView() {
     let unitBase = selectedMaterial.pricePerUnit;
     let baseTotal = 0;
 
-    if (selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²") {
+    if (isMaterialDimensionBased(selectedMaterial)) {
       baseTotal = calculatedAreaM2 * unitBase * quantity;
     } else {
       baseTotal = unitBase * quantity;
@@ -322,7 +336,7 @@ export default function PrintingPOSView() {
       const fObj = finishingOptions.find((f) => f.id === fId);
       if (fObj) {
         chosenFinishingsObj.push(fObj);
-        if (fObj.isPerM2 && (selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²")) {
+        if (fObj.isPerM2 && isMaterialDimensionBased(selectedMaterial)) {
           finishingTotal += fObj.price * calculatedAreaM2 * quantity;
         } else {
           finishingTotal += fObj.price * quantity;
@@ -360,16 +374,16 @@ export default function PrintingPOSView() {
   const handleAddToCart = () => {
     if (!selectedMaterial) return alert("Silakan pilih produk/bahan terlebih dahulu.");
 
-    const title = jobTitle.trim() || `${selectedMaterial.name} ${(selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²") ? `${widthCm}x${heightCm}cm` : "Unit"}`;
+    const title = jobTitle.trim() || `${selectedMaterial.name} ${isMaterialDimensionBased(selectedMaterial) ? `${widthCm}x${heightCm}cm` : "Unit"}`;
 
     const newItem: PrintingCartItem = {
       id: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       category: selectedMaterial.category,
       jobTitle: title,
       material: selectedMaterial,
-      widthCm: (selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²") ? widthCm : 0,
-      heightCm: (selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²") ? heightCm : 0,
-      areaM2: (selectedMaterial.unitName.toLowerCase() === "m²" || selectedMaterial.unitName.toLowerCase() === "mÂ²") ? calculatedAreaM2 : 0,
+      widthCm: isMaterialDimensionBased(selectedMaterial) ? widthCm : 0,
+      heightCm: isMaterialDimensionBased(selectedMaterial) ? heightCm : 0,
+      areaM2: isMaterialDimensionBased(selectedMaterial) ? calculatedAreaM2 : 0,
       quantity,
       unitPrice: selectedMaterial.pricePerUnit,
       finishings: currentItemPricing.chosenFinishingsObj,
@@ -674,7 +688,7 @@ export default function PrintingPOSView() {
               </div>
 
               {/* Outdoor Dimensions Input */}
-                {(selectedMaterial?.unitName.toLowerCase() === "m²" || selectedMaterial?.unitName.toLowerCase() === "mÂ²") && (
+                {isMaterialDimensionBased(selectedMaterial) && (
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
                     Dimensi Ukuran Cetak (Centimeter / cm)
@@ -706,8 +720,8 @@ export default function PrintingPOSView() {
                   <div className="p-1.5 px-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] flex items-center justify-between rounded-none">
                     <span className="text-slate-600 dark:text-slate-400 font-medium">Luas Dihitung:</span>
                     <span className="font-mono font-extrabold text-slate-900 dark:text-white text-xs">
-                      {(widthCm / 100).toFixed(2)}m × {(heightCm / 100).toFixed(2)}m ={" "}
-                      <strong className="text-brand">{calculatedAreaM2} m²</strong>
+                      {(widthCm / 100).toFixed(2)}m Ã— {(heightCm / 100).toFixed(2)}m ={" "}
+                      <strong className="text-brand">{calculatedAreaM2} mÂ²</strong>
                     </span>
                   </div>
                 </div>
@@ -954,12 +968,12 @@ export default function PrintingPOSView() {
                 <div className="flex items-start justify-between gap-1.5">
                   <div>
                     <span className="text-[9px] font-bold text-brand uppercase font-mono block">
-                      #{idx + 1} • {item.material.category}
+                      #{idx + 1} â€¢ {item.material.category}
                     </span>
                     <h4 className="font-bold text-xs text-slate-900 dark:text-white leading-tight">{item.jobTitle}</h4>
                     <p className="text-[10px] text-slate-600 dark:text-slate-400">
                       {item.material.name}{" "}
-                      {item.category === "OUTDOOR_INDOOR" && `(${item.widthCm}x${item.heightCm}cm = ${item.areaM2}m²)`}
+                      {item.category === "OUTDOOR_INDOOR" && `(${item.widthCm}x${item.heightCm}cm = ${item.areaM2}mÂ²)`}
                     </p>
                   </div>
 
@@ -1115,7 +1129,7 @@ export default function PrintingPOSView() {
                 onClick={() => setSelectedSpkJob(null)}
                 className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1"
               >
-                ✕
+                âœ•
               </Button>
             </div>
 
@@ -1129,7 +1143,7 @@ export default function PrintingPOSView() {
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{selectedSpkJob.branchName}</p>
                   <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-1">
-                    Kasir: {selectedSpkJob.cashierName} • Tgl:{" "}
+                    Kasir: {selectedSpkJob.cashierName} â€¢ Tgl:{" "}
                     {new Date(selectedSpkJob.createdAt).toLocaleString("id-ID")}
                   </p>
                 </div>
@@ -1170,12 +1184,12 @@ export default function PrintingPOSView() {
                       }
                       className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold text-brand p-1 rounded-none"
                     >
-                      <option value="Antrean">🟡 Antrean Mesin</option>
-                      <option value="Proses Desain">🔵 Proses Desain</option>
-                      <option value="Proses Cetak">🟣 Proses Cetak</option>
-                      <option value="Finishing">🟠 Finishing</option>
-                      <option value="Siap Diambil">🟢 Siap Diambil</option>
-                      <option value="Selesai">⚪ Selesai (Diambil)</option>
+                      <option value="Antrean">ðŸŸ¡ Antrean Mesin</option>
+                      <option value="Proses Desain">ðŸ”µ Proses Desain</option>
+                      <option value="Proses Cetak">ðŸŸ£ Proses Cetak</option>
+                      <option value="Finishing">ðŸŸ  Finishing</option>
+                      <option value="Siap Diambil">ðŸŸ¢ Siap Diambil</option>
+                      <option value="Selesai">âšª Selesai (Diambil)</option>
                     </select>
                   </div>
                 </div>
@@ -1204,7 +1218,7 @@ export default function PrintingPOSView() {
                           Ukuran:{" "}
                           <strong className="text-slate-800 dark:text-slate-200">
                             {item.category === "OUTDOOR_INDOOR"
-                              ? `${item.widthCm} x ${item.heightCm} cm (${item.areaM2} m²)`
+                              ? `${item.widthCm} x ${item.heightCm} cm (${item.areaM2} mÂ²)`
                               : "Standard Unit"}
                           </strong>
                         </div>
@@ -1395,3 +1409,5 @@ export default function PrintingPOSView() {
     </div>
   );
 }
+
+
