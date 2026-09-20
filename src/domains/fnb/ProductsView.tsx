@@ -232,35 +232,37 @@ export function ProductsView() {
       saveLocalStation(productId, targetStation);
 
       // 2. Async sync to Supabase
-      const productData = {
-        id: productId,
-        tenant_id: user.id,
-        name: newProductItem.name,
-        cost_price: newProductItem.cost_price,
-        price: newProductItem.price,
-        stock: newProductItem.stock,
-        category: newProductItem.category,
-        status: newProductItem.status,
-        image_url: newProductItem.image_url,
-        target_station: targetStation
-      };
+      if (user && !user.id.includes("tenant_")) {
+        try {
+          const productData = {
+            id: productId,
+            tenant_id: user.id,
+            name: newProductItem.name,
+            cost_price: newProductItem.cost_price,
+            price: newProductItem.price,
+            stock: newProductItem.stock,
+            category: newProductItem.category,
+            status: newProductItem.status,
+            image_url: newProductItem.image_url,
+            target_station: targetStation
+          };
 
-      try {
-        if (editingProduct) {
-          const { error } = await supabase.from("products").update(productData).eq("id", editingProduct.id);
-          if (error) {
-            console.error("Update error:", error);
-            alert("Data tersimpan lokal, namun gagal sinkronisasi ke cloud.");
+          if (editingProduct) {
+            const { error } = await supabase.from("products").update(productData).eq("id", editingProduct.id);
+            if (error) {
+              console.error("Update error:", error);
+              alert("Data tersimpan lokal, namun gagal sinkronisasi ke cloud.");
+            }
+          } else {
+            const { error } = await supabase.from("products").insert([productData]);
+            if (error) {
+              console.error("Insert error:", error);
+              alert("Data tersimpan lokal, namun gagal sinkronisasi ke cloud.");
+            }
           }
-        } else {
-          const { error } = await supabase.from("products").insert([productData]);
-          if (error) {
-            console.error("Insert error:", error);
-            alert("Data tersimpan lokal, namun gagal sinkronisasi ke cloud.");
-          }
+        } catch (err) {
+          console.warn("Supabase product sync exception (saved locally):", err);
         }
-      } catch (err) {
-        console.warn("Supabase product sync exception (saved locally):", err);
       }
       
       // Reset form
@@ -288,10 +290,12 @@ export function ProductsView() {
     setProducts(updated);
     localStorage.setItem(tenantProductKey, JSON.stringify(updated));
 
-    try {
-      await supabase.from("products").delete().eq("id", id);
-    } catch (error) {
-      console.warn("Supabase product delete sync error:", error);
+    if (user && !user.id.includes("tenant_")) {
+      try {
+        await supabase.from("products").delete().eq("id", id);
+      } catch (error) {
+        console.warn("Supabase product delete sync error:", error);
+      }
     }
   };
 

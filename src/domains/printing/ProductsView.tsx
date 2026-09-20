@@ -225,7 +225,7 @@ export function PrintingProductsView() {
     saveMaterials(updated);
 
     // Sync optional with Supabase
-    if (user && user.id !== "tenant_demo") {
+    if (user && !user.id.includes("tenant_")) {
       try {
         const { error } = await supabase.from("products").upsert({
           id: currentId,
@@ -256,7 +256,7 @@ export function PrintingProductsView() {
       const updated = materials.filter((m) => m.id !== id);
       saveMaterials(updated);
 
-      if (user && user.id !== "tenant_demo") {
+      if (user && !user.id.includes("tenant_")) {
         try {
           await supabase.from("products").delete().eq("id", id);
         } catch (e) {
