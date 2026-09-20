@@ -237,7 +237,6 @@ export function PrintingProductsView() {
           category: formCategory,
           unit_type: formUnitType,
           description: formDescription,
-          finishings_allowed: finishingsArr,
           status: formIsAvailable ? "active" : "inactive"
         });
         
