@@ -100,16 +100,16 @@ export default function PrintingPOSView() {
   const isMaterialDimensionBased = (material: MaterialOption | null) => {
     if (!material) return false;
     const unit = (material.unitName || "").toLowerCase();
-    const cat = (material.category || "").toLowerCase();
     
-    if (unit.includes("m") && (unit.includes("2") || unit.includes("Â²") || unit.includes("Ã‚Â²") || unit.includes("Ãƒâ€šÃ‚Â²"))) return true;
-    if (unit.includes("meter persegi") || unit === "m") return true;
-    if (cat.includes("banner") || cat.includes("spanduk") || cat.includes("outdoor") || cat.includes("baliho") || cat.includes("stiker") || cat.includes("sticker")) return true;
+    // If they explicitly use pcs/lembar etc, definitely not dimension
+    if (unit.includes("pcs") || unit.includes("lembar") || unit.includes("lbr") || unit.includes("pack") || unit.includes("rim") || unit.includes("buku") || unit.includes("a3") || unit.includes("box")) return false;
+
+    // Dimension based if unit mentions m, m2, meter, meter persegi, cm
+    if (unit.includes("m2") || unit.includes("m²") || unit.includes("meter") || unit === "m" || unit.includes("cm") || unit.includes("mÂ²") || unit.includes("mÃ‚Â²")) return true;
     
     return false;
   };
-
-  const { user, activeBranchId, activeBranchName } = useAuth();
+const { user, activeBranchId, activeBranchName } = useAuth();
 
   const [categories, setCategories] = useState<any[]>(() => {
     try {
