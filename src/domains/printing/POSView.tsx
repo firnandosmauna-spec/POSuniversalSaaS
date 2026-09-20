@@ -600,7 +600,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate("/app/sales")}
+                onClick={() => navigate({ to: "/app/sales" })}
                 className="text-[10px] h-7 px-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 gap-1 rounded-none hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
                 <FileText className="size-3 text-brand" /> SPK & Riwayat Cetak
