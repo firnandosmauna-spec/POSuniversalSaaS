@@ -181,7 +181,7 @@ export function PrintingProductsView() {
       .filter((s) => s.length > 0);
 
     let updated: PrintingMaterial[];
-    const currentId = editingMaterial ? editingMaterial.id : `mat_${Date.now()}`;
+    const currentId = editingMaterial ? editingMaterial.id : crypto.randomUUID();
 
     if (editingMaterial) {
       // Edit

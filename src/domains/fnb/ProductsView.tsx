@@ -206,7 +206,7 @@ export function ProductsView() {
         }
       }
 
-      const productId = editingProduct ? editingProduct.id : `prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const productId = editingProduct ? editingProduct.id : crypto.randomUUID();
       const newProductItem: Product = {
         id: productId,
         name: name.trim(),
