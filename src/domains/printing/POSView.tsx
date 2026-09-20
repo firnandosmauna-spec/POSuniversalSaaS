@@ -162,7 +162,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
         let list: any[] = savedStr ? JSON.parse(savedStr) : [];
         
         const catStr = localStorage.getItem("pos_printing_categories");
-        const loadedCategories = catStr ? JSON.parse(catStr) : [];
+        let loadedCategories = catStr ? JSON.parse(catStr) : [];
 
         if (user) {
           const { data: dbProducts } = await supabase
@@ -172,6 +172,24 @@ const { user, activeBranchId, activeBranchName } = useAuth();
             .order("name", { ascending: true });
 
           if (dbProducts && dbProducts.length > 0) {
+            // Extract missing categories dynamically from products
+            const uniqueDbCategories = Array.from(new Set(dbProducts.map(p => p.category).filter(Boolean)));
+            let catUpdated = false;
+            const currentCats = [...loadedCategories];
+            
+            uniqueDbCategories.forEach((catCode: any) => {
+              if (!currentCats.some(c => c.code === catCode)) {
+                currentCats.push({ code: catCode, name: catCode });
+                catUpdated = true;
+              }
+            });
+
+            if (catUpdated) {
+              loadedCategories = currentCats;
+              localStorage.setItem("pos_printing_categories", JSON.stringify(currentCats));
+              setCategories(currentCats);
+            }
+
             const remoteMaterials = dbProducts.map((p) => ({
               id: p.id,
               name: p.name,
