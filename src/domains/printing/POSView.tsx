@@ -97,7 +97,7 @@ export interface PrintingJobOrder {
 export default function PrintingPOSView() {
 
   // Helper to determine if a material uses dimension (m2) calculation
-  const isMaterialDimensionBased = (material: PrintingMaterial | null) => {
+  const isMaterialDimensionBased = (material: MaterialOption | null) => {
     if (!material) return false;
     const unit = (material.unitName || "").toLowerCase();
     const cat = (material.category || "").toLowerCase();
@@ -317,7 +317,7 @@ export default function PrintingPOSView() {
 
   // Dynamic Price Calculation
   const currentItemPricing = useMemo(() => {
-    if (!selectedMaterial) return { baseTotal: 0, finishingTotal: 0, chosenDesignFee: 0, finalTotal: 0, chosenFinishingsObj: [] };
+    if (!selectedMaterial) return { baseTotal: 0, finishingTotal: 0, chosenDesignFee: 0, chosenDesignFeeName: "File Siap Cetak (Rp 0)", finalTotal: 0, chosenFinishingsObj: [] };
 
     let unitBase = selectedMaterial.pricePerUnit;
     let baseTotal = 0;

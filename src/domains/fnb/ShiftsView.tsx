@@ -59,7 +59,7 @@ export function ShiftsView() {
         if (!error && data) {
           setStaffList(data);
           // Set default selected to current user if found, or first staff
-          const currentStaff = data.find(s => s.name === user.name);
+          const currentStaff = data.find(s => s.name === user?.name);
           if (currentStaff) {
             setCashierName(currentStaff.name);
           } else if (data.length > 0) {
