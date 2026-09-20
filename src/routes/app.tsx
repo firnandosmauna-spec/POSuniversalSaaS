@@ -320,8 +320,36 @@ function AppLayout() {
         break;
     }
 
-    // Filter menu based on User Role permissions
+    // Filter menu based on User Role permissions (RBAC)
     const userRole = user?.role || "Owner Tenant";
+    if (userRole !== "Owner Tenant") {
+      try {
+        const savedRoleAccess = localStorage.getItem(`pos_tenant_${user?.id}_role_access_${user?.businessType}`);
+        if (savedRoleAccess) {
+          const roleAccess = JSON.parse(savedRoleAccess);
+          if (roleAccess[userRole]) {
+            return baseMenu.filter((m) => roleAccess[userRole].includes(m.to));
+          }
+        } else {
+          // Fallback defaults for Printing if no config saved yet
+          if (user?.businessType === "PRINTING") {
+            const defaultRoleAccess: Record<string, string[]> = {
+              "Manager Percetakan": ["/app/dashboard", "/app/pos", "/app/sales", "/app/shifts", "/app/expenses", "/app/products", "/app/customers", "/app/users", "/app/settings"],
+              "Kasir POS": ["/app/pos", "/app/sales", "/app/shifts", "/app/customers"],
+              "Desainer Grafis": ["/app/dashboard", "/app/pos", "/app/sales", "/app/products"],
+              "Operator Mesin Cetak": ["/app/dashboard", "/app/sales", "/app/products"],
+            };
+            if (defaultRoleAccess[userRole]) {
+               return baseMenu.filter((m) => defaultRoleAccess[userRole]!.includes(m.to));
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse role access", e);
+      }
+    }
+
+    // Legacy Fallback filters
     if (userRole === "Kasir") {
       return baseMenu.filter((m) => ["/app/pos", "/app/shifts", "/app/sales", "/app/customers"].includes(m.to));
     }

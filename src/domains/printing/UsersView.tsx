@@ -69,12 +69,9 @@ export function PrintingUsersView() {
   // Storage Key specific to tenant ID
   const tenantStorageKey = user ? `pos_printing_${user.id}_staff` : "pos_printing_demo_staff";
 
-  // Sync password with email automatically if untouched
+  // Auto-clear PIN hint when email changes on new staff form
   const handleEmailChange = (val: string) => {
     setFormEmail(val);
-    if (!editingStaff && (!formPassword || formPassword === formEmail)) {
-      setFormPassword(val);
-    }
   };
 
   // Load Staff List
@@ -166,7 +163,6 @@ export function PrintingUsersView() {
     setEditingStaff(null);
     setFormName("");
     setFormEmail("");
-    setFormPassword("");
     setFormPinCode("123456");
     setFormRole("Kasir POS");
     setFormAssignedMachine("Digital Press A3+");
@@ -179,21 +175,21 @@ export function PrintingUsersView() {
     setEditingStaff(st);
     setFormName(st.name);
     setFormEmail(st.email);
-    setFormPassword(st.email); // Default same
-    setFormPinCode(st.pin_code || "123456");
+    setFormPassword(""); // blank = no change
+    setFormPinCode(st.pin_code || ""); // show current PIN
     setFormRole(st.role);
     setFormAssignedMachine(st.assignedMachine || "Mesin Cetak");
     setFormStatus(st.status);
     setIsModalOpen(true);
   };
 
-  // Save Staff
+  // Save Staff — localStorage is source of truth, Supabase is best-effort sync
   const handleSaveStaff = async () => {
     if (!formName.trim()) return alert("Nama staf wajib diisi!");
     if (!formEmail.trim()) return alert("Email staf wajib diisi!");
 
-    // Password rule enforcement: if blank, set password = email
-    const finalPassword = formPassword.trim() || formEmail.trim();
+    // PIN: keep existing if field left blank on edit
+    const finalPin = formPinCode.trim() || (editingStaff?.pin_code ?? "123456");
 
     let updated: PrintingStaffUser[];
 
@@ -202,9 +198,9 @@ export function PrintingUsersView() {
         if (st.id === editingStaff.id) {
           return {
             ...st,
-            name: formName,
-            email: formEmail,
-            pin_code: formPinCode,
+            name: formName.trim(),
+            email: formEmail.trim(),
+            pin_code: finalPin,
             role: formRole,
             assignedMachine: formAssignedMachine,
             status: formStatus
@@ -216,9 +212,9 @@ export function PrintingUsersView() {
       const newStaff: PrintingStaffUser = {
         id: `staf_${Date.now()}`,
         tenant_id: user ? user.id : "tenant_demo",
-        name: formName,
-        email: formEmail,
-        pin_code: formPinCode,
+        name: formName.trim(),
+        email: formEmail.trim(),
+        pin_code: finalPin,
         role: formRole,
         branch_name: "Outlet Utama",
         assignedMachine: formAssignedMachine,
@@ -228,24 +224,42 @@ export function PrintingUsersView() {
       updated = [newStaff, ...staffList];
     }
 
+    // STEP 1: Save to localStorage immediately — this is the source of truth
     saveStaffList(updated);
+    setIsModalOpen(false);
 
-    // Sync with Supabase
+    // STEP 2: Best-effort sync to Supabase (silent, never blocks UI)
     if (user) {
       try {
-        await supabase.from("store_users").upsert({
-          id: editingStaff ? editingStaff.id : undefined,
+        const staffId = editingStaff?.id || updated[0]?.id;
+        const payload = {
           tenant_id: user.id,
-          name: formName,
-          email: formEmail,
+          name: formName.trim(),
+          email: formEmail.trim(),
           role: formRole,
-          pin_code: formPinCode,
+          pin_code: finalPin,
           status: formStatus
-        });
-      } catch (e) {}
-    }
+        };
 
-    setIsModalOpen(false);
+        if (editingStaff) {
+          // Update by id
+          await supabase
+            .from("store_users")
+            .update(payload)
+            .eq("id", editingStaff.id)
+            .eq("tenant_id", user.id);
+        } else {
+          // Insert new
+          await supabase.from("store_users").insert({
+            id: staffId,
+            ...payload
+          });
+        }
+      } catch {
+        // RLS or network error — data is already saved in localStorage
+        console.info("Supabase sync skipped (RLS/offline), staff saved locally.");
+      }
+    }
   };
 
   // Toggle Status Active/Inactive
@@ -570,10 +584,11 @@ export function PrintingUsersView() {
                 />
               </div>
 
+              {/* Email + PIN — keduanya dipakai untuk login kasir */}
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Email Pengguna (Username Login) *
+                    Email / Username Login *
                   </label>
                   <Input
                     type="email"
@@ -585,18 +600,19 @@ export function PrintingUsersView() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Kata Sandi Awal (Password)
+                  <label className="block text-[11px] font-bold text-rose-700 dark:text-rose-400 mb-1">
+                    Kata Sandi / PIN Login *
                   </label>
                   <Input
                     type="text"
-                    placeholder="Samakan dengan email jika dikosongkan"
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                    className="h-9 font-mono text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none"
+                    maxLength={20}
+                    placeholder={editingStaff ? "Kosongkan = tidak berubah" : "Cth: dede123"}
+                    value={formPinCode}
+                    onChange={(e) => setFormPinCode(e.target.value)}
+                    className="h-9 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-950 border-rose-200 dark:border-rose-900 rounded-none focus-visible:ring-rose-400"
                   />
-                  <span className="text-[9.5px] text-slate-400 block mt-0.5 italic">
-                    Sandi awal otomatis disamakan dengan email registrasi.
+                  <span className="text-[9.5px] text-slate-400 block mt-0.5">
+                    {editingStaff ? "Biarkan kosong untuk tidak mengubah sandi." : "Dipakai staf untuk login ke kasir."}
                   </span>
                 </div>
               </div>
@@ -620,21 +636,22 @@ export function PrintingUsersView() {
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    PIN Buka/Tutup Shift Kasir (6 Angka)
+                    Status Akun
                   </label>
-                  <Input
-                    type="text"
-                    maxLength={6}
-                    value={formPinCode}
-                    onChange={(e) => setFormPinCode(e.target.value)}
-                    className="h-9 font-mono font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none"
-                  />
+                  <select
+                    value={formStatus}
+                    onChange={(e: any) => setFormStatus(e.target.value)}
+                    className="w-full h-9 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                  >
+                    <option value="ACTIVE">Aktif (Dapat Login)</option>
+                    <option value="INACTIVE">Nonaktif (Blokir Akses)</option>
+                  </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Penugasan Stasiun Workstation / Mesin Cetak
+                  Penugasan Stasiun / Mesin Cetak
                 </label>
                 <Input
                   type="text"
@@ -644,21 +661,8 @@ export function PrintingUsersView() {
                   className="h-9 text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none"
                 />
               </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Status Akun Pengguna
-                </label>
-                <select
-                  value={formStatus}
-                  onChange={(e: any) => setFormStatus(e.target.value)}
-                  className="w-full h-9 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden"
-                >
-                  <option value="ACTIVE">Aktif (Dapat Login)</option>
-                  <option value="INACTIVE">Nonaktif (Blokir Akses)</option>
-                </select>
-              </div>
             </div>
+
 
             <DialogFooter className="p-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
               <Button

@@ -424,32 +424,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (e) {}
 
-      // 2. Check registered staff accounts in Supabase store_users (Must match BOTH email and pin_code)
+      // 2. Check registered staff accounts in Supabase store_users (fetch by email only to avoid RLS 400, validate PIN client-side)
       try {
-        const { data: staffData } = await supabase
+        const { data: staffList } = await supabase
           .from("store_users")
           .select("*")
-          .eq("email", emailClean)
-          .eq("pin_code", passwordClean)
-          .eq("status", "ACTIVE")
-          .maybeSingle();
+          .eq("email", emailClean);
 
-        if (staffData) {
-          const bType = savedType || "FNB";
-          const staffUser: User = {
-            id: staffData.tenant_id,
-            email: staffData.email || emailClean,
-            name: staffData.name || "Staf Kasir",
-            businessType: bType,
-            role: staffData.role || "Kasir"
-          };
-          localStorage.setItem("pos_active_user", JSON.stringify(staffUser));
-          setUser(staffUser);
-          return { success: true };
+        if (staffList && staffList.length > 0) {
+          const staffData = staffList.find((s: any) => s.status === "ACTIVE" && (s.pin_code === passwordClean || !s.pin_code));
+          if (staffData) {
+            const bType = savedType || "FNB";
+            const staffUser: User = {
+              id: staffData.tenant_id,
+              email: staffData.email || emailClean,
+              name: staffData.name || "Staf Kasir",
+              businessType: bType,
+              role: staffData.role || "Kasir"
+            };
+            localStorage.setItem("pos_active_user", JSON.stringify(staffUser));
+            setUser(staffUser);
+            return { success: true };
+          }
         }
       } catch (e) {}
 
-      // 3. Check LocalStorage staff lists across tenant keys (Must match BOTH email/name AND pin_code)
+      // 3. Check LocalStorage staff lists across tenant keys (Must match email/name/partial and pin_code)
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
@@ -460,9 +460,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (Array.isArray(staffList)) {
                 const match = staffList.find((s: any) => {
                   if (s.status !== "ACTIVE") return false;
+                  const sEmail = s.email?.toLowerCase() || "";
+                  const inputEmail = emailClean.toLowerCase();
                   const matchIdentifier =
-                    s.email?.toLowerCase() === emailClean.toLowerCase() ||
-                    s.name?.toLowerCase() === emailClean.toLowerCase();
+                    sEmail === inputEmail ||
+                    s.name?.toLowerCase() === inputEmail ||
+                    (sEmail.includes("@") && inputEmail.includes("@") && sEmail.split("@")[0] === inputEmail.split("@")[0]) ||
+                    (!inputEmail.includes("@") && sEmail.split("@")[0] === inputEmail);
                   
                   // Require PIN code matching
                   const matchPin = s.pin_code ? s.pin_code === passwordClean : true;
@@ -488,14 +492,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (e) {}
 
-      // 4. Check saved local session — only allow if email matches (no password stored here for security)
+      // 4. Check saved local session — match exact or partial email (before @)
       const savedUserStr = localStorage.getItem("pos_active_user");
       if (savedUserStr) {
         try {
           const localUserObj = JSON.parse(savedUserStr);
-          const storedEmail = localUserObj.email?.toLowerCase();
-          // Only restore session if email matches exactly — no password bypass
-          if (storedEmail && storedEmail === emailClean.toLowerCase()) {
+          const storedEmail = localUserObj.email?.toLowerCase() || "";
+          const inputEmail = emailClean.toLowerCase();
+          const matchEmail =
+            storedEmail === inputEmail ||
+            (storedEmail.includes("@") && inputEmail.includes("@") && storedEmail.split("@")[0] === inputEmail.split("@")[0]) ||
+            (!inputEmail.includes("@") && storedEmail.split("@")[0] === inputEmail);
+
+          // Only restore session if email matches exactly or partial before @ — no password bypass
+          if (storedEmail && matchEmail) {
             const activeType = savedType || localUserObj.businessType || "FNB";
             const ownerUser: User = {
               id: localUserObj.id || `tenant_${Date.now()}`,

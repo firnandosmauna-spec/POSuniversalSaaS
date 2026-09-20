@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { supabase } from "@/shared/lib/supabase";
@@ -81,6 +81,10 @@ export interface PrintingJobOrder {
   customerName: string;
   customerPhone: string;
   items: PrintingCartItem[];
+  subTotalAmount?: number;
+  discountAmount?: number;
+  taxRate?: number;
+  taxAmount?: number;
   totalAmount: number;
   dpAmount: number;
   remainingAmount: number;
@@ -212,6 +216,24 @@ const { user, activeBranchId, activeBranchName } = useAuth();
   const [customerName, setCustomerName] = useState("Pelanggan Umum");
   const [customerPhone, setCustomerPhone] = useState("");
   const [cart, setCart] = useState<PrintingCartItem[]>([]);
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
+  const [taxRate, setTaxRate] = useState<number>(0);
+
+  useEffect(() => {
+    if (user) {
+      try {
+        const savedSettings = localStorage.getItem(`pos_tenant_${user.id}_printing_settings`);
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings);
+          if (parsed.defaultTaxRate !== undefined) {
+            setTaxRate(parsed.defaultTaxRate);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load tax rate", e);
+      }
+    }
+  }, [user]);
 
   // Customer Synchronization State
   const [registeredCustomers, setRegisteredCustomers] = useState<any[]>([]);
@@ -281,7 +303,16 @@ const { user, activeBranchId, activeBranchName } = useAuth();
   // Checkout & Payment State
   const [paymentType, setPaymentType] = useState<"LUNAS" | "DP">("LUNAS");
   const [dpInput, setDpInput] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<string>("Tunai");
+  const [paymentMethodsList, setPaymentMethodsList] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("pos_payment_methods");
+      if (saved) {
+        return saved.split(",").map(s => s.trim()).filter(Boolean);
+      }
+    } catch(e) {}
+    return ["Tunai", "QRIS", "Transfer Bank", "Debit / Kredit"];
+  });
+  const [paymentMethod, setPaymentMethod] = useState<string>(paymentMethodsList[0] || "Tunai");
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   const [activeJobOrder, setActiveJobOrder] = useState<PrintingJobOrder | null>(null);
 
@@ -412,10 +443,18 @@ const { user, activeBranchId, activeBranchName } = useAuth();
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Total Cart Amount
-  const cartTotalAmount = useMemo(() => {
+  // Total Cart Amount Calculation
+  const cartSubtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.totalPrice, 0);
   }, [cart]);
+
+  const taxAmount = useMemo(() => {
+    return Math.max(0, (cartSubtotal - discountAmount) * (taxRate / 100));
+  }, [cartSubtotal, discountAmount, taxRate]);
+
+  const cartTotalAmount = useMemo(() => {
+    return Math.max(0, cartSubtotal - discountAmount + taxAmount);
+  }, [cartSubtotal, discountAmount, taxAmount]);
 
   // Toggle Finishing Checkbox
   const toggleFinishing = (fId: string) => {
@@ -442,6 +481,10 @@ const { user, activeBranchId, activeBranchName } = useAuth();
         customerName: customerName || "Pelanggan Umum",
         customerPhone: customerPhone || "-",
         items: [...cart],
+        subTotalAmount: cartSubtotal,
+        discountAmount,
+        taxRate,
+        taxAmount,
         totalAmount: cartTotalAmount,
         dpAmount: dpVal,
         remainingAmount: remainingVal,
@@ -534,7 +577,13 @@ const { user, activeBranchId, activeBranchName } = useAuth();
             payment_status: remainingVal === 0 ? "Lunas" : "DP (Kurang Bayar)",
             payment_method: paymentMethod,
             job_status: "Antrean",
-            items: cart,
+            items: {
+              ...cart,
+              tax_rate: taxRate,
+              tax_amount: taxAmount,
+              discount_amount: discountAmount,
+              sub_total: cartSubtotal
+            },
             cashier_name: user?.name || "Staf Percetakan",
             branch_id: activeBranchId || "main",
             branch_name: activeBranchName || "Cabang Utama"
@@ -593,10 +642,13 @@ const { user, activeBranchId, activeBranchName } = useAuth();
               <h1 className="font-display font-extrabold text-xs md:text-sm text-slate-900 dark:text-white tracking-tight">
                 Kasir
               </h1>
+              <p className="text-[10px] text-slate-500 font-mono hidden sm:block">
+                {new Date().toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              </p>
             </div>
           </div>
 
-                      <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -978,7 +1030,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
                 <div className="flex items-start justify-between gap-1.5">
                   <div>
                     <span className="text-[9px] font-bold text-brand uppercase font-mono block">
-                      #{idx + 1} â€¢ {item.material.category}
+                      #{idx + 1} • {item.material.category}
                     </span>
                     <h4 className="font-bold text-xs text-slate-900 dark:text-white leading-tight">{item.jobTitle}</h4>
                     <p className="text-[10px] text-slate-600 dark:text-slate-400">
@@ -1092,18 +1144,46 @@ const { user, activeBranchId, activeBranchName } = useAuth();
               onChange={(e) => setPaymentMethod(e.target.value)}
               className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white p-1.5 rounded-none focus:outline-brand"
             >
-              <option value="Tunai">Tunai / Cash</option>
-              <option value="QRIS">QRIS Statis/Dinamis</option>
-              <option value="Transfer Bank">Transfer Bank BCA/Mandiri</option>
-              <option value="Debit / Kredit">Kartu Debit / Kredit</option>
+              {paymentMethodsList.map(method => (
+                <option key={method} value={method}>{method}</option>
+              ))}
             </select>
           </div>
+
+          {/* Discount Input */}
+          <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-2">
+            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Diskon (Rp):</span>
+            <Input
+              type="number"
+              min={0}
+              value={discountAmount}
+              onChange={(e) => setDiscountAmount(Number(e.target.value))}
+              className="w-24 h-7 text-right text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-none focus:border-brand"
+              placeholder="0"
+            />
+          </div>
+
+          {/* Tax Display */}
+          {taxRate > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">Pajak PPN ({taxRate}%):</span>
+              <span className="font-mono text-xs text-slate-900 dark:text-white">
+                +Rp {taxAmount.toLocaleString("id-ID")}
+              </span>
+            </div>
+          )}
 
           {/* Total & Checkout Action */}
           <div className="border-t border-slate-200 dark:border-slate-800 pt-2 space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Total Tagihan:</span>
-              <span className="font-mono text-base font-extrabold text-slate-900 dark:text-white">
+              <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Subtotal:</span>
+              <span className="font-mono text-xs text-slate-900 dark:text-white">
+                Rp {cartSubtotal.toLocaleString("id-ID")}
+              </span>
+            </div>
+            <div className="flex items-center justify-between bg-brand/10 p-1">
+              <span className="text-xs text-brand font-bold">Total Tagihan:</span>
+              <span className="font-mono text-base font-extrabold text-brand">
                 Rp {cartTotalAmount.toLocaleString("id-ID")}
               </span>
             </div>
@@ -1126,7 +1206,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl rounded-none">
             {/* Modal Header */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between no-print">
               <div className="flex items-center gap-2">
                 <FileCheck className="size-5 text-brand" />
                 <h3 className="font-display font-extrabold text-sm text-slate-900 dark:text-white">
@@ -1139,12 +1219,12 @@ const { user, activeBranchId, activeBranchName } = useAuth();
                 onClick={() => setSelectedSpkJob(null)}
                 className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1"
               >
-                âœ•
+                ✕
               </Button>
             </div>
 
             {/* Printable Content Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-slate-800 dark:text-slate-200 font-sans">
+            <div id="printable-receipt" className="flex-1 overflow-y-auto p-6 space-y-6 text-slate-800 dark:text-slate-200 font-sans bg-white">
               {/* Header SPK Dokumen */}
               <div className="border-b border-slate-200 dark:border-slate-800 pb-4 flex justify-between items-start">
                 <div>
@@ -1153,7 +1233,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{selectedSpkJob.branchName}</p>
                   <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-1">
-                    Kasir: {selectedSpkJob.cashierName} â€¢ Tgl:{" "}
+                    Kasir: {selectedSpkJob.cashierName} • Tgl:{" "}
                     {new Date(selectedSpkJob.createdAt).toLocaleString("id-ID")}
                   </p>
                 </div>
@@ -1259,11 +1339,29 @@ const { user, activeBranchId, activeBranchName } = useAuth();
 
               {/* Payment Breakdown */}
               <div className="bg-slate-50 dark:bg-slate-950 p-4 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs font-mono">
-                <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                  <span>Total Pekerjaan:</span>
+                {selectedSpkJob.subTotalAmount !== undefined && (
+                  <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                    <span>Subtotal Pekerjaan:</span>
+                    <span>Rp {selectedSpkJob.subTotalAmount.toLocaleString("id-ID")}</span>
+                  </div>
+                )}
+                {selectedSpkJob.discountAmount !== undefined && selectedSpkJob.discountAmount > 0 && (
+                  <div className="flex justify-between text-red-500">
+                    <span>Diskon:</span>
+                    <span>- Rp {selectedSpkJob.discountAmount.toLocaleString("id-ID")}</span>
+                  </div>
+                )}
+                {selectedSpkJob.taxAmount !== undefined && selectedSpkJob.taxAmount > 0 && (
+                  <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                    <span>PPN ({selectedSpkJob.taxRate}%):</span>
+                    <span>+ Rp {selectedSpkJob.taxAmount.toLocaleString("id-ID")}</span>
+                  </div>
+                )}
+                <div className={`flex justify-between ${selectedSpkJob.subTotalAmount !== undefined ? "font-bold text-slate-800 dark:text-slate-200 border-t border-slate-300 dark:border-slate-700 pt-1.5" : "text-slate-600 dark:text-slate-400"}`}>
+                  <span>Total Tagihan:</span>
                   <span>Rp {selectedSpkJob.totalAmount.toLocaleString("id-ID")}</span>
                 </div>
-                <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold">
+                <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold mt-1">
                   <span>Uang Muka (DP) Bayar:</span>
                   <span>- Rp {selectedSpkJob.dpAmount.toLocaleString("id-ID")}</span>
                 </div>
@@ -1275,7 +1373,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
             </div>
 
             {/* Modal Actions */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center no-print">
               <Button
                 variant="outline"
                 onClick={() => window.print()}

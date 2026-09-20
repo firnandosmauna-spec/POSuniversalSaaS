@@ -80,8 +80,12 @@ const DEFAULT_DESIGN_TIERS: PrintingDesignFeeTier[] = [];
 export function PrintingSettingsView() {
   const { user, branches, addBranch, deleteBranch, switchBranch, activeBranchId, editBranch, setMainBranch } = useAuth();
   const [activeTab, setActiveTab] = useState<
-    "printing_calc" | "printing_categories" | "printing_finishing" | "printing_spk" | "design_fee_calc" | "cabang" | "invoice" | "langganan" | "printer_kasir"
+    "printing_calc" | "printing_categories" | "printing_finishing" | "printing_spk" | "design_fee_calc" | "cabang" | "invoice" | "langganan" | "printer_kasir" | "role_access"
   >("printing_calc");
+
+  // Role Access State
+  type RoleAccessConfig = Record<string, string[]>;
+  const [roleAccess, setRoleAccess] = useState<RoleAccessConfig>({});
 
   // Design Fee Settings & Calculator State
   const [designTiers, setDesignTiers] = useState<PrintingDesignFeeTier[]>(() => {
@@ -143,6 +147,8 @@ export function PrintingSettingsView() {
 
   // SPK & DP Workflow Settings
   const [minDpPercentage, setMinDpPercentage] = useState<number>(50);
+  const [defaultTaxRate, setDefaultTaxRate] = useState<number>(0);
+  const [paymentMethodsStr, setPaymentMethodsStr] = useState<string>("Tunai, QRIS, Transfer Bank, Debit / Kredit");
   const [defaultEstimatedDays, setDefaultEstimatedDays] = useState<number>(1);
   const [enableFileProofing, setEnableFileProofing] = useState<boolean>(true);
   const [defaultSpkNotes, setDefaultSpkNotes] = useState<string>("Periksa resolusi CMYK min 300 DPI dan lebihi bleed potong 3mm.");
@@ -189,9 +195,16 @@ export function PrintingSettingsView() {
         const parsed = JSON.parse(savedSettings);
         if (parsed.machines) setMachines(parsed.machines);
         if (parsed.minDpPercentage) setMinDpPercentage(parsed.minDpPercentage);
+        if (parsed.defaultTaxRate !== undefined) setDefaultTaxRate(parsed.defaultTaxRate);
         if (parsed.defaultEstimatedDays) setDefaultEstimatedDays(parsed.defaultEstimatedDays);
         if (parsed.enableFileProofing !== undefined) setEnableFileProofing(parsed.enableFileProofing);
         if (parsed.defaultSpkNotes) setDefaultSpkNotes(parsed.defaultSpkNotes);
+        if (parsed.baseHourlyRate !== undefined) setBaseHourlyRate(parsed.baseHourlyRate);
+      }
+
+      const savedPaymentMethods = localStorage.getItem("pos_payment_methods");
+      if (savedPaymentMethods) {
+        setPaymentMethodsStr(savedPaymentMethods);
       }
 
       // 3. Finishing Options
@@ -216,10 +229,40 @@ export function PrintingSettingsView() {
       const currentConfig = getInvoiceSettings();
       setInvoiceConfig(currentConfig);
       setSampleInvoice(generateInvoiceCode(currentConfig, 1, "PUSAT"));
+
+      // 6. Role Access
+      const savedRoleAccess = localStorage.getItem(`pos_tenant_${user.id}_role_access_PRINTING`);
+      if (savedRoleAccess) {
+        setRoleAccess(JSON.parse(savedRoleAccess));
+      } else {
+        // Defaults
+        setRoleAccess({
+          "Manager Percetakan": ["/app/dashboard", "/app/pos", "/app/sales", "/app/shifts", "/app/expenses", "/app/products", "/app/customers", "/app/users", "/app/settings"],
+          "Kasir POS": ["/app/pos", "/app/sales", "/app/shifts", "/app/customers"],
+          "Desainer Grafis": ["/app/dashboard", "/app/pos", "/app/sales", "/app/products"],
+          "Operator Mesin Cetak": ["/app/dashboard", "/app/sales", "/app/products"],
+        });
+      }
     } catch (e) {
       console.error("Error loading printing settings:", e);
     }
   }, [user]);
+
+  // Role Access Handler
+  const handleToggleRoleAccess = (role: string, path: string) => {
+    setRoleAccess(prev => {
+      const currentAccess = prev[role] || [];
+      const newAccess = currentAccess.includes(path) 
+        ? currentAccess.filter(p => p !== path)
+        : [...currentAccess, path];
+      
+      const updated = { ...prev, [role]: newAccess };
+      if (user) {
+        localStorage.setItem(`pos_tenant_${user.id}_role_access_PRINTING`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
 
   // Seed All Mock Data to Permanent Storage
   const handleSeedAllPermanentData = async () => {
@@ -512,12 +555,14 @@ export function PrintingSettingsView() {
       const dataToSave = {
         machines,
         minDpPercentage,
+        defaultTaxRate,
         defaultEstimatedDays,
         enableFileProofing,
         defaultSpkNotes,
         baseHourlyRate
       };
       localStorage.setItem(`pos_tenant_${user.id}_printing_settings`, JSON.stringify(dataToSave));
+      localStorage.setItem("pos_payment_methods", paymentMethodsStr);
       localStorage.setItem("pos_printing_finishing_options", JSON.stringify(finishings));
       localStorage.setItem("pos_printing_categories", JSON.stringify(categories));
       localStorage.setItem("pos_printing_design_fee_tiers", JSON.stringify(designTiers));
@@ -643,7 +688,8 @@ export function PrintingSettingsView() {
             { id: "printer_kasir", label: "Koneksi Printer Struk", icon: Printer, badge: `${receiptPrinters.length} Aktif` },
             { id: "cabang", label: "Outlet & Cabang", icon: Building2, badge: `${branches.length} Outlet` },
             { id: "invoice", label: "Format Kode SPK", icon: Receipt, badge: invoiceConfig.invoicePrefix },
-            { id: "langganan", label: "Status Paket SaaS", icon: Crown, badge: "PRO" }
+            { id: "langganan", label: "Status Paket SaaS", icon: Crown, badge: "PRO" },
+            { id: "role_access", label: "Hak Akses Role", icon: ShieldCheck, badge: "RBAC" }
           ].map((item) => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;
@@ -1096,6 +1142,42 @@ export function PrintingSettingsView() {
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1">
                   Kasir wajib menerima DP minimal persentase ini sebelum cetakan masuk antrean produksi operator.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Pajak PPN (%)
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={defaultTaxRate}
+                    onChange={(e) => setDefaultTaxRate(Number(e.target.value))}
+                    className="h-9 font-mono font-extrabold text-sm w-32 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl text-brand"
+                  />
+                  <span className="font-bold text-slate-500">% Pajak</span>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Persentase pajak default yang akan diterapkan pada setiap transaksi Kasir. Isi 0 jika tidak ada pajak.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Daftar Metode Pembayaran (Pisahkan dengan koma)
+                </label>
+                <Input
+                  type="text"
+                  value={paymentMethodsStr}
+                  onChange={(e) => setPaymentMethodsStr(e.target.value)}
+                  className="h-9 w-full bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl"
+                  placeholder="Contoh: Tunai, QRIS, Transfer Bank"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Daftar ini akan muncul sebagai opsi di menu Kasir dan Ringkasan Laporan Penjualan.
                 </p>
               </div>
 
@@ -1581,6 +1663,55 @@ export function PrintingSettingsView() {
                   {user?.id || "tenant_demo"}
                 </span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 8: HAK AKSES ROLE */}
+      {activeTab === "role_access" && (
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 space-y-4 shadow-md shadow-slate-200/50 dark:shadow-none">
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <ShieldCheck className="size-4 text-brand" /> Pengaturan Hak Akses Menu & Role (RBAC)
+            </h3>
+            <p className="text-xs text-slate-500">
+              Centang menu di bawah ini untuk mengatur halaman mana saja yang dapat dilihat oleh setiap jabatan/role staf. (Catatan: "Owner Tenant" selalu memiliki akses penuh ke seluruh menu).
+            </p>
+
+            <div className="space-y-4 mt-4">
+              {["Manager Percetakan", "Kasir POS", "Desainer Grafis", "Operator Mesin Cetak"].map((role) => (
+                <div key={role} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                  <div className="bg-slate-100 dark:bg-slate-800/80 px-4 py-2 font-bold text-xs text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-800">
+                    Role: {role}
+                  </div>
+                  <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-950">
+                    {[
+                      { path: "/app/dashboard", label: "Dashboard Percetakan" },
+                      { path: "/app/pos", label: "Kasir & Kalkulator" },
+                      { path: "/app/sales", label: "SPK & Riwayat Cetak" },
+                      { path: "/app/shifts", label: "Shift Kasir" },
+                      { path: "/app/expenses", label: "Belanja & Pengeluaran" },
+                      { path: "/app/products", label: "Bahan & Material" },
+                      { path: "/app/customers", label: "Pelanggan Percetakan" },
+                      { path: "/app/users", label: "Operator & Pengguna" },
+                      { path: "/app/settings", label: "Pengaturan Percetakan" }
+                    ].map((menu) => (
+                      <label key={menu.path} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 p-1.5 rounded-lg transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={roleAccess[role]?.includes(menu.path) || false}
+                          onChange={() => handleToggleRoleAccess(role, menu.path)}
+                          className="size-3.5 rounded border-slate-300 text-brand focus:ring-brand accent-brand cursor-pointer"
+                        />
+                        <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                          {menu.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

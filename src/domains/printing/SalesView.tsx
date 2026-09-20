@@ -89,7 +89,14 @@ export function PrintingSalesView() {
   const [isPayRemainingModalOpen, setIsPayRemainingModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [payAmountInput, setPayAmountInput] = useState<number>(0);
-  const [payMethodInput, setPayMethodInput] = useState<string>("cash");
+  const [paymentMethodsList, setPaymentMethodsList] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("pos_payment_methods");
+      if (saved) return saved.split(",").map(s => s.trim()).filter(Boolean);
+    } catch(e) {}
+    return ["Tunai", "QRIS", "Transfer Bank", "Debit / Kredit"];
+  });
+  const [payMethodInput, setPayMethodInput] = useState<string>(paymentMethodsList[0] || "Tunai");
 
   // Load SPK Jobs from localStorage and Supabase
   const loadJobs = async () => {
@@ -198,7 +205,7 @@ export function PrintingSalesView() {
   const handleOpenPayRemaining = (job: PrintingJobOrder) => {
     setSelectedJob(job);
     setPayAmountInput(job.remainingAmount);
-    setPayMethodInput("cash");
+    setPayMethodInput(paymentMethodsList[0] || "Tunai");
     setIsPayRemainingModalOpen(true);
   };
 
@@ -342,9 +349,10 @@ export function PrintingSalesView() {
       });
     });
 
-    const cashTotal = filteredJobs.filter((j) => j.paymentMethod === "cash").reduce((acc, j) => acc + j.dpAmount, 0);
-    const qrisTotal = filteredJobs.filter((j) => j.paymentMethod === "qris").reduce((acc, j) => acc + j.dpAmount, 0);
-    const transferTotal = filteredJobs.filter((j) => j.paymentMethod === "transfer").reduce((acc, j) => acc + j.dpAmount, 0);
+    const paymentBreakdown = paymentMethodsList.map(method => {
+      const total = filteredJobs.filter(j => j.paymentMethod === method || (method === 'Tunai' && j.paymentMethod === 'cash') || (method === 'QRIS' && j.paymentMethod === 'qris') || (method === 'Transfer Bank' && j.paymentMethod === 'transfer')).reduce((acc, j) => acc + j.dpAmount, 0);
+      return { method, total };
+    });
 
     return {
       totalRevenue,
@@ -358,11 +366,9 @@ export function PrintingSalesView() {
       sheetOmzet,
       merchCount,
       merchOmzet,
-      cashTotal,
-      qrisTotal,
-      transferTotal
+      paymentBreakdown
     };
-  }, [filteredJobs]);
+  }, [filteredJobs, paymentMethodsList]);
 
   const handleExportCSV = () => {
     const headers = [
@@ -935,9 +941,9 @@ export function PrintingSalesView() {
                   onChange={(e) => setPayMethodInput(e.target.value)}
                   className="w-full h-9 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden"
                 >
-                  <option value="cash">Tunai / Cash</option>
-                  <option value="qris">QRIS Standar</option>
-                  <option value="transfer">Transfer Bank</option>
+                  {paymentMethodsList.map(method => (
+                    <option key={method} value={method}>{method}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -1085,24 +1091,14 @@ export function PrintingSalesView() {
                   <CreditCard className="size-4 text-emerald-600" /> Distribusi Uang Masuk per Pembayaran
                 </h3>
                 <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-2 border border-slate-100 dark:border-slate-800">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">Tunai / Cash</span>
-                    <span className="font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                      {formatRupiah(metrics.cashTotal)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-2 border border-slate-100 dark:border-slate-800">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">QRIS Standar</span>
-                    <span className="font-mono font-extrabold text-indigo-600 dark:text-indigo-400">
-                      {formatRupiah(metrics.qrisTotal)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-2 border border-slate-100 dark:border-slate-800">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">Transfer Bank</span>
-                    <span className="font-mono font-extrabold text-blue-600 dark:text-blue-400">
-                      {formatRupiah(metrics.transferTotal)}
-                    </span>
-                  </div>
+                  {metrics.paymentBreakdown.map(p => (
+                    <div key={p.method} className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-2 border border-slate-100 dark:border-slate-800">
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{p.method}</span>
+                      <span className="font-mono font-extrabold text-slate-700 dark:text-slate-300">
+                        {formatRupiah(p.total)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
