@@ -181,7 +181,13 @@ export function PrintingProductsView() {
       .filter((s) => s.length > 0);
 
     let updated: PrintingMaterial[];
-    const currentId = editingMaterial ? editingMaterial.id : crypto.randomUUID();
+    
+    // Ensure currentId is a valid UUID, otherwise Supabase throws 400 Bad Request
+    let currentId = editingMaterial ? editingMaterial.id : crypto.randomUUID();
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(currentId)) {
+      currentId = crypto.randomUUID();
+    }
 
     if (editingMaterial) {
       // Edit
@@ -240,7 +246,7 @@ export function PrintingProductsView() {
         
         if (error) {
           console.error("Supabase upsert error:", error);
-          alert("Data tersimpan lokal, namun gagal sinkronisasi ke cloud (Supabase).");
+          alert("Data tersimpan lokal, namun gagal sinkronisasi ke cloud (Supabase): " + JSON.stringify(error));
         }
       } catch (e) {
         console.error("Supabase sync exception:", e);
