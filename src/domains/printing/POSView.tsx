@@ -1,5 +1,5 @@
 ﻿import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { supabase } from "@/shared/lib/supabase";
 import { generateInvoiceCode, getInvoiceSettings } from "@/shared/utils/invoiceGenerator";
