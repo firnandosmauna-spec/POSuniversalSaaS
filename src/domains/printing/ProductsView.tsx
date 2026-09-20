@@ -26,7 +26,7 @@ export interface PrintingMaterial {
   id: string;
   name: string;
   category: string;
-  unitType: "m²" | "lembar" | "pcs" | "box" | "roll";
+  unitType: string;
   costPrice: number; // HPP
   price: number; // Harga Jual
   stock: number; // Sisa Stok
@@ -56,7 +56,7 @@ export function PrintingProductsView() {
   // Form State
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState<string>("");
-  const [formUnitType, setFormUnitType] = useState<PrintingMaterial["unitType"]>("m²");
+  const [formUnitType, setFormUnitType] = useState<string>("m²");
   const [formCostPrice, setFormCostPrice] = useState<number>(0);
   const [formPrice, setFormPrice] = useState<number>(0);
   const [formStock, setFormStock] = useState<number>(100);
@@ -562,17 +562,23 @@ export function PrintingProductsView() {
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Satuan Hitung
                   </label>
-                  <select
+                  <Input
+                    type="text"
+                    list="unit-options"
                     value={formUnitType}
-                    onChange={(e: any) => setFormUnitType(e.target.value)}
-                    className="w-full h-9 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 font-semibold text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden"
-                  >
-                    <option value="m²">m² (Meter Persegi)</option>
-                    <option value="lembar">lembar (A3+/A4)</option>
-                    <option value="pcs">pcs (Per Buah)</option>
-                    <option value="box">box (Per Kotak)</option>
-                    <option value="roll">roll (Per Roll)</option>
-                  </select>
+                    onChange={(e) => setFormUnitType(e.target.value)}
+                    placeholder="Pilih atau ketik satuan baru..."
+                    className="h-9 font-semibold text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-none focus:outline-hidden"
+                  />
+                  <datalist id="unit-options">
+                    <option value="m²">Meter Persegi</option>
+                    <option value="lembar">Lembar (A3+/A4)</option>
+                    <option value="pcs">Pcs (Per Buah)</option>
+                    <option value="box">Box (Per Kotak)</option>
+                    <option value="roll">Roll</option>
+                    <option value="rim">Rim</option>
+                    <option value="paket">Paket</option>
+                  </datalist>
                 </div>
               </div>
 
