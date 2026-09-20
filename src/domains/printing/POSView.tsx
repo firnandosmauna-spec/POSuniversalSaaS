@@ -383,14 +383,60 @@ const { user, activeBranchId, activeBranchName } = useAuth();
   const [activeJobOrder, setActiveJobOrder] = useState<PrintingJobOrder | null>(null);
 
   // History & SPK Modal
-  const [recentJobs, setRecentJobs] = useState<PrintingJobOrder[]>(() => {
-    try {
-      const saved = localStorage.getItem("pos_printing_jobs");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [recentJobs, setRecentJobs] = useState<PrintingJobOrder[]>([]);
+
+  useEffect(() => {
+    const loadRecentJobs = async () => {
+      try {
+        const saved = localStorage.getItem("pos_printing_jobs");
+        let list: PrintingJobOrder[] = saved ? JSON.parse(saved) : [];
+
+        if (user) {
+          const { data: txData, error: txErr } = await supabase
+            .from("transactions")
+            .select("*")
+            .eq("tenant_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(20);
+
+          if (txData && txData.length > 0) {
+            const remoteJobs = txData.map((t, idx) => {
+              const total = Number(t.total_amount) || 0;
+              return {
+                id: t.id,
+                invoiceNo: t.invoice_no || `SPK-${new Date(t.created_at).getTime().toString().substring(6)}-${idx + 1}`,
+                customerName: t.customer_name || t.customer_name_custom || "Pelanggan General",
+                customerPhone: t.customer_phone || "-",
+                items: t.items ? (typeof t.items === 'string' ? JSON.parse(t.items) : t.items) : [],
+                totalAmount: total,
+                dpAmount: Number(t.dp_amount) || total,
+                remainingAmount: Number(t.remaining_amount) || 0,
+                paymentStatus: t.payment_status || (Number(t.remaining_amount) === 0 ? "Lunas" : "DP (Kurang Bayar)"),
+                paymentMethod: t.payment_method || "Tunai",
+                jobStatus: t.job_status || "Antrean",
+                cashierName: t.cashier_name || "Kasir Operator",
+                branchName: t.branch_name || "Outlet Utama",
+                createdAt: t.created_at
+              };
+            });
+
+            const merged = [...list];
+            remoteJobs.forEach((rj: any) => {
+              if (!merged.some((lj) => lj.id === rj.id)) {
+                merged.push(rj);
+              }
+            });
+            list = merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 30);
+            localStorage.setItem("pos_printing_jobs", JSON.stringify(list));
+          }
+        }
+        setRecentJobs(list);
+      } catch (e) {
+        console.error("Failed loading recent jobs:", e);
+      }
+    };
+    loadRecentJobs();
+  }, [user]);
 
   const [selectedSpkJob, setSelectedSpkJob] = useState<PrintingJobOrder | null>(null);
 
