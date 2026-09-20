@@ -80,6 +80,8 @@ export function PrintingCustomersView() {
     try {
       const deletedIdsStr = localStorage.getItem("pos_deleted_customer_ids");
       const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
+      const deletedNamesStr = localStorage.getItem("pos_deleted_customer_names");
+      const deletedNames: string[] = deletedNamesStr ? JSON.parse(deletedNamesStr) : [];
 
       // 1. Get from localStorage
       const savedStr = localStorage.getItem("pos_printing_customers");
@@ -115,7 +117,10 @@ export function PrintingCustomersView() {
           const mergedMap = new Map<string, PrintingCustomer>();
           list.forEach((lc) => mergedMap.set(lc.id, lc));
           remoteList.forEach((rc) => {
-            if (!deletedIds.includes(rc.id)) {
+            // Skip if ID or NAME is in deleted lists
+            const isDeletedById = deletedIds.includes(rc.id);
+            const isDeletedByName = deletedNames.includes(rc.name?.trim().toLowerCase());
+            if (!isDeletedById && !isDeletedByName) {
               mergedMap.set(rc.id, rc);
             }
           });
@@ -123,8 +128,23 @@ export function PrintingCustomersView() {
         }
       }
 
-      // Filter deleted items
-      list = list.filter((c) => !deletedIds.includes(c.id));
+      // Filter deleted items (by ID and name)
+      list = list.filter((c) => !deletedIds.includes(c.id) && !deletedNames.includes(c.name?.trim().toLowerCase()));
+
+      // One-time cleanup: remove legacy mock customers (ID like cust_1, cust_2, cust_3)
+      const MOCK_CUSTOMER_IDS = ["cust_1", "cust_2", "cust_3", "cust_4", "cust_5"];
+      const mockItemsInList = list.filter((c) => MOCK_CUSTOMER_IDS.includes(c.id));
+      if (mockItemsInList.length > 0) {
+        list = list.filter((c) => !MOCK_CUSTOMER_IDS.includes(c.id));
+        // Add their names to deleted list so they don't reappear from Supabase
+        const deletedNamesArr = [...deletedNames];
+        mockItemsInList.forEach((m) => {
+          const nameLower = m.name?.trim().toLowerCase();
+          if (nameLower && !deletedNamesArr.includes(nameLower)) deletedNamesArr.push(nameLower);
+        });
+        localStorage.setItem("pos_deleted_customer_names", JSON.stringify(deletedNamesArr));
+        localStorage.setItem("pos_printing_customers", JSON.stringify(list));
+      }
 
       const isInitialized = localStorage.getItem("pos_printing_customers_initialized");
       if (list.length === 0 && !isInitialized) {
@@ -281,12 +301,26 @@ export function PrintingCustomersView() {
   // Delete Customer
   const handleDeleteCustomer = async (id: string) => {
     if (confirm("Apakah Anda yakin ingin menghapus data pelanggan cetak ini?")) {
+      const deletedCustomer = customers.find((c) => c.id === id);
+
       try {
+        // Track deleted IDs
         const deletedIdsStr = localStorage.getItem("pos_deleted_customer_ids");
         const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
         if (!deletedIds.includes(id)) {
           deletedIds.push(id);
           localStorage.setItem("pos_deleted_customer_ids", JSON.stringify(deletedIds));
+        }
+
+        // Track deleted names (handles mock data with mismatched IDs in Supabase)
+        if (deletedCustomer?.name) {
+          const deletedNamesStr = localStorage.getItem("pos_deleted_customer_names");
+          const deletedNames: string[] = deletedNamesStr ? JSON.parse(deletedNamesStr) : [];
+          const nameLower = deletedCustomer.name.trim().toLowerCase();
+          if (!deletedNames.includes(nameLower)) {
+            deletedNames.push(nameLower);
+            localStorage.setItem("pos_deleted_customer_names", JSON.stringify(deletedNames));
+          }
         }
       } catch (e) {}
 
@@ -300,9 +334,13 @@ export function PrintingCustomersView() {
 
       if (user) {
         try {
-          const { error } = await supabase.from("customers").delete().eq("id", id);
-          if (error && error.message) {
-            console.error("Supabase delete customer error:", error);
+          // Delete by ID
+          await supabase.from("customers").delete().eq("id", id);
+          // Also delete by name+tenant_id (handles mock data where Supabase ID differs from local ID)
+          if (deletedCustomer?.name) {
+            await supabase.from("customers").delete()
+              .eq("tenant_id", user.id)
+              .eq("name", deletedCustomer.name);
           }
         } catch (e) {
           console.error("Failed to delete customer from Supabase:", e);
@@ -324,10 +362,11 @@ export function PrintingCustomersView() {
       const matchType = typeFilter === "ALL" || c.customerType === typeFilter;
       const matchTier = tierFilter === "ALL" || c.tier === tierFilter;
       const matchBranch =
+        !activeBranchId ||
         activeBranchId === "all" ||
         c.branchId === activeBranchId ||
         c.branchName === activeBranchName ||
-        (!c.branchId && (activeBranchId === "main" || activeBranchId === "all"));
+        (!c.branchId && activeBranchId?.startsWith("main"));
 
       return matchSearch && matchType && matchTier && matchBranch;
     });

@@ -103,26 +103,65 @@ export function UsersView() {
         setStaffList(mappedData);
         localStorage.setItem(tenantStorageKey, JSON.stringify(mappedData));
       } else {
-        // Fallback to local storage
+        // Fallback to local storage (current key)
         const saved = localStorage.getItem(tenantStorageKey);
         if (saved) {
           setStaffList(JSON.parse(saved) as StaffUser[]);
         } else {
-          // Provision initial Owner account for this tenant
-          const initialOwner: StaffUser = {
-            id: `staff_owner_${user.id}`,
-            tenant_id: user.id,
-            name: user.name || "Owner Utama",
-            email: user.email || "owner@pos.id",
-            pin_code: "1234",
-            role: "Owner Tenant",
-            branch_id: "main",
-            branch_name: "Cabang Utama (Pusat)",
-            status: "ACTIVE",
-            created_at: new Date().toISOString()
-          };
-          setStaffList([initialOwner]);
-          localStorage.setItem(tenantStorageKey, JSON.stringify([initialOwner]));
+          // Fallback: search ALL localStorage staff keys (handles ID migration from temp → UUID)
+          let migratedStaff: StaffUser[] | null = null;
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.endsWith("_staff") && key.includes("pos_tenant_") && key !== tenantStorageKey) {
+              try {
+                const val = localStorage.getItem(key);
+                if (val) {
+                  const parsed = JSON.parse(val) as StaffUser[];
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    // Migrate: update tenant_id to current user.id
+                    migratedStaff = parsed.map(s => ({ ...s, tenant_id: user.id }));
+                    break;
+                  }
+                }
+              } catch {}
+            }
+          }
+
+          if (migratedStaff && migratedStaff.length > 0) {
+            // Save under correct key and sync owner record to Supabase
+            setStaffList(migratedStaff);
+            localStorage.setItem(tenantStorageKey, JSON.stringify(migratedStaff));
+            try {
+              const owner = migratedStaff.find(s => s.role === "Owner Tenant");
+              if (owner) {
+                await supabase.from("store_users").upsert({
+                  id: owner.id,
+                  tenant_id: user.id,
+                  name: owner.name,
+                  email: owner.email,
+                  pin_code: owner.pin_code,
+                  role: owner.role,
+                  status: owner.status
+                }, { onConflict: "id" });
+              }
+            } catch {}
+          } else {
+            // Provision initial Owner account for this tenant
+            const initialOwner: StaffUser = {
+              id: `staff_owner_${user.id}`,
+              tenant_id: user.id,
+              name: user.name || "Owner Utama",
+              email: user.email || "owner@pos.id",
+              pin_code: "1234",
+              role: "Owner Tenant",
+              branch_id: "main",
+              branch_name: "Cabang Utama (Pusat)",
+              status: "ACTIVE",
+              created_at: new Date().toISOString()
+            };
+            setStaffList([initialOwner]);
+            localStorage.setItem(tenantStorageKey, JSON.stringify([initialOwner]));
+          }
         }
       }
     } catch (e) {

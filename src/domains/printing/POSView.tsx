@@ -631,8 +631,8 @@ const { user, activeBranchId, activeBranchName } = useAuth();
             }
           }
 
-          // Supabase transaction insert
-          await supabase.from("transactions").insert({
+          // Supabase transaction insert (resilient to schema differences)
+          const fullPayload: any = {
             tenant_id: user.id,
             invoice_no: invNo,
             customer_name: customerName || "Pelanggan Umum",
@@ -643,21 +643,45 @@ const { user, activeBranchId, activeBranchName } = useAuth();
             payment_status: remainingVal === 0 ? "Lunas" : "DP (Kurang Bayar)",
             payment_method: paymentMethod,
             job_status: "Antrean",
-            items: {
-              ...cart,
-              tax_rate: taxRate,
-              tax_amount: taxAmount,
-              discount_amount: discountAmount,
-              sub_total: cartSubtotal
-            },
+            status: "completed",
+            order_type: "take_away",
+            items: cart,
+            tax_amount: taxAmount,
+            discount_amount: discountAmount,
             cashier_name: user?.name || "Staf Percetakan",
             branch_id: activeBranchId || "main",
             branch_name: activeBranchName || "Cabang Utama"
-          });
+          };
+
+          const { data: insertedTx, error: insertErr } = await supabase
+            .from("transactions")
+            .insert(fullPayload)
+            .select("id")
+            .single();
+
+          if (insertErr) {
+            // Kolom baru belum ada (sebelum migration) — retry dengan kolom minimal
+            const isColumnErr = insertErr.message?.includes("column") || insertErr.code === "42703" || insertErr.message?.includes("does not exist");
+            if (isColumnErr) {
+              await supabase.from("transactions").insert({
+                tenant_id: user.id,
+                total_amount: cartTotalAmount,
+                payment_method: paymentMethod,
+                status: "completed",
+                order_type: "take_away",
+                tax_amount: taxAmount,
+                discount_amount: discountAmount
+              });
+              console.info("Printing TX saved with minimal schema (run supabase_migration.sql to enable full sync)");
+            } else {
+              console.error("Printing TX Supabase insert error:", insertErr.message);
+            }
+          }
         }
       } catch (e) {
         console.error("Failed syncing customer on checkout:", e);
       }
+
 
       setActiveJobOrder(newJobOrder);
       setSelectedSpkJob(newJobOrder);

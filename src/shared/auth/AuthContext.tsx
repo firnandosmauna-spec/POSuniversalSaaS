@@ -203,28 +203,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(activeUser);
 
           // Inisialisasi cabang utama unik per tenant jika belum ada
-          const savedBranches = localStorage.getItem("pos_tenant_branches");
-          if (!savedBranches || JSON.parse(savedBranches).length === 0) {
+          const savedBranchesRaw = localStorage.getItem("pos_tenant_branches");
+          if (!savedBranchesRaw || JSON.parse(savedBranchesRaw).length === 0) {
             const defaultBranch = createDefaultBranch(session.user.id);
             const initBranches = [defaultBranch];
             setBranches(initBranches);
             setActiveBranchId(defaultBranch.id);
             localStorage.setItem("pos_tenant_branches", JSON.stringify(initBranches));
             localStorage.setItem("pos_active_branch_id", defaultBranch.id);
+          } else {
+            // Pastikan activeBranchId selalu ter-set
+            const activeSaved = localStorage.getItem("pos_active_branch_id");
+            if (!activeSaved) {
+              const parsed = JSON.parse(savedBranchesRaw);
+              if (parsed[0]) {
+                setActiveBranchId(parsed[0].id);
+                localStorage.setItem("pos_active_branch_id", parsed[0].id);
+              }
+            }
           }
         } else if (localUserObj) {
           if (savedType) localUserObj.businessType = savedType;
           setUser(localUserObj);
 
           // Inisialisasi cabang utama unik per tenant jika belum ada
-          const savedBranches = localStorage.getItem("pos_tenant_branches");
-          if (!savedBranches || JSON.parse(savedBranches).length === 0) {
+          const savedBranchesRaw2 = localStorage.getItem("pos_tenant_branches");
+          if (!savedBranchesRaw2 || JSON.parse(savedBranchesRaw2).length === 0) {
             const defaultBranch = createDefaultBranch(localUserObj.id);
             const initBranches = [defaultBranch];
             setBranches(initBranches);
             setActiveBranchId(defaultBranch.id);
             localStorage.setItem("pos_tenant_branches", JSON.stringify(initBranches));
             localStorage.setItem("pos_active_branch_id", defaultBranch.id);
+          } else {
+            const activeSaved2 = localStorage.getItem("pos_active_branch_id");
+            if (!activeSaved2) {
+              const parsed2 = JSON.parse(savedBranchesRaw2);
+              if (parsed2[0]) {
+                setActiveBranchId(parsed2[0].id);
+                localStorage.setItem("pos_active_branch_id", parsed2[0].id);
+              }
+            }
           }
         } else {
           // No session and no saved user — stay logged out, let route guard redirect to login
@@ -381,6 +400,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: "Owner Tenant"
           };
           await seedTenantData(syncedUser.id, name, email, businessType, password);
+
+          // Migrate localStorage data from temp ID to real UUID
+          const tempStaffKey = `pos_tenant_${newUserId}_staff`;
+          const tempStaffData = localStorage.getItem(tempStaffKey);
+          const realStaffKey = `pos_tenant_${syncedUser.id}_staff`;
+          if (tempStaffData && !localStorage.getItem(realStaffKey)) {
+            try {
+              const staffArr = JSON.parse(tempStaffData);
+              const migratedStaff = staffArr.map((s: any) => ({ ...s, tenant_id: syncedUser.id }));
+              localStorage.setItem(realStaffKey, JSON.stringify(migratedStaff));
+            } catch (e) {}
+          }
+
+          // Migrate branches from temp ID
+          const tempBranches = localStorage.getItem("pos_tenant_branches");
+          if (tempBranches) {
+            try {
+              const branchArr = JSON.parse(tempBranches);
+              // If branch IDs reference temp ID, update them
+              const fixed = branchArr.map((b: any) => ({
+                ...b,
+                id: b.id?.startsWith("main_") && b.id.includes(newUserId.substring(0, 8))
+                  ? `main_${syncedUser.id.substring(0, 8)}`
+                  : b.id
+              }));
+              localStorage.setItem("pos_tenant_branches", JSON.stringify(fixed));
+              if (fixed[0]) {
+                localStorage.setItem("pos_active_branch_id", fixed[0].id);
+              }
+            } catch (e) {}
+          }
+
           localStorage.setItem("pos_active_user", JSON.stringify(syncedUser));
           setUser(syncedUser);
         }
@@ -420,6 +471,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
           localStorage.setItem("pos_active_user", JSON.stringify(activeUser));
           setUser(activeUser);
+
+          // Ensure activeBranchId is always set after login
+          if (!localStorage.getItem("pos_active_branch_id")) {
+            const savedBranches = localStorage.getItem("pos_tenant_branches");
+            if (savedBranches) {
+              try {
+                const parsed = JSON.parse(savedBranches);
+                if (parsed[0]) {
+                  localStorage.setItem("pos_active_branch_id", parsed[0].id);
+                  setActiveBranchId(parsed[0].id);
+                }
+              } catch {}
+            } else {
+              const defaultBranch = createDefaultBranch(data.session.user.id);
+              setBranches([defaultBranch]);
+              setActiveBranchId(defaultBranch.id);
+              localStorage.setItem("pos_tenant_branches", JSON.stringify([defaultBranch]));
+              localStorage.setItem("pos_active_branch_id", defaultBranch.id);
+            }
+          }
+
           return { success: true };
         }
       } catch (e) {}

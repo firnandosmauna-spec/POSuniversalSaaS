@@ -120,11 +120,12 @@ export function DashboardView() {
   // Filter transactions by period and branch
   const filteredTx = transactions.filter((tx) => {
     const matchesBranch = 
+      !activeBranchId ||
       activeBranchId === "all" ||
       tx.branch_id === activeBranchId ||
       tx.branchId === activeBranchId ||
       tx.branch_name === activeBranchName ||
-      (!tx.branch_id && !tx.branchId && (activeBranchId === "main" || activeBranchId === "all"));
+      (!tx.branch_id && !tx.branchId && activeBranchId?.startsWith("main"));
 
     if (!matchesBranch) return false;
     if (!tx.created_at) return false;

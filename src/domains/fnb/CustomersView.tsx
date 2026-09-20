@@ -51,6 +51,8 @@ export function CustomersView() {
     try {
       const deletedIdsStr = localStorage.getItem("pos_deleted_customer_ids");
       const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
+      const deletedNamesStr = localStorage.getItem("pos_deleted_customer_names");
+      const deletedNames: string[] = deletedNamesStr ? JSON.parse(deletedNamesStr) : [];
 
       let list: Customer[] = [];
       const savedStr = localStorage.getItem("pos_printing_customers");
@@ -86,7 +88,9 @@ export function CustomersView() {
           const mergedMap = new Map<string, Customer>();
           list.forEach((lc) => mergedMap.set(lc.id, lc));
           remoteList.forEach((rc) => {
-            if (!deletedIds.includes(rc.id)) {
+            const isDeletedById = deletedIds.includes(rc.id);
+            const isDeletedByName = deletedNames.includes(rc.name?.trim().toLowerCase());
+            if (!isDeletedById && !isDeletedByName) {
               mergedMap.set(rc.id, rc);
             }
           });
@@ -94,7 +98,7 @@ export function CustomersView() {
         }
       }
 
-      list = list.filter((c) => !deletedIds.includes(c.id));
+      list = list.filter((c) => !deletedIds.includes(c.id) && !deletedNames.includes(c.name?.trim().toLowerCase()));
       setCustomers(list);
     } catch (error) {
       console.error("Error fetching customers:", error);
@@ -196,12 +200,25 @@ export function CustomersView() {
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus pelanggan ini?")) return;
     
+    const deletedCustomer = customers.find((c) => c.id === id);
+
     try {
       const deletedIdsStr = localStorage.getItem("pos_deleted_customer_ids");
       const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
       if (!deletedIds.includes(id)) {
         deletedIds.push(id);
         localStorage.setItem("pos_deleted_customer_ids", JSON.stringify(deletedIds));
+      }
+
+      // Track by name too (handles mock IDs that don't match Supabase UUIDs)
+      if (deletedCustomer?.name) {
+        const deletedNamesStr = localStorage.getItem("pos_deleted_customer_names");
+        const deletedNames: string[] = deletedNamesStr ? JSON.parse(deletedNamesStr) : [];
+        const nameLower = deletedCustomer.name.trim().toLowerCase();
+        if (!deletedNames.includes(nameLower)) {
+          deletedNames.push(nameLower);
+          localStorage.setItem("pos_deleted_customer_names", JSON.stringify(deletedNames));
+        }
       }
     } catch (e) {}
 
@@ -214,6 +231,11 @@ export function CustomersView() {
     if (user) {
       try {
         await supabase.from("customers").delete().eq("id", id);
+        if (deletedCustomer?.name) {
+          await supabase.from("customers").delete()
+            .eq("tenant_id", user.id)
+            .eq("name", deletedCustomer.name);
+        }
       } catch (error) {
         console.error("Failed to delete from Supabase:", error);
       }

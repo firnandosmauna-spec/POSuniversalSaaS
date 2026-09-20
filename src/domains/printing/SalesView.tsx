@@ -310,10 +310,11 @@ export function PrintingSalesView() {
 
       // Branch Isolation Filter
       const matchBranch =
+        !activeBranchId ||
         activeBranchId === "all" ||
         job.branchId === activeBranchId ||
         job.branchName === activeBranchName ||
-        (!job.branchId && activeBranchId === "main");
+        (!job.branchId && activeBranchId?.startsWith("main"));
 
       return matchSearch && matchStatus && matchPayment && matchDate && matchBranch;
     });

@@ -116,12 +116,13 @@ export function PrintingDashboardView() {
   // Branch Isolation Filter
   const branchJobs = useMemo(() => {
     return jobs.filter((j: PrintingJob) => {
-      if (activeBranchId === "all") return true;
+      if (!activeBranchId || activeBranchId === "all") return true;
       if (j.branchId) return j.branchId === activeBranchId;
       if (j.branchName) return j.branchName === activeBranchName;
-      return activeBranchId === "main";
+      return activeBranchId?.startsWith("main");
     });
   }, [jobs, activeBranchId, activeBranchName]);
+
 
   const formatRupiah = (num: number) => {
     return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(num);

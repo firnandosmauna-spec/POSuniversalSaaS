@@ -145,11 +145,12 @@ export function SalesView() {
     if (!matchesSearch) return false;
 
     const matchesBranch = 
+      !activeBranchId ||
       activeBranchId === "all" ||
       t.branch_id === activeBranchId ||
       t.branchId === activeBranchId ||
       t.branch_name === activeBranchName ||
-      (!t.branch_id && !t.branchId && (activeBranchId === "main" || activeBranchId === "all"));
+      (!t.branch_id && !t.branchId && activeBranchId?.startsWith("main"));
 
     if (!matchesBranch) return false;
 
