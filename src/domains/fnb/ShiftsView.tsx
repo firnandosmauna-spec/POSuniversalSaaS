@@ -63,7 +63,7 @@ export function ShiftsView() {
           if (currentStaff) {
             setCashierName(currentStaff.name);
           } else if (data.length > 0) {
-            setCashierName(data[0].name);
+            setCashierName(data[0]?.name || "");
           }
         }
       } catch (err) {
