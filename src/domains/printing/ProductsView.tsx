@@ -272,7 +272,7 @@ export function PrintingProductsView() {
         activeBranchId === "all" ||
         mat.branchId === activeBranchId ||
         mat.branchName === activeBranchName ||
-        (!mat.branchId && (activeBranchId === "main" || activeBranchId === "all"));
+        !mat.branchId;
 
       return matchSearch && matchCategory && matchBranch;
     });
