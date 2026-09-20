@@ -43,7 +43,7 @@ export interface MaterialOption {
   name: string;
   category: PrintCategory;
   pricePerUnit: number; // Price per m2 for OUTDOOR, price per sheet/unit for SHEET/MERCH
-  unitName: string; // "mÂ²", "lembar", "box", "pcs"
+  unitName: string; // "m²", "lembar", "box", "pcs"
   description: string;
 }
 
@@ -105,7 +105,7 @@ export default function PrintingPOSView() {
     if (unit.includes("pcs") || unit.includes("lembar") || unit.includes("lbr") || unit.includes("pack") || unit.includes("rim") || unit.includes("buku") || unit.includes("a3") || unit.includes("box")) return false;
 
     // Dimension based if unit mentions m, m2, meter, meter persegi, cm
-    if (unit.includes("m2") || unit.includes("m²") || unit.includes("meter") || unit === "m" || unit.includes("cm") || unit.includes("mÂ²") || unit.includes("mÃ‚Â²")) return true;
+    if (unit.includes("m2") || unit.includes("m²") || unit.includes("meter") || unit === "m" || unit.includes("cm") || unit.includes("m²") || unit.includes("m²")) return true;
     
     return false;
   };
@@ -306,12 +306,12 @@ const { user, activeBranchId, activeBranchName } = useAuth();
     }
   }, [activeTab, materialsList]);
 
-  // Dynamic Area Calculation (mÂ²)
+  // Dynamic Area Calculation (m²)
   const calculatedAreaM2 = useMemo(() => {
     if (!selectedMaterial) return 1;
     if (!isMaterialDimensionBased(selectedMaterial)) return 1;
     const rawArea = (widthCm / 100) * (heightCm / 100);
-    // Minimum 1 mÂ² order size rounding for banner
+    // Minimum 1 m² order size rounding for banner
     return Math.max(1, parseFloat(rawArea.toFixed(2)));
   }, [widthCm, heightCm, selectedMaterial]);
 
@@ -720,8 +720,8 @@ const { user, activeBranchId, activeBranchName } = useAuth();
                   <div className="p-1.5 px-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] flex items-center justify-between rounded-none">
                     <span className="text-slate-600 dark:text-slate-400 font-medium">Luas Dihitung:</span>
                     <span className="font-mono font-extrabold text-slate-900 dark:text-white text-xs">
-                      {(widthCm / 100).toFixed(2)}m Ã— {(heightCm / 100).toFixed(2)}m ={" "}
-                      <strong className="text-brand">{calculatedAreaM2} mÂ²</strong>
+                      {(widthCm / 100).toFixed(2)}m x {(heightCm / 100).toFixed(2)}m ={" "}
+                      <strong className="text-brand">{calculatedAreaM2} m²</strong>
                     </span>
                   </div>
                 </div>
@@ -973,7 +973,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
                     <h4 className="font-bold text-xs text-slate-900 dark:text-white leading-tight">{item.jobTitle}</h4>
                     <p className="text-[10px] text-slate-600 dark:text-slate-400">
                       {item.material.name}{" "}
-                      {item.category === "OUTDOOR_INDOOR" && `(${item.widthCm}x${item.heightCm}cm = ${item.areaM2}mÂ²)`}
+                      {item.category === "OUTDOOR_INDOOR" && `(${item.widthCm}x${item.heightCm}cm = ${item.areaM2}m²)`}
                     </p>
                   </div>
 
@@ -1218,7 +1218,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
                           Ukuran:{" "}
                           <strong className="text-slate-800 dark:text-slate-200">
                             {item.category === "OUTDOOR_INDOOR"
-                              ? `${item.widthCm} x ${item.heightCm} cm (${item.areaM2} mÂ²)`
+                              ? `${item.widthCm} x ${item.heightCm} cm (${item.areaM2} m²)`
                               : "Standard Unit"}
                           </strong>
                         </div>
