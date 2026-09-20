@@ -22,6 +22,11 @@ export default defineConfig({
           enabled: true
         },
         includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
+        outDir: ".output/public",
+        workbox: {
+          globDirectory: ".output/public",
+          globPatterns: ["**/*.{js,css,html,ico,png,svg}"]
+        },
         manifest: {
           name: "POS Universal SaaS",
           short_name: "POS Kasir",
