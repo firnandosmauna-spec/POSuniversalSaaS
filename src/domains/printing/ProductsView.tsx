@@ -251,10 +251,18 @@ export function PrintingProductsView() {
   };
 
   // Delete Material
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Apakah Anda yakin ingin menghapus bahan cetak ini dari katalog?")) {
       const updated = materials.filter((m) => m.id !== id);
       saveMaterials(updated);
+
+      if (user && user.id !== "tenant_demo") {
+        try {
+          await supabase.from("products").delete().eq("id", id);
+        } catch (e) {
+          console.warn("Supabase delete sync error:", e);
+        }
+      }
     }
   };
 
