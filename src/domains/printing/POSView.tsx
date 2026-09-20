@@ -152,26 +152,67 @@ const { user, activeBranchId, activeBranchName } = useAuth();
     } catch (e) {}
   }, []);
 
-  const [materialsList, setMaterialsList] = useState<MaterialOption[]>(() => {
-    try {
-      const saved = localStorage.getItem("pos_printing_materials");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.filter((m: any) => m.isAvailable !== false).map((m: any) => {
-          let cat: PrintCategory = m.category || "UMUM";
-          return {
-            id: m.id,
-            name: m.name,
-            category: cat,
-            pricePerUnit: m.price || 0,
-            unitName: m.unitType || "pcs",
-            description: m.description || ""
-          };
-        });
+  const [materialsList, setMaterialsList] = useState<MaterialOption[]>([]);
+
+  // Load materials from localStorage & Supabase to ensure Kasir always gets the latest
+  useEffect(() => {
+    const loadMaterials = async () => {
+      try {
+        const savedStr = localStorage.getItem("pos_printing_materials");
+        let list: any[] = savedStr ? JSON.parse(savedStr) : [];
+        
+        const catStr = localStorage.getItem("pos_printing_categories");
+        const loadedCategories = catStr ? JSON.parse(catStr) : [];
+
+        if (user) {
+          const { data: dbProducts } = await supabase
+            .from("products")
+            .select("*")
+            .eq("tenant_id", user.id)
+            .order("name", { ascending: true });
+
+          if (dbProducts && dbProducts.length > 0) {
+            const remoteMaterials = dbProducts.map((p) => ({
+              id: p.id,
+              name: p.name,
+              category: p.category || (loadedCategories.length > 0 ? loadedCategories[0].code : "UMUM"),
+              unitType: p.unit_type || "m²",
+              costPrice: Number(p.cost_price) || 0,
+              price: Number(p.price) || 0,
+              stock: Number(p.stock) || 0,
+              minOrder: 1,
+              description: p.description || "Bahan material cetak percetakan",
+              finishingsAllowed: ["Laminasi Glossy", "Potong Clean"],
+              isAvailable: p.status === "active"
+            }));
+
+            const merged = [...list];
+            remoteMaterials.forEach((rm) => {
+              if (!merged.some((lm) => lm.id === rm.id)) {
+                merged.push(rm);
+              }
+            });
+            list = merged;
+            localStorage.setItem("pos_printing_materials", JSON.stringify(list));
+          }
+        }
+        
+        // Map to MaterialOption for POS
+        const mappedList = list.filter((m: any) => m.isAvailable !== false).map((m: any) => ({
+          id: m.id,
+          name: m.name,
+          category: m.category || "UMUM",
+          pricePerUnit: m.price || 0,
+          unitName: m.unitType || "pcs",
+          description: m.description || ""
+        }));
+        setMaterialsList(mappedList);
+      } catch (e) {
+        console.error("Failed loading materials:", e);
       }
-    } catch (e) {}
-    return [];
-  });
+    };
+    loadMaterials();
+  }, [user]);
 
   // Design Fee Tiers State
   const [designTiers, setDesignTiers] = useState<any[]>(() => {
@@ -211,6 +252,13 @@ const { user, activeBranchId, activeBranchName } = useAuth();
   const [fileStatus, setFileStatus] = useState<"Ready" | "Perlu Desain" | "Re-Desain">("Ready");
   const [fileUrl, setFileUrl] = useState("");
   const [jobNotes, setJobNotes] = useState("");
+
+  // Auto-select first material when loaded if none selected
+  useEffect(() => {
+    if (materialsList.length > 0 && !selectedMaterial) {
+      setSelectedMaterial(materialsList[0] || null);
+    }
+  }, [materialsList, selectedMaterial]);
 
   // Customer & Cart State
   const [customerName, setCustomerName] = useState("Pelanggan Umum");
