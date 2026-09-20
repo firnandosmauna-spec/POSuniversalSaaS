@@ -42,7 +42,7 @@ export function ShiftsView() {
 
   useEffect(() => {
     if (user?.name && staffList.length === 0) {
-      setCashierName(user.name);
+      if (user?.name) setCashierName(user.name);
     }
   }, [user, staffList]);
 
