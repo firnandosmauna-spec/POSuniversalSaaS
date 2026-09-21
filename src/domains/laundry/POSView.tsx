@@ -21,6 +21,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/shared/auth/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export type LaundryCategory = "KILOAN" | "SATUAN" | "EXPRESS";
 
@@ -64,23 +66,28 @@ export type LaundryJobOrder = {
   targetCompletionDate: string;
 };
 
-const SERVICES: LaundryService[] = [];
-
-const PARFUM_OPTIONS: string[] = [];
-
-const RACK_LOCATIONS: string[] = [];
-
 export default function LaundryPOSView() {
   const { user, activeBranchId, branches } = useAuth();
   const currentBranch = branches.find((b) => b.id === activeBranchId) || branches[0];
 
+  const [services, setServices] = useState<LaundryService[]>([]);
+  const [parfumOptions, setParfumOptions] = useState<string[]>([]);
+  const [rackLocations, setRackLocations] = useState<string[]>([]);
+
   const [activeTab, setActiveTab] = useState<LaundryCategory>("KILOAN");
-  const [selectedService, setSelectedService] = useState<LaundryService | null>(SERVICES.length > 0 ? SERVICES[0] : null);
+  const [selectedService, setSelectedService] = useState<LaundryService | null>(null);
   const [weightOrQty, setWeightOrQty] = useState<number>(3);
-  const [parfum, setParfum] = useState<string>(PARFUM_OPTIONS.length > 0 ? PARFUM_OPTIONS[0] : "");
+  const [parfum, setParfum] = useState<string>("");
   const [expressTier, setExpressTier] = useState<"Reguler (2-3 Hari)" | "Kilat (24 Jam)" | "Express (6 Jam)">("Reguler (2-3 Hari)");
   const [notes, setNotes] = useState<string>("");
-  const [rackLocation, setRackLocation] = useState<string>(RACK_LOCATIONS.length > 0 ? RACK_LOCATIONS[0] : "");
+  const [rackLocation, setRackLocation] = useState<string>("");
+
+  // Add Service Modal
+  const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
+  const [newServiceName, setNewServiceName] = useState("");
+  const [newServicePrice, setNewServicePrice] = useState("");
+  const [newServiceUnit, setNewServiceUnit] = useState("kg");
+  const [newServiceCategory, setNewServiceCategory] = useState<LaundryCategory>("KILOAN");
 
   // Customer & Cart
   const [customerName, setCustomerName] = useState<string>("");
@@ -97,24 +104,83 @@ export default function LaundryPOSView() {
   const [recentJobs, setRecentJobs] = useState<LaundryJobOrder[]>([]);
   const [selectedSpkJob, setSelectedSpkJob] = useState<LaundryJobOrder | null>(null);
 
-  // Load local recent jobs
+  // Load local recent jobs and settings
   useEffect(() => {
     try {
       const saved = localStorage.getItem("pos_laundry_jobs");
       if (saved) setRecentJobs(JSON.parse(saved));
+
+      const savedSvc = localStorage.getItem("laundry_services");
+      if (savedSvc) {
+        const parsed = JSON.parse(savedSvc);
+        const mapped: LaundryService[] = parsed.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          category: s.category || "KILOAN",
+          pricePerUnit: s.price,
+          unitName: s.unit,
+          description: s.name,
+          minQty: 1
+        }));
+        setServices(mapped);
+        if (mapped.length > 0) setSelectedService(mapped[0]);
+      }
+
+      const savedPrf = localStorage.getItem("laundry_parfums");
+      if (savedPrf) {
+        const parsedPrf = JSON.parse(savedPrf).map((p: any) => p.name);
+        setParfumOptions(parsedPrf);
+        if (parsedPrf.length > 0) setParfum(parsedPrf[0]);
+      }
+
+      const savedRck = localStorage.getItem("laundry_racks");
+      if (savedRck) {
+        const parsedRck = JSON.parse(savedRck).map((r: any) => r.name);
+        setRackLocations(parsedRck);
+        if (parsedRck.length > 0) setRackLocation(parsedRck[0]);
+      }
     } catch (e) {}
   }, []);
 
+  const handleAddServiceSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newServiceName) return;
+    const updated = [...services, {
+      id: "lnd_svc_" + Date.now(),
+      name: newServiceName,
+      category: newServiceCategory,
+      pricePerUnit: Number(newServicePrice) || 0,
+      unitName: newServiceUnit,
+      description: newServiceName,
+      minQty: 1
+    }];
+    setServices(updated);
+    
+    // Save to localStorage matching SettingsView format
+    const toSave = updated.map(s => ({
+      id: s.id,
+      name: s.name,
+      price: s.pricePerUnit,
+      unit: s.unitName,
+      category: s.category
+    }));
+    localStorage.setItem("laundry_services", JSON.stringify(toSave));
+    
+    setIsAddServiceOpen(false);
+    setNewServiceName("");
+    setNewServicePrice("");
+  };
+
   // Update default service when tab changes
   useEffect(() => {
-    const defaultForTab = SERVICES.find((s) => s.category === activeTab);
+    const defaultForTab = services.find((s) => s.category === activeTab);
     if (defaultForTab) {
-      setSelectedService(defaultForTab);
+      setSelectedService(defaultForTab || null);
       setWeightOrQty(defaultForTab.minQty || 1);
     } else {
       setSelectedService(null);
     }
-  }, [activeTab]);
+  }, [activeTab, services]);
 
   // Express Multiplier
   const getExpressMultiplier = () => {
@@ -245,38 +311,114 @@ export default function LaundryPOSView() {
           </Button>
         </div>
 
-        {/* Category Tabs */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800">
-          <button
-            onClick={() => setActiveTab("KILOAN")}
-            className={`py-1.5 px-3 text-xs font-semibold border-b-2 transition-all ${
-              activeTab === "KILOAN"
-                ? "border-slate-900 dark:border-white text-slate-900 dark:text-white"
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            Kiloan
-          </button>
-          <button
-            onClick={() => setActiveTab("SATUAN")}
-            className={`py-1.5 px-3 text-xs font-semibold border-b-2 transition-all ${
-              activeTab === "SATUAN"
-                ? "border-slate-900 dark:border-white text-slate-900 dark:text-white"
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            Satuan
-          </button>
-          <button
-            onClick={() => setActiveTab("EXPRESS")}
-            className={`py-1.5 px-3 text-xs font-semibold border-b-2 transition-all ${
-              activeTab === "EXPRESS"
-                ? "border-slate-900 dark:border-white text-slate-900 dark:text-white"
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            Layanan Express
-          </button>
+        {/* Category Tabs & Add Service */}
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab("KILOAN")}
+              className={`py-1.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+                activeTab === "KILOAN"
+                  ? "border-slate-900 dark:border-white text-slate-900 dark:text-white"
+                  : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              Kiloan
+            </button>
+            <button
+              onClick={() => setActiveTab("SATUAN")}
+              className={`py-1.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+                activeTab === "SATUAN"
+                  ? "border-slate-900 dark:border-white text-slate-900 dark:text-white"
+                  : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              Satuan
+            </button>
+            <button
+              onClick={() => setActiveTab("EXPRESS")}
+              className={`py-1.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+                activeTab === "EXPRESS"
+                  ? "border-slate-900 dark:border-white text-slate-900 dark:text-white"
+                  : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              Layanan Express
+            </button>
+          </div>
+          <Dialog open={isAddServiceOpen} onOpenChange={setIsAddServiceOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px] text-brand hover:text-brand hover:bg-brand/10">
+                <Plus className="size-3 mr-1" /> Tambah
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] rounded-none">
+              <DialogHeader>
+                <DialogTitle className="font-display font-bold">Tambah Layanan Laundry</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddServiceSubmit} className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold">Kategori Layanan</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {["KILOAN", "SATUAN", "EXPRESS"].map((cat) => (
+                      <div
+                        key={cat}
+                        onClick={() => setNewServiceCategory(cat as LaundryCategory)}
+                        className={`text-center cursor-pointer p-2 border text-xs font-semibold transition-colors ${
+                          newServiceCategory === cat
+                            ? "bg-slate-900 text-white border-slate-900"
+                            : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                        }`}
+                      >
+                        {cat}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold" htmlFor="svc-name">Nama Layanan</Label>
+                  <Input
+                    id="svc-name"
+                    required
+                    className="h-8 rounded-none text-xs"
+                    placeholder="Contoh: Cuci Komplit, Sprei, Bedcover"
+                    value={newServiceName}
+                    onChange={(e) => setNewServiceName(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold" htmlFor="svc-price">Harga (Rp)</Label>
+                    <Input
+                      id="svc-price"
+                      required
+                      type="number"
+                      className="h-8 rounded-none text-xs font-mono"
+                      placeholder="6000"
+                      value={newServicePrice}
+                      onChange={(e) => setNewServicePrice(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold" htmlFor="svc-unit">Satuan</Label>
+                    <select
+                      id="svc-unit"
+                      className="flex h-8 w-full items-center justify-between border border-slate-200 bg-white px-3 py-1 text-xs focus:outline-none"
+                      value={newServiceUnit}
+                      onChange={(e) => setNewServiceUnit(e.target.value)}
+                    >
+                      <option value="kg">kg (Kilo)</option>
+                      <option value="pcs">pcs (Satuan)</option>
+                      <option value="m2">m² (Karpet)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button type="button" variant="outline" className="rounded-none h-8 text-xs" onClick={() => setIsAddServiceOpen(false)}>Batal</Button>
+                  <Button type="submit" className="rounded-none h-8 text-xs bg-slate-900 text-white hover:bg-slate-800">Simpan Layanan</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Calculator Main Box */}
@@ -284,12 +426,12 @@ export default function LaundryPOSView() {
           {/* Service Selector List */}
           <div>
             <div className="flex flex-col border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800">
-              {SERVICES.length === 0 ? (
+              {services.length === 0 ? (
                 <div className="p-4 text-center text-xs text-slate-500 italic">
                   Belum ada layanan untuk kategori ini.
                 </div>
               ) : (
-                SERVICES.filter((s) => (activeTab === "EXPRESS" ? true : s.category === activeTab)).map((srv) => {
+                services.filter((s) => (activeTab === "EXPRESS" ? true : s.category === activeTab)).map((srv) => {
                   const isSelected = selectedService?.id === srv.id;
                   return (
                     <div
@@ -384,7 +526,7 @@ export default function LaundryPOSView() {
                 onChange={(e) => setParfum(e.target.value)}
                 className="w-full h-8 text-xs px-2 bg-transparent border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-900"
               >
-                {PARFUM_OPTIONS.map((p) => (
+                {parfumOptions.map((p: string) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
@@ -399,7 +541,7 @@ export default function LaundryPOSView() {
                 onChange={(e) => setRackLocation(e.target.value)}
                 className="w-full h-8 text-xs px-2 bg-transparent border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-900"
               >
-                {RACK_LOCATIONS.map((r) => (
+                {rackLocations.map((r: string) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>

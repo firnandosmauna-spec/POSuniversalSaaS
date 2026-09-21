@@ -361,7 +361,7 @@ export function CustomersView() {
               <Input 
                 value={formData.notes} 
                 onChange={e => setFormData({...formData, notes: e.target.value})} 
-                placeholder="Cth: Suka kopi tanpa gula (Opsional)"
+                placeholder={user?.businessType === "LAUNDRY" ? "Cth: Alergi deterjen, minta pisah warna (Opsional)" : "Cth: Suka kopi tanpa gula (Opsional)"}
               />
             </div>
             <DialogFooter className="pt-4">

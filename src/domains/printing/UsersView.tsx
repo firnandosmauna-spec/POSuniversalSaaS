@@ -250,7 +250,7 @@ export function PrintingUsersView() {
             .eq("tenant_id", user.id);
             
           if (updateErr && (updateErr.message?.includes("column") || updateErr.code === "42703" || updateErr.message?.includes("does not exist"))) {
-            const fallbackPayload = { ...payload };
+            const fallbackPayload: any = { ...payload };
             delete fallbackPayload.pin_code;
             await supabase.from("store_users").update(fallbackPayload).eq("id", editingStaff.id).eq("tenant_id", user.id);
           }
@@ -262,7 +262,7 @@ export function PrintingUsersView() {
           });
           
           if (insertErr && (insertErr.message?.includes("column") || insertErr.code === "42703" || insertErr.message?.includes("does not exist"))) {
-            const fallbackPayload = { ...payload };
+            const fallbackPayload: any = { ...payload };
             delete fallbackPayload.pin_code;
             await supabase.from("store_users").insert({
               id: staffId,
