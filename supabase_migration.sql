@@ -69,3 +69,7 @@ ALTER TABLE store_users
   ADD COLUMN IF NOT EXISTS branch_id text,
   ADD COLUMN IF NOT EXISTS branch_name text,
   ADD COLUMN IF NOT EXISTS pin_code text;
+
+-- 6. Tambah kolom store_name di tabel store_settings
+ALTER TABLE store_settings
+  ADD COLUMN IF NOT EXISTS store_name text;
