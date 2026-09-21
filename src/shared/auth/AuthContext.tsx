@@ -364,14 +364,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           store_name: `${name} Store`,
           tax_rate: 10,
           enable_dine_in: true
-        });
+        }, { onConflict: "tenant_id" });
         
         if (settingsErr && (settingsErr.message?.includes("column") || settingsErr.code === "42703" || settingsErr.message?.includes("does not exist"))) {
           await supabase.from("store_settings").upsert({
             tenant_id: tenantId,
             tax_rate: 10,
             enable_dine_in: true
-          });
+          }, { onConflict: "tenant_id" });
         }
       } catch (e) {}
     } catch (e) {
