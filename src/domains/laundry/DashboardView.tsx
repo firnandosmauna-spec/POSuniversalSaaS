@@ -34,69 +34,7 @@ export function LaundryDashboardView() {
       if (saved) {
         setJobs(JSON.parse(saved));
       } else {
-        // Initial sample data if empty
-        const samples: LaundryJobOrder[] = [
-          {
-            id: "job_demo_1",
-            invoiceNo: "LND-88201",
-            customerName: "Ibu Rina Wijaya",
-            customerPhone: "081299887766",
-            items: [
-              {
-                id: "i1",
-                service: { id: "k1", name: "Cuci Komplit (Cuci + Lipat + Setrika)", category: "KILOAN", pricePerUnit: 8000, unitName: "kg", description: "" },
-                weightOrQty: 5,
-                parfum: "Lavender Fresh",
-                notes: "Baju kerja lipat rapi",
-                rackLocation: "Rak A-1",
-                expressTier: "Reguler (2-3 Hari)",
-                totalPrice: 40000,
-              },
-            ],
-            totalAmount: 40000,
-            dpAmount: 40000,
-            remainingAmount: 0,
-            paymentType: "LUNAS",
-            paymentMethod: "Tunai",
-            paymentStatus: "Lunas",
-            jobStatus: "Proses Cuci",
-            createdAt: new Date().toISOString(),
-            cashierName: "Kasir Laundry",
-            branchName: currentBranch?.name || "Laundry Utama",
-            targetCompletionDate: new Date(Date.now() + 86400000 * 2).toISOString(),
-          },
-          {
-            id: "job_demo_2",
-            invoiceNo: "LND-88202",
-            customerName: "Pak Hendra",
-            customerPhone: "085611223344",
-            items: [
-              {
-                id: "i2",
-                service: { id: "s1", name: "Bedcover King / Jumbo", category: "SATUAN", pricePerUnit: 40000, unitName: "pcs", description: "" },
-                weightOrQty: 1,
-                parfum: "Fresh Lily",
-                notes: "Noda kopi di pojok kanan",
-                rackLocation: "Rak B-2",
-                expressTier: "Kilat (24 Jam)",
-                totalPrice: 60000,
-              },
-            ],
-            totalAmount: 60000,
-            dpAmount: 30000,
-            remainingAmount: 30000,
-            paymentType: "DP",
-            paymentMethod: "QRIS",
-            paymentStatus: "DP (Belum Lunas)",
-            jobStatus: "Siap Diambil",
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            cashierName: "Kasir Laundry",
-            branchName: currentBranch?.name || "Laundry Utama",
-            targetCompletionDate: new Date().toISOString(),
-          },
-        ];
-        setJobs(samples);
-        localStorage.setItem("pos_laundry_jobs", JSON.stringify(samples));
+        setJobs([]);
       }
     } catch (e) {}
   }, [currentBranch]);
