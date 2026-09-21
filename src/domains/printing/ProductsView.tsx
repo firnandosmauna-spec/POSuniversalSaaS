@@ -115,10 +115,12 @@ export function PrintingProductsView() {
             };
           });
 
-          // Merge local and remote avoiding duplicate IDs
           const merged = [...list];
           remoteMaterials.forEach((rm) => {
-            if (!merged.some((lm) => lm.id === rm.id)) {
+            const existingIdx = merged.findIndex((lm) => lm.id === rm.id);
+            if (existingIdx >= 0) {
+              merged[existingIdx] = rm; // Supabase overwrites local
+            } else {
               merged.push(rm);
             }
           });
