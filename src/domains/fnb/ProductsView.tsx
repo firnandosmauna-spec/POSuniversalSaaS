@@ -243,8 +243,7 @@ export function ProductsView() {
             stock: newProductItem.stock,
             category: newProductItem.category,
             status: newProductItem.status,
-            image_url: newProductItem.image_url,
-            target_station: targetStation
+            image_url: newProductItem.image_url
           };
 
           if (editingProduct) {

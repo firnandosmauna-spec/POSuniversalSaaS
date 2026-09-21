@@ -88,19 +88,32 @@ export function PrintingProductsView() {
           .order("name", { ascending: true });
 
         if (dbProducts && dbProducts.length > 0) {
-          const remoteMaterials: PrintingMaterial[] = dbProducts.map((p) => ({
-            id: p.id,
-            name: p.name,
-            category: p.category || (loadedCategories.length > 0 ? loadedCategories[0].code : "UMUM"),
-            unitType: p.unit_type || "m²",
-            costPrice: Number(p.cost_price) || 0,
-            price: Number(p.price) || 0,
-            stock: Number(p.stock) || 0,
-            minOrder: 1,
-            description: p.description || "Bahan material cetak percetakan",
-            finishingsAllowed: ["Laminasi Glossy", "Potong Clean"],
-            isAvailable: p.status === "active"
-          }));
+          const remoteMaterials: PrintingMaterial[] = dbProducts.map((p) => {
+            let parsedFinishings: string[] = ["Laminasi Glossy", "Potong Clean"]; // default fallback
+            if (p.finishings_allowed) {
+              if (Array.isArray(p.finishings_allowed)) {
+                parsedFinishings = p.finishings_allowed;
+              } else if (typeof p.finishings_allowed === 'string') {
+                try {
+                  parsedFinishings = JSON.parse(p.finishings_allowed);
+                } catch(e) {}
+              }
+            }
+
+            return {
+              id: p.id,
+              name: p.name,
+              category: p.category || (loadedCategories.length > 0 ? loadedCategories[0].code : "UMUM"),
+              unitType: p.unit_type || "m²",
+              costPrice: Number(p.cost_price) || 0,
+              price: Number(p.price) || 0,
+              stock: Number(p.stock) || 0,
+              minOrder: Number(p.min_order) || 1,
+              description: p.description || "Bahan material cetak percetakan",
+              finishingsAllowed: parsedFinishings,
+              isAvailable: p.status === "active"
+            };
+          });
 
           // Merge local and remote avoiding duplicate IDs
           const merged = [...list];
@@ -241,7 +254,11 @@ export function PrintingProductsView() {
           price: Number(formPrice) || 0,
           stock: Number(formStock) || 0,
           category: formCategory,
-          status: formIsAvailable ? "active" : "inactive"
+          status: formIsAvailable ? "active" : "inactive",
+          unit_type: formUnitType,
+          description: formDescription,
+          min_order: Number(formMinOrder) || 1,
+          finishings_allowed: finishingsArr
         });
         
         if (error) {
