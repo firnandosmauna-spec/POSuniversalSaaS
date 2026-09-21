@@ -544,8 +544,10 @@ const { user, activeBranchId, activeBranchName } = useAuth();
       const dpVal = paymentType === "DP" ? Math.min(dpInput, cartTotalAmount) : cartTotalAmount;
       const remainingVal = Math.max(0, cartTotalAmount - dpVal);
 
+      const newTxId = crypto.randomUUID();
+
       const newJobOrder: PrintingJobOrder = {
-        id: `job_${Date.now()}`,
+        id: newTxId,
         invoiceNo: invNo,
         customerName: customerName || "Pelanggan Umum",
         customerPhone: customerPhone || "-",
@@ -636,6 +638,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
 
           // Supabase transaction insert (resilient to schema differences)
           const fullPayload: any = {
+            id: newTxId,
             tenant_id: user.id,
             invoice_no: invNo,
             customer_name: customerName || "Pelanggan Umum",
@@ -667,6 +670,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
             const isColumnErr = insertErr.message?.includes("column") || insertErr.code === "42703" || insertErr.message?.includes("does not exist");
             if (isColumnErr) {
               await supabase.from("transactions").insert({
+                id: newTxId,
                 tenant_id: user.id,
                 total_amount: cartTotalAmount,
                 payment_method: paymentMethod,
