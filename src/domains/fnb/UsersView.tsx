@@ -249,7 +249,6 @@ export function UsersView() {
               .update({
                 name: formName.trim(),
                 email: formEmail.trim(),
-                pin_code: formPin.trim(),
                 role: formRole,
                 status: formStatus
               })
@@ -258,8 +257,9 @@ export function UsersView() {
         }
       } else {
         // Create new staff
+        const newStaffId = crypto.randomUUID();
         const newStaffItem: StaffUser = {
-          id: `staff_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          id: newStaffId,
           tenant_id: user.id,
           name: formName.trim(),
           email: formEmail.trim() || `${formName.toLowerCase().replace(/\s+/g, ".")}@pos.id`,
@@ -296,7 +296,6 @@ export function UsersView() {
               tenant_id: user.id,
               name: newStaffItem.name,
               email: newStaffItem.email,
-              pin_code: newStaffItem.pin_code,
               role: newStaffItem.role,
               status: newStaffItem.status
             });

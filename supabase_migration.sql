@@ -68,3 +68,4 @@ ORDER BY ordinal_position;
 ALTER TABLE store_users
   ADD COLUMN IF NOT EXISTS branch_id text,
   ADD COLUMN IF NOT EXISTS branch_name text;
+  ADD COLUMN IF NOT EXISTS pin_code text;

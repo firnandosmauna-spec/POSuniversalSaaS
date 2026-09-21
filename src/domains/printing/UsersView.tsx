@@ -210,7 +210,7 @@ export function PrintingUsersView() {
       });
     } else {
       const newStaff: PrintingStaffUser = {
-        id: `staf_${Date.now()}`,
+        id: crypto.randomUUID(),
         tenant_id: user ? user.id : "tenant_demo",
         name: formName.trim(),
         email: formEmail.trim(),
@@ -243,17 +243,32 @@ export function PrintingUsersView() {
 
         if (editingStaff) {
           // Update by id
-          await supabase
+          const { error: updateErr } = await supabase
             .from("store_users")
             .update(payload)
             .eq("id", editingStaff.id)
             .eq("tenant_id", user.id);
+            
+          if (updateErr && (updateErr.message?.includes("column") || updateErr.code === "42703" || updateErr.message?.includes("does not exist"))) {
+            const fallbackPayload = { ...payload };
+            delete fallbackPayload.pin_code;
+            await supabase.from("store_users").update(fallbackPayload).eq("id", editingStaff.id).eq("tenant_id", user.id);
+          }
         } else {
           // Insert new
-          await supabase.from("store_users").insert({
+          const { error: insertErr } = await supabase.from("store_users").insert({
             id: staffId,
             ...payload
           });
+          
+          if (insertErr && (insertErr.message?.includes("column") || insertErr.code === "42703" || insertErr.message?.includes("does not exist"))) {
+            const fallbackPayload = { ...payload };
+            delete fallbackPayload.pin_code;
+            await supabase.from("store_users").insert({
+              id: staffId,
+              ...fallbackPayload
+            });
+          }
         }
       } catch {
         // RLS or network error — data is already saved in localStorage
