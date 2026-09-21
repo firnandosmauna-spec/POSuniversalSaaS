@@ -134,7 +134,7 @@ export function UsersView() {
             try {
               const owner = migratedStaff.find(s => s.role === "Owner Tenant");
               if (owner) {
-                await supabase.from("store_users").upsert({
+                const { error: upsertErr } = await supabase.from("store_users").upsert({
                   id: owner.id,
                   tenant_id: user.id,
                   name: owner.name,
@@ -143,6 +143,20 @@ export function UsersView() {
                   role: owner.role,
                   status: owner.status
                 }, { onConflict: "id" });
+                
+                if (upsertErr) {
+                  const isColumnErr = upsertErr.message?.includes("column") || upsertErr.code === "42703" || upsertErr.message?.includes("does not exist");
+                  if (isColumnErr) {
+                    await supabase.from("store_users").upsert({
+                      id: owner.id,
+                      tenant_id: user.id,
+                      name: owner.name,
+                      email: owner.email,
+                      role: owner.role,
+                      status: owner.status
+                    }, { onConflict: "id" });
+                  }
+                }
               }
             } catch {}
           } else {
@@ -291,7 +305,7 @@ export function UsersView() {
         if (insertErr) {
           const isColumnErr = insertErr.message?.includes("column") || insertErr.code === "42703" || insertErr.message?.includes("does not exist");
           if (isColumnErr) {
-            await supabase.from("store_users").insert({
+            const { error: fallbackErr } = await supabase.from("store_users").insert({
               id: newStaffItem.id,
               tenant_id: user.id,
               name: newStaffItem.name,
@@ -299,6 +313,9 @@ export function UsersView() {
               role: newStaffItem.role,
               status: newStaffItem.status
             });
+            if (fallbackErr) {
+              console.error("Store users Supabase FALLBACK insert error:", fallbackErr.message, fallbackErr);
+            }
           } else {
             console.error("Store users Supabase insert error:", insertErr.message);
           }

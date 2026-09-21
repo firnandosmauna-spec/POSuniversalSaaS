@@ -312,7 +312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // 1. Initial Staff Account
       const initialStaff = [{
-        id: `staff_owner_${tenantId}`,
+        id: crypto.randomUUID(),
         tenant_id: tenantId,
         name: name || "Owner Utama",
         email: email || "owner@pos.id",
@@ -329,7 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const firstOwner = initialStaff[0];
         if (firstOwner) {
-          await supabase.from("store_users").insert({
+          const { error: insertErr } = await supabase.from("store_users").insert({
             id: firstOwner.id,
             tenant_id: tenantId,
             name: firstOwner.name,
@@ -337,8 +337,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             pin_code: ownerPin,
             role: "Owner Tenant",
             branch_id: "main",
+            branch_name: "Cabang Utama (Pusat)",
             status: "ACTIVE"
           });
+          
+          if (insertErr) {
+            const isColumnErr = insertErr.message?.includes("column") || insertErr.code === "42703" || insertErr.message?.includes("does not exist");
+            if (isColumnErr) {
+              await supabase.from("store_users").insert({
+                id: firstOwner.id,
+                tenant_id: tenantId,
+                name: firstOwner.name,
+                email: firstOwner.email,
+                role: "Owner Tenant",
+                status: "ACTIVE"
+              });
+            }
+          }
         }
       } catch (e) {}
 
