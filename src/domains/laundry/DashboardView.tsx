@@ -64,15 +64,15 @@ export function LaundryDashboardView() {
   return (
     <div className="flex flex-col h-full w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-y-auto p-4 md:p-6 space-y-6 font-sans">
       {/* Top Banner Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 border border-slate-200 dark:border-slate-800 shadow-sm rounded-none">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 border border-slate-200 dark:border-slate-800 rounded-none">
         <div className="flex items-center gap-3.5">
-          <div className="size-12 bg-cyan-600 text-white grid place-items-center rounded-none font-bold shadow-md">
+          <div className="size-12 bg-slate-900 text-white dark:bg-white dark:text-slate-900 grid place-items-center rounded-none font-bold">
             <WashingMachine className="size-6" />
           </div>
           <div>
             <h1 className="font-display font-extrabold text-lg md:text-xl text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               Dashboard Usaha Laundry
-              <span className="text-xs bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 px-2.5 py-0.5 border border-cyan-500/40 font-mono">
+              <span className="text-xs bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-2.5 py-0.5 border border-slate-300 dark:border-slate-700 font-mono">
                 {currentBranch?.name || "Cabang Utama"}
               </span>
             </h1>
@@ -85,7 +85,7 @@ export function LaundryDashboardView() {
         <div className="flex flex-wrap items-center gap-2">
           {/* Synchronized Branch Switcher Dropdown */}
           <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 border border-slate-200 dark:border-slate-700">
-            <Building2 className="size-4 text-cyan-600 dark:text-cyan-400" />
+            <Building2 className="size-4 text-slate-700 dark:text-slate-300" />
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 hidden sm:inline">Pilih Cabang:</span>
             <select
               value={activeBranchId}
@@ -102,7 +102,7 @@ export function LaundryDashboardView() {
           </div>
 
           <Link to="/app/pos">
-            <Button className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs px-5 py-2.5 rounded-none shadow-md gap-2">
+            <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 font-bold text-xs px-5 py-2.5 rounded-none gap-2">
               <Calculator className="size-4" /> Buka Kasir Laundry
             </Button>
           </Link>
@@ -112,65 +112,65 @@ export function LaundryDashboardView() {
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1 */}
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none shadow-xs space-y-2">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none space-y-2">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-bold uppercase tracking-wider">Total Omset Laundry</span>
-            <div className="size-8 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 grid place-items-center">
+            <div className="size-8 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white grid place-items-center">
               <CircleDollarSign className="size-4" />
             </div>
           </div>
           <div className="font-mono text-xl font-extrabold text-slate-900 dark:text-white">
             Rp {totalRevenue.toLocaleString("id-ID")}
           </div>
-          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1">
             <TrendingUp className="size-3" /> Rekapitulasi nota laundry aktif
           </p>
         </div>
 
         {/* Metric 2 */}
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none shadow-xs space-y-2">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none space-y-2">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-bold uppercase tracking-wider">Dalam Proses Cuci/Setrika</span>
-            <div className="size-8 bg-cyan-100 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 grid place-items-center">
+            <div className="size-8 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white grid place-items-center">
               <WashingMachine className="size-4" />
             </div>
           </div>
           <div className="font-mono text-xl font-extrabold text-slate-900 dark:text-white">
             {activeProcessingCount} Nota
           </div>
-          <p className="text-[11px] text-cyan-600 dark:text-cyan-400 font-medium">
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
             Pakaian sedang dibilas, dikeringkan & disetrika
           </p>
         </div>
 
         {/* Metric 3 */}
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none shadow-xs space-y-2">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none space-y-2">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-bold uppercase tracking-wider">Siap Diambil Pelanggan</span>
-            <div className="size-8 bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 grid place-items-center">
+            <div className="size-8 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white grid place-items-center">
               <CheckCircle2 className="size-4" />
             </div>
           </div>
           <div className="font-mono text-xl font-extrabold text-slate-900 dark:text-white">
             {readyPickupCount} Nota
           </div>
-          <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
             Tersimpan rapi di Rak Penyimpanan
           </p>
         </div>
 
         {/* Metric 4 */}
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none shadow-xs space-y-2">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none space-y-2">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-bold uppercase tracking-wider">Timbangan Kiloan Hari Ini</span>
-            <div className="size-8 bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 grid place-items-center">
+            <div className="size-8 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white grid place-items-center">
               <Shirt className="size-4" />
             </div>
           </div>
           <div className="font-mono text-xl font-extrabold text-slate-900 dark:text-white">
             {totalKgToday} kg
           </div>
-          <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
             Total berat pakaian masuk hari ini
           </p>
         </div>
@@ -179,24 +179,24 @@ export function LaundryDashboardView() {
       {/* Laundry Status Pipeline Cards */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-none space-y-4">
         <h3 className="font-display font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-          <Clock className="size-4 text-cyan-600 dark:text-cyan-400" /> Pipeline Status Pengerjaan Laundry
+          <Clock className="size-4 text-slate-900 dark:text-white" /> Pipeline Status Pengerjaan Laundry
         </h3>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {(
             [
-              { status: "Antrean", label: "Antrean Cuci", color: "border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30" },
-              { status: "Proses Cuci", label: "Proses Cuci", color: "border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30" },
-              { status: "Pengeringan", label: "Pengeringan", color: "border-purple-500 text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30" },
-              { status: "Setrika & Packing", label: "Setrika & Packing", color: "border-orange-500 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30" },
-              { status: "Siap Diambil", label: "Siap Diambil", color: "border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30" },
+              { status: "Antrean", label: "Antrean Cuci" },
+              { status: "Proses Cuci", label: "Proses Cuci" },
+              { status: "Pengeringan", label: "Pengeringan" },
+              { status: "Setrika & Packing", label: "Setrika & Packing" },
+              { status: "Siap Diambil", label: "Siap Diambil" },
             ] as const
           ).map((st) => {
             const count = jobs.filter((j) => j.jobStatus === st.status).length;
             return (
-              <div key={st.status} className={`p-3 border-l-4 border ${st.color} space-y-1`}>
-                <span className="text-[10px] font-extrabold uppercase font-mono block">{st.label}</span>
-                <span className="font-mono text-lg font-extrabold block">{count} Nota</span>
+              <div key={st.status} className="p-3 border-l-4 border-slate-400 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 space-y-1">
+                <span className="text-[10px] font-extrabold uppercase font-mono block text-slate-500 dark:text-slate-400">{st.label}</span>
+                <span className="font-mono text-lg font-extrabold block text-slate-900 dark:text-white">{count} Nota</span>
               </div>
             );
           })}
@@ -207,10 +207,10 @@ export function LaundryDashboardView() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-none space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-            <Package className="size-4 text-cyan-600 dark:text-cyan-400" /> Daftar Nota & Job Order Laundry Terbaru
+            <Package className="size-4 text-slate-900 dark:text-white" /> Daftar Nota & Job Order Laundry Terbaru
           </h3>
           <Link to="/app/sales">
-            <Button variant="ghost" size="sm" className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 font-bold gap-1">
+            <Button variant="ghost" size="sm" className="text-xs text-slate-900 dark:text-white hover:bg-slate-100 font-bold gap-1 rounded-none border border-slate-300">
               Lihat Semua Transaksi <ChevronRight className="size-3.5" />
             </Button>
           </Link>
@@ -238,9 +238,9 @@ export function LaundryDashboardView() {
               ) : (
                 jobs.map((job) => (
                   <tr key={job.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/60 transition-all">
-                    <td className="p-3 font-mono font-bold text-cyan-600 dark:text-cyan-400">
+                    <td className="p-3 font-mono font-bold text-slate-900 dark:text-white">
                       {job.invoiceNo}
-                      <span className="block text-[10px] text-slate-400 font-normal">
+                      <span className="block text-[10px] text-slate-500 font-normal">
                         {new Date(job.createdAt).toLocaleDateString("id-ID")}
                       </span>
                     </td>
@@ -267,14 +267,14 @@ export function LaundryDashboardView() {
                       <span
                         className={`inline-block px-2 py-0.5 text-[10px] font-extrabold border uppercase ${
                           job.paymentStatus === "Lunas"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400 border-amber-300 dark:border-amber-800"
+                            ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white border-slate-300 dark:border-slate-600"
+                            : "bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300 border-slate-300 dark:border-slate-600"
                         }`}
                       >
                         {job.paymentStatus}
                       </span>
                       {job.remainingAmount > 0 && (
-                        <span className="block text-[10px] text-amber-600 font-mono mt-0.5">
+                        <span className="block text-[10px] text-slate-500 font-mono mt-0.5">
                           Sisa: Rp {job.remainingAmount.toLocaleString("id-ID")}
                         </span>
                       )}
@@ -284,14 +284,14 @@ export function LaundryDashboardView() {
                       <select
                         value={job.jobStatus}
                         onChange={(e) => handleUpdateStatus(job.id, e.target.value as LaundryJobOrder["jobStatus"])}
-                        className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold text-cyan-600 dark:text-cyan-400 p-1 rounded-none"
+                        className="bg-transparent border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 p-1 rounded-none"
                       >
-                        <option value="Antrean">🟡 Antrean Cuci</option>
-                        <option value="Proses Cuci">🔵 Proses Cuci</option>
-                        <option value="Pengeringan">🟣 Pengeringan Mesin</option>
-                        <option value="Setrika & Packing">🟠 Setrika & Packing</option>
-                        <option value="Siap Diambil">🟢 Siap Diambil</option>
-                        <option value="Selesai">⚪ Selesai (Diambil)</option>
+                        <option value="Antrean">Antrean Cuci</option>
+                        <option value="Proses Cuci">Proses Cuci</option>
+                        <option value="Pengeringan">Pengeringan Mesin</option>
+                        <option value="Setrika & Packing">Setrika & Packing</option>
+                        <option value="Siap Diambil">Siap Diambil</option>
+                        <option value="Selesai">Selesai (Diambil)</option>
                       </select>
                     </td>
 

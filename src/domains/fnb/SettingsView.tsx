@@ -8,6 +8,7 @@ import { useAuth } from "@/shared/auth/AuthContext";
 import { getInvoiceSettings, saveInvoiceSettings, generateInvoiceCode, InvoiceSettings } from "@/shared/utils/invoiceGenerator";
 
 import { PrintingSettingsView } from "@/domains/printing/SettingsView";
+import { LaundrySettingsView } from "@/domains/laundry/SettingsView";
 
 type TableData = {
   id: string;
@@ -20,6 +21,9 @@ export function SettingsView() {
 
   if ((user?.businessType as string) === "PRINTING") {
     return <PrintingSettingsView />;
+  }
+  if ((user?.businessType as string) === "LAUNDRY") {
+    return <LaundrySettingsView />;
   }
   const [tables, setTables] = useState<TableData[]>([]);
   const [newTableName, setNewTableName] = useState("");
