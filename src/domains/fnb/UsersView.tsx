@@ -228,7 +228,7 @@ export function UsersView() {
         localStorage.setItem(tenantStorageKey, JSON.stringify(updatedList));
 
         // Sync to Supabase
-        await supabase
+        const { error: updateErr } = await supabase
           .from("store_users")
           .update({
             name: formName.trim(),
@@ -240,6 +240,22 @@ export function UsersView() {
             status: formStatus
           })
           .eq("id", editingStaff.id);
+          
+        if (updateErr) {
+          const isColumnErr = updateErr.message?.includes("column") || updateErr.code === "42703" || updateErr.message?.includes("does not exist");
+          if (isColumnErr) {
+            await supabase
+              .from("store_users")
+              .update({
+                name: formName.trim(),
+                email: formEmail.trim(),
+                pin_code: formPin.trim(),
+                role: formRole,
+                status: formStatus
+              })
+              .eq("id", editingStaff.id);
+          }
+        }
       } else {
         // Create new staff
         const newStaffItem: StaffUser = {
@@ -260,7 +276,7 @@ export function UsersView() {
         localStorage.setItem(tenantStorageKey, JSON.stringify(updatedList));
 
         // Sync to Supabase
-        await supabase.from("store_users").insert({
+        const { error: insertErr } = await supabase.from("store_users").insert({
           id: newStaffItem.id,
           tenant_id: user.id,
           name: newStaffItem.name,
@@ -271,6 +287,23 @@ export function UsersView() {
           branch_name: newStaffItem.branch_name,
           status: newStaffItem.status
         });
+        
+        if (insertErr) {
+          const isColumnErr = insertErr.message?.includes("column") || insertErr.code === "42703" || insertErr.message?.includes("does not exist");
+          if (isColumnErr) {
+            await supabase.from("store_users").insert({
+              id: newStaffItem.id,
+              tenant_id: user.id,
+              name: newStaffItem.name,
+              email: newStaffItem.email,
+              pin_code: newStaffItem.pin_code,
+              role: newStaffItem.role,
+              status: newStaffItem.status
+            });
+          } else {
+            console.error("Store users Supabase insert error:", insertErr.message);
+          }
+        }
       }
 
       setIsModalOpen(false);

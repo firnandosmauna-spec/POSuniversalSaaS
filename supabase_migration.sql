@@ -63,3 +63,8 @@ SELECT column_name, data_type
 FROM information_schema.columns 
 WHERE table_name = 'transactions' AND table_schema = 'public'
 ORDER BY ordinal_position;
+
+-- 5. Tambah kolom yang dibutuhkan di tabel store_users
+ALTER TABLE store_users
+  ADD COLUMN IF NOT EXISTS branch_id text,
+  ADD COLUMN IF NOT EXISTS branch_name text;
