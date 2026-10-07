@@ -45,6 +45,7 @@ export function KitchenView() {
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [fetchError, setFetchError] = useState<string | null>(null);
   
   // Local state storage for kitchen status (fallback if DB column not present)
   const [statusOverrides, setStatusOverrides] = useState<Record<string, "pending" | "preparing" | "ready" | "served">>({});
@@ -97,29 +98,96 @@ export function KitchenView() {
   };
 
   const fetchOrders = async () => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
     try {
-      const { data, error } = await supabase
+      // 1. Fetch transactions safely without foreign keys to avoid schema errors
+      const { data: trxData, error: trxError } = await supabase
         .from("transactions")
-        .select(`
-          id,
-          created_at,
-          order_type,
-          status,
-          kitchen_status,
-          tables ( name ),
-          customers ( name ),
-          transaction_items ( id, product_name, qty, price, product_id )
-        `)
+        .select(`id, created_at, order_type, status, kitchen_status, table_id, customer_id`)
         .eq("tenant_id", user.id)
         .order("created_at", { ascending: false })
         .limit(40);
 
-      if (error) throw error;
-      setOrders((data as any) || []);
+      let fetchedTransactions = trxData as any[];
+
+      if (trxError) {
+        // Fallback without kitchen_status if it fails
+        const retry = await supabase
+          .from("transactions")
+          .select(`id, created_at, order_type, status, table_id, customer_id`)
+          .eq("tenant_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(40);
+        
+        if (retry.error) {
+          setFetchError(`Trx Error: ${retry.error.message || JSON.stringify(retry.error)}`);
+          throw retry.error;
+        }
+        fetchedTransactions = retry.data as any[];
+      }
+
+      if (!fetchedTransactions) {
+        fetchedTransactions = [];
+      }
+
+      // 2. Fetch transaction items manually
+      const trxIds = fetchedTransactions.map(t => t.id);
+      let itemsData: any[] = [];
+      try {
+        const { data: items } = await supabase
+          .from("transaction_items")
+          .select(`id, transaction_id, product_name, qty, price, product_id`)
+          .in("transaction_id", trxIds);
+        if (items) itemsData = items;
+      } catch (e) {
+        console.error("Error fetching items:", e);
+      }
+
+      // 3. Assemble the final orders array
+      const assembledOrders = fetchedTransactions.map(t => {
+        const tItems = itemsData.filter(i => i.transaction_id === t.id);
+        return {
+          ...t,
+          tables: null, // we skip tables/customers join for now to ensure reliability
+          customers: null,
+          transaction_items: tItems.map(item => ({
+            id: item.id,
+            product_name: item.product_name,
+            qty: item.qty,
+            price: item.price,
+            product_id: item.product_id
+          }))
+        };
+      });
+
+      // 4. Merge with localStorage fallback transactions
+      let mergedOrders = [...assembledOrders];
+      try {
+        const saved = localStorage.getItem(`pos_transactions_${user.id}`);
+        if (saved) {
+          const localTrx = JSON.parse(saved);
+          // Only add local transactions that are not already from Supabase
+          const existingIds = new Set(mergedOrders.map(o => o.id));
+          const newLocalTrx = localTrx.filter((lt: any) => !existingIds.has(lt.id));
+          mergedOrders = [...newLocalTrx, ...mergedOrders];
+          // Sort by created_at descending
+          mergedOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        }
+      } catch (e) {
+        console.error("Failed to merge local transactions", e);
+      }
+
+      setFetchError(null);
+      setOrders(mergedOrders as any);
       setLastRefreshed(new Date());
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching kitchen orders:", error);
+      if (!fetchError) {
+        setFetchError(`Catch: ${error.message || JSON.stringify(error)}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -152,7 +220,7 @@ export function KitchenView() {
     if (productId && map[productId]) {
       return map[productId] === "bar";
     }
-    const name = productName.toLowerCase();
+    const name = (productName || "").toLowerCase();
     return (
       name.includes("es ") ||
       name.includes("kopi") ||
@@ -171,7 +239,7 @@ export function KitchenView() {
   };
 
   const isDrinkItem = (item: TransactionItem) => {
-    const name = item.product_name.toLowerCase();
+    const name = (item.product_name || "").toLowerCase();
     return (
       name.includes("es ") ||
       name.includes("kopi") ||
@@ -280,6 +348,30 @@ export function KitchenView() {
     printWindow.print();
   };
 
+  const injectDummyOrder = () => {
+    try {
+      const lsKey = `pos_transactions_${user?.id}`;
+      const saved = localStorage.getItem(lsKey);
+      const currentTrx = saved ? JSON.parse(saved) : [];
+      const dummyTrx = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        order_type: "dine_in",
+        status: "completed",
+        kitchen_status: "pending",
+        tables: { name: "Meja Uji Coba" },
+        transaction_items: [
+          { id: `item_${Date.now()}_1`, product_name: "Nasi Goreng Spesial", qty: 2, price: 25000 },
+          { id: `item_${Date.now()}_2`, product_name: "Es Teh Manis", qty: 2, price: 5000 }
+        ]
+      };
+      localStorage.setItem(lsKey, JSON.stringify([dummyTrx, ...currentTrx]));
+      fetchOrders();
+    } catch (e) {
+      alert("Gagal inject dummy order: " + e);
+    }
+  };
+
   return (
     <div className="p-6 h-full flex flex-col bg-slate-100 overflow-y-auto">
       {/* Header Utama */}
@@ -312,6 +404,16 @@ export function KitchenView() {
               <CheckCircle2 className="size-3.5" /> {readyCount} Siap
             </span>
           </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={injectDummyOrder}
+            className="border-dashed border-amber-300 text-amber-600 hover:text-amber-800 bg-amber-50"
+          >
+            <Sparkles className="size-3.5 mr-1.5" />
+            Tes Dummy
+          </Button>
 
           <Button
             variant="outline"
@@ -406,6 +508,13 @@ export function KitchenView() {
           </div>
         </div>
       </div>
+
+      {fetchError && (
+        <div className="mx-4 mt-4 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">
+          <p className="font-bold">Gagal memuat pesanan dapur:</p>
+          <p className="font-mono text-xs mt-1 break-all">{fetchError}</p>
+        </div>
+      )}
 
       {/* Grid Kartu Pesanan Dapur */}
       {isLoading ? (

@@ -58,7 +58,10 @@ export function SalesView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchTransactions = async () => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -70,7 +73,24 @@ export function SalesView() {
       if (error) {
         console.warn("Supabase transaction query warning:", error.message);
       }
-      setTransactions(data || []);
+      
+      let fetchedTransactions = data || [];
+
+      // Merge with localStorage transactions (offline/fallback POS transactions)
+      try {
+        const saved = localStorage.getItem(`pos_transactions_${user.id}`);
+        if (saved) {
+          const localTrx = JSON.parse(saved);
+          const existingIds = new Set(fetchedTransactions.map((o: any) => o.id));
+          const newLocalTrx = localTrx.filter((lt: any) => !existingIds.has(lt.id));
+          fetchedTransactions = [...newLocalTrx, ...fetchedTransactions];
+          fetchedTransactions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        }
+      } catch (e) {
+        console.error("Failed to merge local transactions", e);
+      }
+
+      setTransactions(fetchedTransactions);
     } catch (error) {
       console.error("Error fetching transactions:", error);
     } finally {
@@ -196,7 +216,7 @@ export function SalesView() {
     const amount = parseFloat(formTotalAmount) || 0;
 
     const newTrx = {
-      id: `trx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: crypto.randomUUID(),
       tenant_id: user.id,
       created_at: new Date().toISOString(),
       order_type: formOrderType,

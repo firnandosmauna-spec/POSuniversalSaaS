@@ -63,20 +63,37 @@ export function DashboardView() {
     setIsLoading(true);
     try {
       // 1. Fetch Transactions
-      const { data: txData, error: txErr } = await supabase
-        .from("transactions")
-        .select(`
-          *,
-          customers ( name ),
-          cashier_shifts ( cashier_name ),
-          tables ( name ),
-          transaction_items ( product_name, qty, price )
-        `)
-        .eq("tenant_id", user.id)
-        .order("created_at", { ascending: false });
+      let txData: any[] = [];
+      try {
+        const res = await supabase
+          .from("transactions")
+          .select(`
+            *,
+            customers ( name ),
+            cashier_shifts ( cashier_name ),
+            tables ( name ),
+            transaction_items ( product_name, qty, price )
+          `)
+          .eq("tenant_id", user.id)
+          .order("created_at", { ascending: false });
+        if (res.data) txData = res.data;
+      } catch (e) {
+        console.warn("Supabase tx failed", e);
+      }
 
-      if (txErr) throw txErr;
-      setTransactions(txData || []);
+      // Merge with localStorage transactions
+      try {
+        const saved = localStorage.getItem(`pos_transactions_${user.id}`);
+        if (saved) {
+          const localTrx = JSON.parse(saved);
+          const existingIds = new Set(txData.map((o: any) => o.id));
+          const newLocalTrx = localTrx.filter((lt: any) => !existingIds.has(lt.id));
+          txData = [...newLocalTrx, ...txData];
+          txData.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        }
+      } catch (e) {}
+
+      setTransactions(txData);
 
       // 2. Fetch Products
       const { data: prodData } = await supabase

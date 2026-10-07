@@ -58,6 +58,9 @@ export default function FnbPOSView() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("Semua");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "debit">("cash");
+  const [amountReceived, setAmountReceived] = useState<number>(0);
 
   const [orderType, setOrderType] = useState<"dine_in" | "take_away">("take_away");
   const [tables, setTables] = useState<TableData[]>([]);
@@ -72,6 +75,10 @@ export default function FnbPOSView() {
   const [isDiscountOpen, setIsDiscountOpen] = useState(false);
   const [tempDiscount, setTempDiscount] = useState<number>(0);
   const [tempDiscountType, setTempDiscountType] = useState<"nominal" | "percent">("nominal");
+
+  // Tax State
+  const [isTaxOpen, setIsTaxOpen] = useState(false);
+  const [tempTaxRate, setTempTaxRate] = useState<number>(0);
 
   // Fitur Struk / Receipt
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
@@ -291,10 +298,12 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
       alert("Pilih meja terlebih dahulu untuk Dine In!");
       return;
     }
+    setPaymentMethod("cash");
+    setAmountReceived(total);
     setIsPaymentOpen(true);
   };
 
-  const confirmPayment = async (method: string) => {
+  const confirmPayment = async (method: string, receivedAmount: number = 0) => {
     if (!user || cart.length === 0) return;
     setIsCheckingOut(true);
 
@@ -314,7 +323,7 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
             tenant_id: user.id,
             shift_id: activeShift ? activeShift.id : null,
             order_type: orderType,
-            table_id: orderType === "dine_in" ? selectedTable : null,
+            table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
             customer_id: selectedCustomerId || null,
             total_amount: total,
             discount_amount: discountAmount,
@@ -335,7 +344,7 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
                 tenant_id: user.id,
                 shift_id: activeShift ? activeShift.id : null,
                 order_type: orderType,
-                table_id: orderType === "dine_in" ? selectedTable : null,
+                table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
                 customer_id: selectedCustomerId || null,
                 total_amount: total,
                 discount_amount: discountAmount,
@@ -357,10 +366,16 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
       // Fallback local transaction object if DB table missing or offline
       if (!transaction) {
         transaction = {
-          id: `trx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          id: crypto.randomUUID(),
           created_at: new Date().toISOString(),
           tenant_id: user.id,
-          total_amount: total
+          total_amount: total,
+          order_type: orderType,
+          table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
+          customer_id: selectedCustomerId || null,
+          payment_method: isHold ? "none" : method,
+          status: isHold ? "hold" : "completed",
+          kitchen_status: "pending"
         };
       }
       
@@ -377,9 +392,28 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
         
         await supabase.from("transaction_items").insert(itemsToInsert);
       } catch (e) {}
+
+      // 2.5 Save to localStorage for offline/KDS fallback
+      try {
+        const localTrx = {
+          ...transaction,
+          transaction_items: cart.map(item => ({
+            id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            transaction_id: transaction.id,
+            product_id: item.id,
+            product_name: item.name,
+            price: item.price,
+            qty: item.qty
+          }))
+        };
+        const lsKey = `pos_transactions_${user.id}`;
+        const saved = localStorage.getItem(lsKey);
+        const currentTrx = saved ? JSON.parse(saved) : [];
+        localStorage.setItem(lsKey, JSON.stringify([localTrx, ...currentTrx].slice(0, 50)));
+      } catch (e) {}
       
       // 3. Update Status Meja
-      if (orderType === "dine_in" && selectedTable && !isHold) {
+      if (orderType === "dine_in" && selectedTable && selectedTable !== "no_table" && !isHold) {
         await supabase.from("tables").update({ status: "occupied" }).eq("id", selectedTable);
       }
       
@@ -398,13 +432,15 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
           cashier: activeShift ? activeShift.cashier_name : user.name,
           customer_name: customers.find(c => c.id === selectedCustomerId)?.name || "Umum",
           order_type: orderType,
-          table_name: tables.find(t => t.id === selectedTable)?.name || "-",
+          table_name: selectedTable === "no_table" ? "Tanpa Meja" : (tables.find(t => t.id === selectedTable)?.name || "-"),
           items: [...cart],
           subtotal: subtotal,
           discount_amount: discountAmount,
           tax_amount: taxAmount,
           total: total,
-          payment_method: method
+          payment_method: method,
+          amount_received: method === "cash" ? receivedAmount : total,
+          change_amount: method === "cash" ? receivedAmount - total : 0
         };
         setLastReceipt(receiptData);
         setIsPaymentOpen(false);
@@ -419,14 +455,23 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
     }
   };
 
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = products.filter((p) => {
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = selectedCategory === "Semua" || p.category === selectedCategory;
+    return matchSearch && matchCategory;
+  });
+
+  const uniqueCategories = ["Semua", ...Array.from(new Set(products.map(p => p.category).filter(Boolean) as string[]))];
 
   const handleApplyDiscount = () => {
     setDiscount(tempDiscount);
     setDiscountType(tempDiscountType);
     setIsDiscountOpen(false);
+  };
+
+  const handleApplyTax = () => {
+    setTaxRate(tempTaxRate);
+    setIsTaxOpen(false);
   };
 
   const handleCloseReceipt = () => {
@@ -551,6 +596,23 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
           </div>
         </div>
         
+        {/* Kategori Produk */}
+        <div className="px-2.5 py-2 border-b border-slate-100 bg-slate-50/50 overflow-x-auto whitespace-nowrap hide-scrollbar flex items-center gap-2 shrink-0">
+          {uniqueCategories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${
+                selectedCategory === cat 
+                  ? "bg-brand text-white border-brand" 
+                  : "bg-white text-slate-600 border-slate-200 hover:border-brand/50 hover:bg-brand/5"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
         <div className="flex-1 overflow-y-auto p-2.5 md:p-4 min-h-0">
           {isLoading ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 min-h-[150px]">
@@ -670,7 +732,8 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
                   onChange={(e) => setSelectedTable(e.target.value)}
                   className="w-full text-xs border border-slate-200 rounded-lg p-1.5 focus:outline-none focus:ring-2 focus:ring-brand bg-slate-50"
                 >
-                  <option value="" disabled>-- Pilih Meja Kosong --</option>
+                  <option value="" disabled>-- Pilih Meja --</option>
+                  <option value="no_table">Dine In (Tanpa Meja)</option>
                   {tables.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
@@ -743,12 +806,22 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
               {discountAmount > 0 && <span className="text-red-500">-{formatRupiah(discountAmount)}</span>}
             </div>
 
-            {taxRate > 0 && (
-              <div className="flex justify-between items-center text-xs text-slate-500">
-                <span>Pajak ({taxRate}%)</span>
-                <span>{formatRupiah(taxAmount)}</span>
-              </div>
-            )}
+            <div className="flex justify-between items-center text-xs">
+              <button 
+                onClick={() => {
+                  setTempTaxRate(taxRate);
+                  setIsTaxOpen(true);
+                }}
+                className="text-brand flex items-center gap-1 hover:underline font-medium"
+              >
+                {taxRate > 0 ? (
+                  <>Pajak ({taxRate}%)</>
+                ) : (
+                  <><Plus className="size-3" /> Tambah Pajak</>
+                )}
+              </button>
+              {taxRate > 0 && <span className="text-slate-500">{formatRupiah(taxAmount)}</span>}
+            </div>
             
             <div className="border-t border-slate-200 pt-1 mt-1 flex justify-between items-center">
               <span className="text-slate-700 font-semibold text-xs">Total Akhir</span>
@@ -760,7 +833,7 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
           <div className="grid grid-cols-3 gap-2">
             <Button
               onClick={() => confirmPayment("hold")}
-              disabled={cart.length === 0 || isCheckingOut || !activeShift}
+              disabled={cart.length === 0 || isCheckingOut}
               variant="outline"
               size="sm"
               className="col-span-1 border-amber-200 text-amber-600 hover:bg-amber-50 h-10 text-xs"
@@ -769,7 +842,7 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
             </Button>
             <Button
               onClick={handleCheckout}
-              disabled={cart.length === 0 || isCheckingOut || !activeShift}
+              disabled={cart.length === 0 || isCheckingOut}
               className="col-span-2 bg-brand text-white hover:bg-brand/90 h-10 text-sm font-extrabold shadow-md"
             >
               Bayar
@@ -827,6 +900,37 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
         </DialogContent>
       </Dialog>
 
+      {/* Pop-up Pajak */}
+      <Dialog open={isTaxOpen} onOpenChange={setIsTaxOpen}>
+        <DialogContent className="sm:max-w-[320px]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl text-center mb-2">Atur Pajak (%)</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={tempTaxRate || ""}
+                onChange={(e) => setTempTaxRate(Number(e.target.value))}
+                className="w-full border border-slate-200 rounded-lg p-3 pr-9 focus:outline-none focus:ring-2 focus:ring-brand font-semibold"
+                placeholder="Masukkan persentase..."
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">%</div>
+            </div>
+          </div>
+          <DialogFooter className="grid grid-cols-2 gap-2 mt-2">
+            <Button variant="ghost" onClick={() => { setTaxRate(0); setIsTaxOpen(false); }}>
+              Hapus Pajak
+            </Button>
+            <Button onClick={handleApplyTax} className="bg-brand text-white">
+              Terapkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Pop-up Held Orders */}
       <Dialog open={isHeldOrdersOpen} onOpenChange={setIsHeldOrdersOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -867,35 +971,69 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
       <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl text-center mb-2">Pilih Metode Pembayaran</DialogTitle>
+            <DialogTitle className="font-display text-2xl text-center mb-2">Pilih Pembayaran</DialogTitle>
           </DialogHeader>
-          <div className="py-6">
-            <div className="text-center mb-6">
+          <div className="py-2">
+            <div className="text-center mb-4 bg-slate-50 rounded-xl p-4 border border-slate-100">
               <p className="text-sm text-slate-500 mb-1">Total Tagihan</p>
               <p className="font-display text-4xl font-bold text-slate-900">{formatRupiah(total)}</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+
+            <div className="grid grid-cols-2 gap-3 mb-6">
               <button
-                onClick={() => confirmPayment("cash")}
-                disabled={isCheckingOut}
-                className="flex flex-col items-center justify-center p-4 border-2 border-slate-200 rounded-xl hover:border-brand hover:bg-brand/5 transition-colors disabled:opacity-50"
+                onClick={() => setPaymentMethod("cash")}
+                className={`flex flex-col items-center justify-center p-3 border-2 rounded-xl transition-colors ${paymentMethod === "cash" ? "border-brand bg-brand/5 text-brand" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}
               >
-                <Banknote className="size-8 text-green-500 mb-2" />
-                <span className="font-semibold text-slate-700">Tunai</span>
+                <Banknote className={`size-6 mb-1 ${paymentMethod === "cash" ? "text-brand" : ""}`} />
+                <span className="font-semibold text-sm">Tunai</span>
               </button>
               <button
-                onClick={() => confirmPayment("debit")}
-                disabled={isCheckingOut}
-                className="flex flex-col items-center justify-center p-4 border-2 border-slate-200 rounded-xl hover:border-brand hover:bg-brand/5 transition-colors disabled:opacity-50"
+                onClick={() => setPaymentMethod("debit")}
+                className={`flex flex-col items-center justify-center p-3 border-2 rounded-xl transition-colors ${paymentMethod === "debit" ? "border-brand bg-brand/5 text-brand" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}
               >
-                <CreditCard className="size-8 text-blue-500 mb-2" />
-                <span className="font-semibold text-slate-700">Non Tunai</span>
+                <CreditCard className={`size-6 mb-1 ${paymentMethod === "debit" ? "text-brand" : ""}`} />
+                <span className="font-semibold text-sm">Non Tunai</span>
               </button>
             </div>
+
+            {paymentMethod === "cash" && (
+              <div className="space-y-4 mb-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Uang Diterima</label>
+                  <input
+                    type="number"
+                    value={amountReceived || ""}
+                    onChange={(e) => setAmountReceived(Number(e.target.value))}
+                    className="w-full text-right text-3xl font-bold p-2 border-b-2 border-slate-200 focus:border-brand focus:outline-none"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setAmountReceived(total)}>Uang Pas</Button>
+                  <Button variant="outline" size="sm" onClick={() => setAmountReceived(50000)}>50.000</Button>
+                  <Button variant="outline" size="sm" onClick={() => setAmountReceived(100000)}>100.000</Button>
+                </div>
+
+                <div className="flex justify-between items-center p-3 rounded-lg bg-slate-100 mt-2">
+                  <span className="text-sm font-semibold text-slate-600">Kembalian</span>
+                  <span className={`text-xl font-bold ${amountReceived >= total ? "text-green-600" : "text-red-500"}`}>
+                    {amountReceived >= total ? formatRupiah(amountReceived - total) : "-"}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-          <DialogFooter className="sm:justify-center">
-            <Button variant="ghost" onClick={() => setIsPaymentOpen(false)}>
+          <DialogFooter className="sm:justify-between flex gap-2">
+            <Button variant="ghost" onClick={() => setIsPaymentOpen(false)} className="flex-1">
               Batal
+            </Button>
+            <Button 
+              onClick={() => confirmPayment(paymentMethod, amountReceived)} 
+              disabled={isCheckingOut || (paymentMethod === "cash" && amountReceived < total)}
+              className="flex-1 bg-brand text-white font-bold"
+            >
+              {isCheckingOut ? "Memproses..." : "Selesaikan Bayar"}
             </Button>
           </DialogFooter>
         </DialogContent>

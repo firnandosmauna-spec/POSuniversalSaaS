@@ -117,20 +117,68 @@ export function ProductsView() {
     } finally {
       setProducts(loadedProducts);
       setIsLoading(false);
+      return loadedProducts; // Return for fetchCategories to use
     }
   };
 
-  const fetchCategories = async () => {
+  const DEFAULT_FNB_CATEGORIES = [
+    { id: "cat_main", name: "Makanan Utama" },
+    { id: "cat_drink", name: "Minuman" },
+    { id: "cat_snack", name: "Camilan" },
+    { id: "cat_dessert", name: "Dessert" },
+    { id: "cat_package", name: "Paket Menu" },
+    { id: "cat_other", name: "Lain-lain" }
+  ];
+
+  const fetchCategories = async (loadedProducts?: Product[]) => {
     if (!user) return;
     try {
       const { data } = await supabase.from("categories").select("*").order("name");
-      setCategories(data || []);
-    } catch (error) {}
+      let currentCategories: any[] = [];
+      
+      if (data && data.length > 0) {
+        currentCategories = data;
+      } else {
+        currentCategories = [...DEFAULT_FNB_CATEGORIES];
+      }
+
+      // Dynamically extract unique categories from products
+      const currentProducts = loadedProducts || products;
+      if (currentProducts && currentProducts.length > 0) {
+        const productCategories = Array.from(new Set(currentProducts.map(p => p.category).filter(Boolean) as string[]));
+        
+        for (const catName of productCategories) {
+          if (catName === "Umum") continue;
+          
+          const exists = currentCategories.some(c => c.name.toLowerCase() === catName.toLowerCase());
+          if (!exists) {
+            const newCat = {
+              id: crypto.randomUUID(),
+              name: catName,
+              tenant_id: user.id
+            };
+            currentCategories.push(newCat);
+            
+            // Background sync to Supabase
+            supabase.from("categories").insert([newCat]).then(({ error }) => {
+              if (error) console.warn("Background category sync failed", error);
+            });
+          }
+        }
+      }
+
+      setCategories(currentCategories);
+    } catch (error) {
+      setCategories(DEFAULT_FNB_CATEGORIES);
+    }
   };
 
   useEffect(() => {
-    fetchProducts();
-    fetchCategories();
+    if (user) {
+      fetchProducts().then(loaded => {
+        fetchCategories(loaded);
+      });
+    }
   }, [user]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,7 +254,8 @@ export function ProductsView() {
         }
       }
 
-      const productId = editingProduct ? editingProduct.id : crypto.randomUUID();
+      const fallbackUUID = () => `prod_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const productId = editingProduct ? editingProduct.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : fallbackUUID());
       const newProductItem: Product = {
         id: productId,
         name: name.trim(),
@@ -259,6 +308,25 @@ export function ProductsView() {
               alert("Data tersimpan lokal, namun gagal sinkronisasi ke cloud.");
             }
           }
+
+          // 3. Sync newly typed category to `categories` table if it doesn't exist
+          if (newProductItem.category && newProductItem.category !== "Umum") {
+            const categoryExists = categories.some(c => c.name.toLowerCase() === newProductItem.category.toLowerCase());
+            if (!categoryExists) {
+              const newCat = {
+                id: crypto.randomUUID(),
+                name: newProductItem.category,
+                tenant_id: user.id
+              };
+              // Add to local state immediately
+              setCategories(prev => [...prev, newCat]);
+              // Insert to Supabase
+              supabase.from("categories").insert([newCat]).then(({ error }) => {
+                if (error) console.warn("Failed to sync new category to Supabase", error);
+              });
+            }
+          }
+
         } catch (err) {
           console.warn("Supabase product sync exception (saved locally):", err);
         }
@@ -318,7 +386,7 @@ export function ProductsView() {
         
           <Button 
             onClick={() => handleOpenDialog()}
-            className="bg-brand text-white hover:bg-brand/90 flex items-center gap-2"
+            className="bg-slate-900 text-white hover:bg-slate-800 rounded-none h-10 px-4 font-bold flex items-center gap-2"
           >
             <Plus className="size-4" />
             Tambah Produk
@@ -327,32 +395,30 @@ export function ProductsView() {
             setIsDialogOpen(open);
             if (!open) setEditingProduct(null);
           }}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>{editingProduct ? "Ubah Produk" : "Tambah Produk Baru"}</DialogTitle>
+            <DialogContent className="sm:max-w-[425px] rounded-none p-0 overflow-hidden">
+              <DialogHeader className="p-4 border-b border-slate-200 bg-slate-50">
+                <DialogTitle className="font-display font-bold text-lg">{editingProduct ? "Ubah Produk" : "Tambah Produk Baru"}</DialogTitle>
               </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+            <form onSubmit={handleSubmit} className="p-4 space-y-4">
               
-              {/* Image Upload Area */}
-              <div className="flex justify-center mb-6">
+              <div className="flex justify-center mb-2">
                 <div className="relative">
                   <div 
-                    className="size-32 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50 overflow-hidden group cursor-pointer hover:bg-slate-100 transition-colors"
+                    className="size-20 border border-slate-200 flex items-center justify-center bg-slate-50 overflow-hidden group cursor-pointer hover:bg-slate-100 transition-colors"
                     onClick={() => document.getElementById('image-upload')?.click()}
                   >
                     {imagePreview ? (
                       <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex flex-col items-center text-slate-400">
-                        <ImageIcon className="size-8 mb-2" />
-                        <span className="text-xs font-medium">Unggah Foto</span>
+                        <ImageIcon className="size-6 mb-1" />
+                        <span className="text-[10px] font-bold uppercase">Foto</span>
                       </div>
                     )}
                     
-                    {/* Hover Overlay */}
                     {imagePreview && (
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Upload className="size-6 text-white" />
+                        <Upload className="size-4 text-white" />
                       </div>
                     )}
                   </div>
@@ -366,120 +432,118 @@ export function ProductsView() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="name">Nama Produk</Label>
+              <div className="space-y-1">
+                <Label htmlFor="name" className="text-[10px] font-bold uppercase text-slate-500">Nama Produk</Label>
                 <Input 
                   id="name" 
                   required 
                   placeholder="Cth: Kopi Susu Aren" 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  className="rounded-none h-8 text-xs font-medium border-slate-300 focus-visible:ring-0 focus-visible:border-slate-900"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Kategori</Label>
-                  <select
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="category" className="text-[10px] font-bold uppercase text-slate-500">Kategori</Label>
+                  <Input
                     id="category"
+                    list="category-options"
                     value={category}
+                    placeholder="Pilih atau ketik kategori..."
                     onChange={(e) => setCategory(e.target.value)}
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">-- Tanpa Kategori --</option>
+                    className="rounded-none h-8 text-xs font-medium border-slate-300 focus-visible:ring-0 focus-visible:border-slate-900"
+                  />
+                  <datalist id="category-options">
                     {categories.map(cat => (
-                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                      <option key={cat.id} value={cat.name} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stock">Stok Awal (Kosong = Unlimited)</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="stock" className="text-[10px] font-bold uppercase text-slate-500">Stok (Kosong = Unlimited)</Label>
                   <Input 
                     id="stock" 
                     type="number" 
                     placeholder="Unlimited" 
                     value={stock}
                     onChange={(e) => setStock(e.target.value)}
+                    className="rounded-none h-8 text-xs font-medium border-slate-300 focus-visible:ring-0 focus-visible:border-slate-900"
                   />
                 </div>
               </div>
 
-              {/* Stasiun Tujuan (Dapur vs Bar - Khusus F&B) */}
               {isFnb && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-bold flex items-center justify-between">
-                    <span>Stasiun Tujuan Pesanan</span>
-                    <span className="text-[11px] font-normal text-slate-500">Dapur (Makanan) / Bar (Minuman)</span>
-                  </Label>
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold uppercase text-slate-500">Stasiun Tujuan</Label>
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setTargetStation("dapur")}
-                      className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                      className={`p-2 border flex items-center justify-center gap-1 text-[10px] uppercase font-bold transition-all cursor-pointer rounded-none ${
                         targetStation === "dapur"
-                          ? "bg-orange-50 border-orange-400 text-orange-700 ring-2 ring-orange-400/20 shadow-sm"
-                          : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                          ? "bg-slate-900 border-slate-900 text-white"
+                          : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
                       }`}
                     >
-                      <ChefHat className="size-4 text-orange-500" /> 🍳 Dapur (Makanan)
+                      <ChefHat className="size-3" /> Dapur
                     </button>
                     <button
                       type="button"
                       onClick={() => setTargetStation("bar")}
-                      className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                      className={`p-2 border flex items-center justify-center gap-1 text-[10px] uppercase font-bold transition-all cursor-pointer rounded-none ${
                         targetStation === "bar"
-                          ? "bg-purple-50 border-purple-400 text-purple-700 ring-2 ring-purple-400/20 shadow-sm"
-                          : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                          ? "bg-slate-900 border-slate-900 text-white"
+                          : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
                       }`}
                     >
-                      <Wine className="size-4 text-purple-500" /> 🥤 Bar (Minuman)
+                      <Wine className="size-3" /> Bar
                     </button>
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3 bg-white">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-semibold">Tampilkan Produk (Dijual)</Label>
-                  <p className="text-xs text-slate-500">Matikan untuk menyimpan produk ini ke status Hold / Draft.</p>
-                </div>
+              <div className="flex items-center justify-between border-y border-slate-200 py-2">
+                <Label className="text-[10px] font-bold uppercase text-slate-500">Tampilkan Produk (Aktif)</Label>
                 <Switch 
                   checked={status === "active"}
                   onCheckedChange={(checked) => setStatus(checked ? "active" : "hold")}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div className="space-y-2">
-                  <Label htmlFor="costPrice" className="text-slate-600">Harga Modal (Rp)</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="costPrice" className="text-[10px] font-bold uppercase text-slate-500">Harga Modal (Rp)</Label>
                   <Input 
                     id="costPrice" 
                     type="number" 
                     placeholder="0" 
                     value={costPrice}
                     onChange={(e) => setCostPrice(e.target.value)}
+                    className="rounded-none h-8 text-xs font-mono font-bold border-slate-300 focus-visible:ring-0 focus-visible:border-slate-900"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price" className="text-brand font-bold">Harga Jual (Rp)</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="price" className="text-[10px] font-bold uppercase text-slate-900">Harga Jual (Rp)</Label>
                   <Input 
                     id="price" 
                     type="number" 
                     required 
                     placeholder="0" 
                     value={price}
-                    className="font-bold border-brand/30 focus-visible:ring-brand/50"
                     onChange={(e) => setPrice(e.target.value)}
+                    className="rounded-none h-8 text-xs font-mono font-bold border-slate-900 focus-visible:ring-0 focus-visible:border-slate-900"
                   />
                 </div>
               </div>
 
-              <Button type="submit" className="w-full mt-2" disabled={isSubmitting || !name || !price}>
-                {isSubmitting ? (
-                  <Loader2 className="size-4 animate-spin mr-2" />
-                ) : null}
-                {isSubmitting ? "Menyimpan ke Cloud..." : (editingProduct ? "Simpan Perubahan" : "Simpan Produk")}
-              </Button>
+              <div className="pt-2 flex gap-2">
+                <Button type="button" variant="outline" className="flex-1 rounded-none font-bold h-10 text-xs" onClick={() => setIsDialogOpen(false)}>Batal</Button>
+                <Button type="submit" className="flex-1 rounded-none bg-slate-900 hover:bg-slate-800 text-white font-bold h-10 text-xs" disabled={isSubmitting}>
+                  {isSubmitting ? "Menyimpan..." : (editingProduct ? "Simpan Perubahan" : "Simpan Produk")}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>

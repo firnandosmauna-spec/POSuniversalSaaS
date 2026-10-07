@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Clock, Plus, LogOut, CheckCircle2, Wallet, Receipt, Calculator, Loader2 } from "lucide-react";
+import { Clock, Plus, LogOut, CheckCircle2, Wallet, Receipt, Calculator, Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,6 +33,15 @@ export function ShiftsView() {
   const [isOpenShiftModalOpen, setIsOpenShiftModalOpen] = useState(false);
   const [isCloseShiftModalOpen, setIsCloseShiftModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // CRUD Modals
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
+  const [editStartingCash, setEditStartingCash] = useState("");
+  const [editActualCash, setEditActualCash] = useState("");
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingShift, setDeletingShift] = useState<Shift | null>(null);
 
   // Forms
   const [cashierName, setCashierName] = useState(user?.name || "");
@@ -126,7 +135,7 @@ export function ShiftsView() {
     setIsSubmitting(true);
     
     const newShift: Shift = {
-      id: `shift_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: crypto.randomUUID(),
       cashier_name: cashierName.trim(),
       starting_cash: parseFloat(startingCash) || 0,
       expected_ending_cash: null,
@@ -251,6 +260,70 @@ export function ShiftsView() {
         .eq("id", activeShift.id);
     } catch (error) {
       console.warn("Supabase shift update optional sync failure:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenEdit = (shift: Shift) => {
+    setEditingShift(shift);
+    setEditStartingCash(String(shift.starting_cash || 0));
+    setEditActualCash(String(shift.actual_ending_cash || 0));
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingShift || !user) return;
+    setIsSubmitting(true);
+
+    const newStart = parseFloat(editStartingCash) || 0;
+    const newActual = parseFloat(editActualCash) || 0;
+    
+    const sales = (editingShift.expected_ending_cash || 0) - editingShift.starting_cash;
+    const newExpected = newStart + sales;
+
+    const updatedShifts = shifts.map(s => 
+      s.id === editingShift.id 
+        ? { ...s, starting_cash: newStart, actual_ending_cash: newActual, expected_ending_cash: newExpected }
+        : s
+    );
+
+    setShifts(updatedShifts);
+    localStorage.setItem(tenantStorageKey, JSON.stringify(updatedShifts));
+    setIsEditModalOpen(false);
+
+    try {
+      await supabase.from("cashier_shifts").update({
+        starting_cash: newStart,
+        actual_ending_cash: newActual,
+        expected_ending_cash: newExpected
+      }).eq("id", editingShift.id);
+    } catch (err) {
+      console.warn("Failed sync edit shift to Supabase:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenDelete = (shift: Shift) => {
+    setDeletingShift(shift);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteSubmit = async () => {
+    if (!deletingShift || !user) return;
+    setIsSubmitting(true);
+
+    const updatedShifts = shifts.filter(s => s.id !== deletingShift.id);
+    setShifts(updatedShifts);
+    localStorage.setItem(tenantStorageKey, JSON.stringify(updatedShifts));
+    setIsDeleteModalOpen(false);
+
+    try {
+      await supabase.from("cashier_shifts").delete().eq("id", deletingShift.id);
+    } catch (err) {
+      console.warn("Failed sync delete shift to Supabase:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -430,15 +503,35 @@ export function ShiftsView() {
                         </td>
                         <td className="p-4 text-center">
                           {shift.status === 'closed' ? (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => openShiftReportPrint(shift)} 
-                              className="text-brand hover:bg-brand/10 transition-colors"
-                              title="Cetak Laporan Shift"
-                            >
-                              <Receipt className="size-4" />
-                            </Button>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => openShiftReportPrint(shift)} 
+                                className="text-brand hover:bg-brand/10 transition-colors px-2"
+                                title="Cetak Laporan"
+                              >
+                                <Receipt className="size-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleOpenEdit(shift)} 
+                                className="text-amber-500 hover:bg-amber-50 transition-colors px-2"
+                                title="Edit Data"
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleOpenDelete(shift)} 
+                                className="text-red-500 hover:bg-red-50 transition-colors px-2"
+                                title="Hapus Shift"
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
                           ) : (
                             <span className="text-slate-300">-</span>
                           )}
@@ -631,6 +724,68 @@ export function ShiftsView() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal Edit Shift */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Edit Data Shift</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Kas Awal (Rp)</label>
+              <Input 
+                required 
+                type="number"
+                min="0"
+                value={editStartingCash}
+                onChange={(e) => setEditStartingCash(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Kas Akhir Real (Rp)</label>
+              <Input 
+                required 
+                type="number"
+                min="0"
+                value={editActualCash}
+                onChange={(e) => setEditActualCash(e.target.value)}
+              />
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>Batal</Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-amber-500 text-white hover:bg-amber-600">
+                Simpan Perubahan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Hapus Shift */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl text-red-600">Hapus Shift Kasir</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-slate-600 mb-4">
+              Apakah Anda yakin ingin menghapus data shift kasir <strong>{deletingShift?.cashier_name}</strong>?
+            </p>
+            <div className="bg-red-50 border border-red-100 p-3 rounded-md">
+              <p className="text-xs text-red-600 font-semibold">Tindakan ini tidak dapat dibatalkan dan akan menghapus riwayat shift ini selamanya dari cloud.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>Batal</Button>
+            <Button type="button" onClick={handleDeleteSubmit} disabled={isSubmitting} className="bg-red-600 text-white hover:bg-red-700">
+              {isSubmitting ? <Loader2 className="size-4 animate-spin mr-2" /> : <Trash2 className="size-4 mr-2" />}
+              Ya, Hapus Permanen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

@@ -400,8 +400,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("pos_active_user", JSON.stringify(newUserObj));
       setUser(newUserObj);
 
-      try {
-        const { data } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password: password.trim(),
           options: {
@@ -413,11 +412,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         });
 
-        if (data?.session?.user) {
+        if (error) throw error;
+
+        if (data?.user) {
           // Never store password/pin_code in localStorage
           const syncedUser: User = {
-            id: data.session.user.id,
-            email: data.session.user.email || email.trim(),
+            id: data.user.id,
+            email: data.user.email || email.trim(),
             name,
             businessType,
             role: "Owner Tenant"
@@ -458,10 +459,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem("pos_active_user", JSON.stringify(syncedUser));
           setUser(syncedUser);
         }
-      } catch (e) {}
       
       return { success: true };
     } catch (error: any) {
+      // Revert local optimistic session if signup fails
+      localStorage.removeItem("pos_active_user");
+      setUser(null);
       return { success: false, message: error.message || "An unexpected error occurred" };
     }
   };
