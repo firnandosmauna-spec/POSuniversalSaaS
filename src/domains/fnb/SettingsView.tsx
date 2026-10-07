@@ -27,6 +27,7 @@ export function SettingsView() {
   }
   const [tables, setTables] = useState<TableData[]>([]);
   const [newTableName, setNewTableName] = useState("");
+  const [newTableCategory, setNewTableCategory] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -266,13 +267,17 @@ export function SettingsView() {
     e.preventDefault();
     if (!user || !newTableName.trim()) return;
     setIsSubmitting(true);
+    const finalName = newTableCategory.trim() 
+      ? `[${newTableCategory.trim()}] ${newTableName.trim()}` 
+      : newTableName.trim();
     try {
       await supabase.from("tables").insert({
         tenant_id: user.id,
-        name: newTableName.trim(),
+        name: finalName,
         status: "available"
       });
       setNewTableName("");
+      setNewTableCategory("");
       fetchTables();
     } catch (error) {
       console.error(error);
@@ -989,15 +994,22 @@ export function SettingsView() {
               <h2 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-4">Daftar Meja (Dine In)</h2>
               
               <form onSubmit={addTable} className="flex gap-3 mb-6">
+                <div className="w-1/3">
+                  <Input 
+                    placeholder="Kategori (Cth: LT1, VIP, Outdoor)" 
+                    value={newTableCategory}
+                    onChange={(e) => setNewTableCategory(e.target.value)}
+                  />
+                </div>
                 <div className="flex-1">
                   <Input 
-                    placeholder="Cth: Meja 1, VIP 2, Outdoor A" 
+                    placeholder="Cth: Meja 1, Meja 2" 
                     value={newTableName}
                     onChange={(e) => setNewTableName(e.target.value)}
                     required
                   />
                 </div>
-                <Button type="submit" disabled={isSubmitting || !newTableName.trim()} className="bg-brand text-white">
+                <Button type="submit" disabled={isSubmitting || !newTableName.trim()} className="bg-brand text-white shrink-0">
                   <Plus className="size-4 mr-2" /> Tambah Meja
                 </Button>
               </form>
