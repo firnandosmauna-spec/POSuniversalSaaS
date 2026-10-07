@@ -428,6 +428,7 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
       } else {
         const receiptData = {
           transaction_id: transaction.id,
+          invoice_code: transaction.invoice_code || generatedInvoiceCode,
           created_at: transaction.created_at || new Date().toISOString(),
           cashier: activeShift ? activeShift.cashier_name : user.name,
           customer_name: customers.find(c => c.id === selectedCustomerId)?.name || "Umum",
@@ -1061,6 +1062,10 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
                       <div className="flex justify-between">
                         <span>Kasir:</span>
                         <span>{lastReceipt.cashier}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>No. Invoice:</span>
+                        <span>{lastReceipt.invoice_code || "-"}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>No. Trx:</span>
