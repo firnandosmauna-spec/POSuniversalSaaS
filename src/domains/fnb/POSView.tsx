@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Trash2, CreditCard, Banknote, Coffee, Utensils, Search, Loader2, Clock, Plus, Percent, AlertTriangle, Wallet, Printer, LayoutDashboard } from "lucide-react";
+import { ShoppingCart, Trash2, CreditCard, Banknote, Coffee, Utensils, Search, Loader2, Clock, Plus, Percent, AlertTriangle, Wallet, Printer, LayoutDashboard, Bluetooth } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -1130,22 +1130,57 @@ const DEFAULT_FNB_PRODUCTS: Product[] = [
               <div className="bg-white p-4 border-t border-slate-200 flex gap-2 flex-shrink-0">
                 <Button 
                   onClick={() => {
-                    // Simple hack to print only the receipt area
                     const printContent = document.getElementById("receipt-printable-area");
                     const originalContent = document.body.innerHTML;
                     if (printContent) {
                       document.body.innerHTML = printContent.innerHTML;
                       window.print();
                       document.body.innerHTML = originalContent;
-                      window.location.reload(); // reload to restore React event listeners
+                      window.location.reload(); 
                     }
                   }}
                   variant="outline" 
                   className="flex-1 font-bold border-slate-300"
                 >
-                  <Printer className="size-4 mr-2" /> Cetak
+                  <Printer className="size-4 mr-1.5" /> Cetak
                 </Button>
-                <Button onClick={handleCloseReceipt} className="flex-1 bg-brand text-white font-bold">
+                
+                {/* RawBT Intent for Android Bluetooth Printers */}
+                <Button 
+                  onClick={() => {
+                    if (!lastReceipt) return;
+                    let text = `        TOKO SAYA        \n`;
+                    text += ` Jl. Contoh Alamat No. 123 \n`;
+                    text += `--------------------------------\n`;
+                    text += `Tgl: ${new Date(lastReceipt.created_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}\n`;
+                    text += `Kasir: ${lastReceipt.cashier}\n`;
+                    text += `No. Invoice: ${lastReceipt.invoice_code || "-"}\n`;
+                    text += `Pelanggan: ${lastReceipt.customer_name}\n`;
+                    text += `Tipe: ${lastReceipt.order_type === "dine_in" ? `Dine In (${lastReceipt.table_name})` : "Take Away"}\n`;
+                    text += `--------------------------------\n`;
+                    
+                    lastReceipt.items.forEach((item: any) => {
+                      text += `${item.name}\n`;
+                      text += `${item.qty} x ${item.price} = ${item.qty * item.price}\n`;
+                    });
+                    
+                    text += `--------------------------------\n`;
+                    text += `Subtotal: ${lastReceipt.subtotal}\n`;
+                    if (lastReceipt.discount_amount > 0) text += `Diskon: -${lastReceipt.discount_amount}\n`;
+                    if (lastReceipt.tax_amount > 0) text += `Pajak: ${lastReceipt.tax_amount}\n`;
+                    text += `TOTAL: ${lastReceipt.total}\n`;
+                    text += `Pembayaran: ${lastReceipt.payment_method === "cash" ? "Tunai" : "Non-Tunai"}\n`;
+                    text += `\n     Terima kasih!     \n\n\n`;
+
+                    const b64 = btoa(unescape(encodeURIComponent(text)));
+                    window.location.href = `intent:${b64}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
+                  }}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                >
+                  <Bluetooth className="size-4 mr-1.5" /> RawBT
+                </Button>
+
+                <Button onClick={handleCloseReceipt} className="flex-1 bg-brand hover:bg-brand-hover text-white font-bold">
                   Selesai
                 </Button>
               </div>
