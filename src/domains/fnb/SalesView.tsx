@@ -229,7 +229,7 @@ export function SalesView() {
   });
 
   // Product Report Calculation
-  const productSalesMap: Record<string, { name: string; price: number; qty: number; stock: number; revenue: number }> = {};
+  const productSalesMap: Record<string, { name: string; price: number; qty: number; stock: number; revenue: number; category: string }> = {};
 
   filteredTransactions.forEach(t => {
     if (t.status === "cancelled") return;
@@ -238,12 +238,13 @@ export function SalesView() {
     items.forEach((item: any) => {
       const pName = item.product_name || item.products?.name || item.name || "Unknown Product";
       const pPrice = item.price || item.products?.price || 0;
+      const pCategory = item.products?.category || "Lainnya";
       const qty = item.qty || item.quantity || 0;
       const stock = item.products?.stock ?? "-";
       const revenue = qty * pPrice;
 
       if (!productSalesMap[pName]) {
-        productSalesMap[pName] = { name: pName, price: pPrice, qty: 0, stock: (stock as number), revenue: 0 };
+        productSalesMap[pName] = { name: pName, price: pPrice, qty: 0, stock: (stock as number), revenue: 0, category: pCategory };
       }
       
       productSalesMap[pName].qty += qty;
@@ -255,6 +256,15 @@ export function SalesView() {
   });
 
   const productReportData = Object.values(productSalesMap).sort((a, b) => b.qty - a.qty);
+
+  // Group top products by category for the report
+  const topProductsByCategory: Record<string, typeof productReportData> = {};
+  productReportData.forEach(p => {
+    if (!topProductsByCategory[p.category]) {
+      topProductsByCategory[p.category] = [];
+    }
+    topProductsByCategory[p.category].push(p);
+  });
 
   const totalTxCount = filteredTransactions.filter(t => t.status !== 'cancelled').length;
   const totalRevenue = netSales;
@@ -1127,30 +1137,38 @@ export function SalesView() {
                   </div>
                 </div>
 
-                {/* Tabel Produk Terjual */}
-                <h3 className="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wide">Rincian Penjualan Produk ({productReportData.length})</h3>
-                <table className="w-full text-xs text-left border-collapse border border-slate-200 mb-6">
-                  <thead>
-                    <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold">
-                      <th className="p-2 border-r border-slate-200">Produk</th>
-                      <th className="p-2 border-r border-slate-200 text-right">Harga</th>
-                      <th className="p-2 border-r border-slate-200 text-center">Jumlah</th>
-                      <th className="p-2 border-r border-slate-200 text-center">Stok</th>
-                      <th className="p-2 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {productReportData.map((p, idx) => (
-                      <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
-                        <td className="p-2 border-r border-slate-200 uppercase font-semibold">{p.name}</td>
-                        <td className="p-2 border-r border-slate-200 text-right">{formatRupiah(p.price)}</td>
-                        <td className="p-2 border-r border-slate-200 text-center font-bold">{p.qty}</td>
-                        <td className="p-2 border-r border-slate-200 text-center font-mono">{p.stock}</td>
-                        <td className="p-2 text-right font-bold">{formatRupiah(p.revenue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {/* Tabel Produk Terjual Per Kategori */}
+                <h3 className="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wide">Rincian Penjualan Produk Terlaris</h3>
+                
+                {Object.entries(topProductsByCategory).map(([category, products]) => (
+                  <div key={category} className="mb-6">
+                    <div className="bg-slate-800 text-white text-xs font-bold uppercase px-3 py-1.5 inline-block mb-2">
+                      Kategori: {category}
+                    </div>
+                    <table className="w-full text-xs text-left border-collapse border border-slate-200">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold">
+                          <th className="p-2 border-r border-slate-200">Produk</th>
+                          <th className="p-2 border-r border-slate-200 text-right w-24">Harga</th>
+                          <th className="p-2 border-r border-slate-200 text-center w-20">Jumlah</th>
+                          <th className="p-2 border-r border-slate-200 text-center w-20">Stok</th>
+                          <th className="p-2 text-right w-28">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {products.map((p, idx) => (
+                          <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                            <td className="p-2 border-r border-slate-200 uppercase font-semibold">{p.name}</td>
+                            <td className="p-2 border-r border-slate-200 text-right">{formatRupiah(p.price)}</td>
+                            <td className="p-2 border-r border-slate-200 text-center font-bold">{p.qty}</td>
+                            <td className="p-2 border-r border-slate-200 text-center font-mono">{p.stock}</td>
+                            <td className="p-2 text-right font-bold">{formatRupiah(p.revenue)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
 
                 {/* Tanda Tangan */}
                 <div className="mt-12 flex justify-between text-xs text-center">
