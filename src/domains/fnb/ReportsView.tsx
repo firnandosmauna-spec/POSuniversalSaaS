@@ -642,11 +642,11 @@ export function ReportsView() {
             </div>
           </div>
 
-          {/* Produk Terlaris Per Kategori */}
+          {/* Rincian Penjualan */}
           <div className="lg:col-span-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-4 h-fit">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
               <Package className="size-4 text-brand" /> 
-              Penjualan Per Produk (Kategori)
+              Rincian Penjualan
             </h3>
             <div className="flex flex-col gap-6">
               {Object.keys(topProductsByCategory).length === 0 ? (
@@ -656,33 +656,33 @@ export function ReportsView() {
                   <div key={category} className="mb-2">
                     <div className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">{category}</div>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-xs text-left border-collapse border border-slate-200 dark:border-slate-700">
+                      <table className="w-full text-[11px] text-left border-collapse border border-slate-200 dark:border-slate-700">
                         <thead>
                           <tr className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold">
-                            <th className="px-2 py-1 border-r border-slate-200 dark:border-slate-700">Produk</th>
-                            <th className="px-2 py-1 border-r border-slate-200 dark:border-slate-700 text-right w-24">Harga</th>
-                            <th className="px-2 py-1 border-r border-slate-200 dark:border-slate-700 text-center w-20">Jumlah</th>
-                            <th className="px-2 py-1 border-r border-slate-200 dark:border-slate-700 text-center w-20">Stok</th>
-                            <th className="px-2 py-1 text-right w-28">Total</th>
+                            <th className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap">Produk</th>
+                            <th className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 text-right whitespace-nowrap">Harga</th>
+                            <th className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 text-center whitespace-nowrap">Jumlah</th>
+                            <th className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 text-center whitespace-nowrap">Stok</th>
+                            <th className="px-2 py-1.5 text-right whitespace-nowrap">Total</th>
                           </tr>
                         </thead>
                         <tbody>
                           {products.map((p, idx) => (
                             <tr key={idx} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                              <td className="px-2 py-1 border-r border-slate-200 dark:border-slate-700 uppercase font-semibold text-slate-700 dark:text-slate-200">{p.name}</td>
-                              <td className="px-2 py-1 border-r border-slate-200 dark:border-slate-700 text-right text-slate-600 dark:text-slate-300">{formatRupiah(p.price)}</td>
-                              <td className="px-2 py-1 border-r border-slate-200 dark:border-slate-700 text-center font-bold text-slate-800 dark:text-white">{p.qty}</td>
-                              <td className="px-2 py-1 border-r border-slate-200 dark:border-slate-700 text-center font-mono text-slate-600 dark:text-slate-300">{p.stock}</td>
-                              <td className="px-2 py-1 text-right font-bold text-brand">{formatRupiah(p.revenue)}</td>
+                              <td className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 uppercase font-semibold text-slate-700 dark:text-slate-200 min-w-[100px]">{p.name}</td>
+                              <td className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 text-right text-slate-600 dark:text-slate-300 whitespace-nowrap">{formatRupiah(p.price)}</td>
+                              <td className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 text-center font-bold text-slate-800 dark:text-white">{p.qty}</td>
+                              <td className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 text-center font-mono text-slate-600 dark:text-slate-300">{p.stock}</td>
+                              <td className="px-2 py-1.5 text-right font-bold text-brand whitespace-nowrap">{formatRupiah(p.revenue)}</td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot className="bg-slate-100/80 dark:bg-slate-800/80 font-bold text-slate-800 dark:text-white">
                           <tr>
-                            <td colSpan={2} className="px-2 py-1 border-r border-slate-200 dark:border-slate-700 text-right">TOTAL</td>
-                            <td className="px-2 py-1 border-r border-slate-200 dark:border-slate-700 text-center">{products.reduce((acc, p) => acc + p.qty, 0)}</td>
-                            <td className="px-2 py-1 border-r border-slate-200 dark:border-slate-700 text-center">-</td>
-                            <td className="px-2 py-1 text-right text-brand">{formatRupiah(products.reduce((acc, p) => acc + p.revenue, 0))}</td>
+                            <td colSpan={2} className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 text-right">TOTAL</td>
+                            <td className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 text-center">{products.reduce((acc, p) => acc + p.qty, 0)}</td>
+                            <td className="px-2 py-1.5 border-r border-slate-200 dark:border-slate-700 text-center">-</td>
+                            <td className="px-2 py-1.5 text-right text-brand whitespace-nowrap">{formatRupiah(products.reduce((acc, p) => acc + p.revenue, 0))}</td>
                           </tr>
                         </tfoot>
                       </table>
