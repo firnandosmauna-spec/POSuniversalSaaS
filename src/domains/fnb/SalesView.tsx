@@ -15,7 +15,8 @@ import {
   Trash2,
   RefreshCw,
   Package,
-  Wallet
+  Wallet,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +54,7 @@ export function SalesView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Form State Create / Edit
   const [formOrderType, setFormOrderType] = useState<"take_away" | "dine_in">("take_away");
@@ -398,8 +400,6 @@ export function SalesView() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) return;
-
     try {
       const { error: itemError } = await supabase.from("transaction_items").delete().eq("transaction_id", id);
       if (itemError) throw itemError;
@@ -408,6 +408,7 @@ export function SalesView() {
       if (error) throw error;
 
       alert("Transaksi berhasil dihapus.");
+      setConfirmDeleteId(null);
       fetchTransactions();
     } catch (err: any) {
       console.error("Error deleting transaction:", err);
@@ -671,13 +672,30 @@ export function SalesView() {
                          >
                             <Pencil className="size-3" />
                          </Button>
-                         <Button 
-                            variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} 
-                            className="h-6 w-6 text-red-500 hover:bg-red-50 hover:text-red-600 bg-slate-50 dark:bg-slate-800/50"
-                            title="Hapus"
-                         >
-                            <Trash2 className="size-3" />
-                         </Button>
+                         {confirmDeleteId === t.id ? (
+                           <div className="flex items-center gap-1">
+                             <Button 
+                                variant="default" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} 
+                                className="h-6 px-2 text-[10px] bg-red-600 hover:bg-red-700 text-white"
+                             >
+                                Yakin?
+                             </Button>
+                             <Button 
+                                variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }} 
+                                className="h-6 w-6 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 bg-slate-100 dark:bg-slate-800"
+                             >
+                                <X className="size-3" />
+                             </Button>
+                           </div>
+                         ) : (
+                           <Button 
+                              variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(t.id); }} 
+                              className="h-6 w-6 text-red-500 hover:bg-red-50 hover:text-red-600 bg-slate-50 dark:bg-slate-800/50"
+                              title="Hapus"
+                           >
+                              <Trash2 className="size-3" />
+                           </Button>
+                         )}
                        </div>
                     </div>
                   </div>
