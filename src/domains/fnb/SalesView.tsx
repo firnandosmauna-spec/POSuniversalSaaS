@@ -543,45 +543,6 @@ export function SalesView() {
               </button>
             </div>
 
-            {/* Action Icons: Search & Filter */}
-            <div className="flex items-center gap-2 shrink-0 ml-4">
-              {isSearchOpen ? (
-                <div className="relative animate-in fade-in slide-in-from-right-2">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="Cari..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-32 md:w-48 pl-8 pr-3 h-8 text-xs border border-brand/30 dark:border-brand/30 rounded-lg bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand"
-                  />
-                  <button onClick={() => setIsSearchOpen(false)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                  </button>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => setIsSearchOpen(true)}
-                  className="p-1.5 md:p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  <Search className="size-4" />
-                </button>
-              )}
-              
-              <button 
-                onClick={() => setIsFilterModalOpen(true)}
-                className="p-1.5 md:p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors relative"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                {(filterStatus !== 'all' || filterPayment !== 'all') && (
-                  <span className="absolute top-1 right-1 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
-                  </span>
-                )}
-              </button>
-            </div>
           </div>
         </div>
       </div>
