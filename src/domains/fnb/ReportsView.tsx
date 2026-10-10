@@ -603,10 +603,10 @@ export function ReportsView() {
       </div>
 
       {/* Ringkasan Penjualan & Produk (Laporan Keuangan) */}
-      <div className="flex-1 overflow-auto p-4 bg-slate-50/50 dark:bg-slate-900/50">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
+      <div className="flex-1 overflow-auto p-3 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 max-w-full mx-auto">
           {/* Metode Pembayaran */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-5 h-fit">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-4 h-fit lg:col-span-1">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
               <Wallet className="size-4 text-brand" /> 
               Metode Pembayaran
@@ -636,14 +636,14 @@ export function ReportsView() {
               </div>
             </div>
             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-               <Button onClick={() => setIsReportModalOpen(true)} className="w-full bg-brand hover:bg-brand/90 text-white font-bold h-11 shadow-sm shadow-brand/20">
+               <Button onClick={() => setIsReportModalOpen(true)} className="w-full bg-brand hover:bg-brand/90 text-white font-bold h-10 text-sm shadow-sm shadow-brand/20">
                   <Printer className="size-4 mr-2" /> Cetak Laporan PDF
                </Button>
             </div>
           </div>
 
           {/* Produk Terlaris Per Kategori */}
-          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-5 h-fit">
+          <div className="lg:col-span-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-4 h-fit">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
               <Package className="size-4 text-brand" /> 
               Penjualan Per Produk (Kategori)
