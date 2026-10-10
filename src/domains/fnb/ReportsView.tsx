@@ -40,6 +40,7 @@ export function ReportsView() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "week" | "month" | "custom">("today");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -442,6 +443,28 @@ export function ReportsView() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          {/* Search Toggle Icon */}
+          <button 
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            className={`p-2 md:p-2.5 rounded-xl transition-colors ${isSearchOpen ? 'bg-[#0b172a] text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+          >
+            <Search className="size-4 md:size-5" />
+          </button>
+          
+          {/* Filter Toggle Icon */}
+          <button 
+            onClick={() => setIsFilterModalOpen(true)}
+            className="p-2 md:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors relative"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 md:size-5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            {(filterStatus !== 'all' || filterPayment !== 'all') && (
+              <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
+              </span>
+            )}
+          </button>
+
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-[#0b172a] hover:bg-slate-800 text-white font-bold flex items-center gap-1.5 md:gap-2 shadow-md rounded-xl text-[10px] md:text-sm h-9 md:h-11 px-3 md:px-5"
@@ -456,6 +479,22 @@ export function ReportsView() {
           </Button>
         </div>
       </div>
+
+      {isSearchOpen && (
+        <div className="bg-white dark:bg-slate-900 px-4 md:px-8 py-3 border-b border-slate-100 dark:border-slate-800 animate-in fade-in slide-in-from-top-2">
+          <div className="relative max-w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Ketik ID transaksi, nama, dll..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 h-11 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Filter Waktu & Search Bar (Mobile Adapted) */}
       <div className="mb-2 md:mb-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-4 bg-white dark:bg-slate-900 p-4 rounded-none md:rounded-xl md:border border-slate-100 dark:border-slate-800 shadow-none md:shadow-sm">
@@ -543,63 +582,6 @@ export function ReportsView() {
           </div>
         </div>
 
-        <div className="hidden md:flex relative w-full md:w-80 shrink-0 mt-2 md:mt-0 gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Cari transaksi..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#0b172a] focus:border-[#0b172a]"
-            />
-          </div>
-          <Button 
-            variant="outline" 
-            onClick={() => setIsFilterModalOpen(true)}
-            className="shrink-0 px-3 bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-          >
-            <span className="md:hidden lg:inline mr-2">Filter</span>
-            <div className="size-4 relative">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-              {(filterStatus !== 'all' || filterPayment !== 'all') && (
-                <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
-                </span>
-              )}
-            </div>
-          </Button>
-        </div>
-      </div>
-      
-      {/* Mobile Search & Filter (Visible only on mobile) */}
-      <div className="md:hidden px-4 mb-4 flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Cari Transaksi.."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 h-11 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand shadow-sm"
-          />
-        </div>
-        <Button 
-          variant="outline" 
-          onClick={() => setIsFilterModalOpen(true)}
-          className="shrink-0 size-11 p-0 bg-white border-slate-200 text-slate-700 shadow-sm rounded-xl"
-        >
-          <div className="relative">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-            {(filterStatus !== 'all' || filterPayment !== 'all') && (
-              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand"></span>
-              </span>
-            )}
-          </div>
-        </Button>
       </div>
 
       {/* Ringkasan Penjualan & Produk (Laporan Keuangan) */}
