@@ -523,14 +523,14 @@ export function SalesView() {
                 Hari ini
               </button>
               <button
-                onClick={() => setDateFilter("week")}
+                onClick={() => setDateFilter("yesterday")}
                 className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                  dateFilter === "week" 
+                  dateFilter === "yesterday" 
                     ? "bg-[#0b172a] border-[#0b172a] text-white" 
                     : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                7 hari terakhir
+                Kemarin
               </button>
               <button
                 onClick={() => setDateFilter("month")}
@@ -540,7 +540,7 @@ export function SalesView() {
                     : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                30 hari terakhir
+                1 Bulan
               </button>
             </div>
           </div>
