@@ -560,8 +560,8 @@ export function SalesView() {
       </div>
 
       {/* Table Container (Always visible now) */}
-      <div className="flex bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex-1 flex-col overflow-hidden min-h-[300px]">
-        <div className="flex-1 overflow-auto p-0">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm min-h-[300px]">
+        <div className="p-0">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64 text-slate-400">
               <Loader2 className="size-8 animate-spin mb-4 text-brand" />
