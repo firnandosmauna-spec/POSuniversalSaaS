@@ -467,14 +467,14 @@ export function SalesView() {
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <div className="relative flex items-center justify-between bg-white border border-slate-200 px-3 py-2.5 rounded-lg text-sm font-medium w-full md:w-auto">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide w-full pb-1 md:pb-0">
+            <div className="shrink-0 relative flex items-center justify-between bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-medium w-auto cursor-pointer">
               <div className="flex items-center gap-1.5 text-slate-700">
                 <span>{startDate ? formatShortDate(startDate) : "Mulai"}</span>
                 <span className="text-slate-400 font-normal">-</span>
                 <span>{endDate ? formatShortDate(endDate) : "Akhir"}</span>
               </div>
-              <Calendar className="size-4 text-slate-600 ml-2" />
+              <Calendar className="size-3.5 text-slate-600 ml-2" />
               
               {/* Invisible native inputs to handle clicks on mobile */}
               <div className="absolute inset-0 flex opacity-0 cursor-pointer">
@@ -485,7 +485,7 @@ export function SalesView() {
                     setStartDate(e.target.value);
                     setDateFilter("custom");
                   }}
-                  className="w-1/2 h-full"
+                  className="w-1/2 h-full cursor-pointer"
                 />
                 <input
                   type="date"
@@ -494,43 +494,41 @@ export function SalesView() {
                     setEndDate(e.target.value);
                     setDateFilter("custom");
                   }}
-                  className="w-1/2 h-full"
+                  className="w-1/2 h-full cursor-pointer"
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide w-full md:w-auto pb-1 md:pb-0">
-              <button
-                onClick={() => setDateFilter("today")}
-                className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                  dateFilter === "today" 
-                    ? "bg-[#0b172a] border-[#0b172a] text-white" 
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                Hari ini
-              </button>
-              <button
-                onClick={() => setDateFilter("yesterday")}
-                className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                  dateFilter === "yesterday" 
-                    ? "bg-[#0b172a] border-[#0b172a] text-white" 
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                Kemarin
-              </button>
-              <button
-                onClick={() => setDateFilter("month")}
-                className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                  dateFilter === "month" 
-                    ? "bg-[#0b172a] border-[#0b172a] text-white" 
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                1 Bulan
-              </button>
-            </div>
+            <button
+              onClick={() => setDateFilter("today")}
+              className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
+                dateFilter === "today" 
+                  ? "bg-[#0b172a] border-[#0b172a] text-white" 
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              Hari ini
+            </button>
+            <button
+              onClick={() => setDateFilter("yesterday")}
+              className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
+                dateFilter === "yesterday" 
+                  ? "bg-[#0b172a] border-[#0b172a] text-white" 
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              Kemarin
+            </button>
+            <button
+              onClick={() => setDateFilter("month")}
+              className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
+                dateFilter === "month" 
+                  ? "bg-[#0b172a] border-[#0b172a] text-white" 
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              1 Bulan
+            </button>
           </div>
         </div>
 
