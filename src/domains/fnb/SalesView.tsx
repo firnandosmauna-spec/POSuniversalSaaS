@@ -605,58 +605,8 @@ export function SalesView() {
         </Button>
       </div>
 
-      {/* Ringkasan Card UI */}
-      <div className="px-3 md:px-0">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden mb-3 shadow-sm">
-          <div className="bg-white dark:bg-slate-800 px-3 py-2.5 border-b border-slate-100 dark:border-slate-700 flex flex-wrap justify-between items-center gap-2">
-            <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm">Ringkasan</h3>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 font-medium">
-              <RefreshCw className="size-3 text-blue-500" /> {new Date().toLocaleString('id-ID', {day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit'})}
-            </span>
-          </div>
-          
-          <div className="p-3 grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-3">
-            <div>
-              <p className="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Penjualan Kotor</p>
-              <p className="font-extrabold text-slate-800 dark:text-white text-sm">{formatRupiah(grossSales)}</p>
-            </div>
-            <div>
-              <p className="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Uang Diterima</p>
-              <p className="font-extrabold text-slate-800 dark:text-white text-sm">{formatRupiah(moneyReceived)}</p>
-            </div>
-            <div>
-              <p className="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Diskon</p>
-              <p className="font-extrabold text-slate-800 dark:text-white text-sm">{formatRupiah(discountTotal)}</p>
-            </div>
-            <div>
-              <p className="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Pembatalan</p>
-              <p className="font-extrabold text-slate-800 dark:text-white text-sm">{formatRupiah(cancelledTotal)}</p>
-            </div>
-            <div>
-              <p className="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Penjualan Bersih</p>
-              <p className="font-extrabold text-slate-800 dark:text-white text-sm">{formatRupiah(netSales)}</p>
-            </div>
-            <div>
-              <p className="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Jumlah Transaksi</p>
-              <p className="font-extrabold text-slate-800 dark:text-white text-sm">{totalTxCount}</p>
-            </div>
-          </div>
-          
-          <div className="px-3 py-2 border-t border-slate-100 dark:border-slate-800 text-center md:hidden">
-            <button 
-              onClick={() => setShowMobileTable(!showMobileTable)}
-              className="text-blue-500 font-bold text-sm hover:underline"
-            >
-              {showMobileTable ? "Sembunyikan Detail" : "Lihat Detail"}
-            </button>
-          </div>
-        </div>
-
-
-      </div>
-
-      {/* Table Container (Hidden on Mobile by default as per screenshot, togglable) */}
-      <div className={`${showMobileTable ? 'flex' : 'hidden md:flex'} bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex-1 flex-col overflow-hidden min-h-[300px]`}>
+      {/* Table Container (Always visible now) */}
+      <div className="flex bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex-1 flex-col overflow-hidden min-h-[300px]">
         <div className="flex-1 overflow-auto p-0">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64 text-slate-400">
