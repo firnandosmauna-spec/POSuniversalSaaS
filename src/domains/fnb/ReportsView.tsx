@@ -653,8 +653,8 @@ export function ReportsView() {
                 <div className="text-center text-sm text-slate-400 py-4">Belum ada data penjualan produk</div>
               ) : (
                 Object.entries(topProductsByCategory).map(([category, products]) => (
-                  <div key={category} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50 h-fit">
-                    <div className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 mb-2 tracking-wider bg-slate-200 dark:bg-slate-700 inline-block px-3 py-1 rounded-md">{category}</div>
+                  <div key={category} className="mb-2">
+                    <div className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">{category}</div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs text-left border-collapse border border-slate-200 dark:border-slate-700">
                         <thead>
