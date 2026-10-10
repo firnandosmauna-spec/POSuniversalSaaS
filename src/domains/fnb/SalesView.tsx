@@ -579,61 +579,61 @@ export function SalesView() {
             </div>
           ) : (
             <div className="w-full pb-4 bg-slate-50/50 dark:bg-slate-900/50">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 p-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 p-2">
                 {filteredTransactions.map(t => (
-                  <div key={t.id} onClick={() => openReceipt(t)} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col relative overflow-hidden group">
+                  <div key={t.id} onClick={() => openReceipt(t)} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5 shadow-sm hover:shadow transition-all cursor-pointer flex flex-col relative overflow-hidden group">
                     {/* Status Ribbon (Decorative) */}
-                    <div className={`absolute top-0 left-0 w-1 h-full ${
+                    <div className={`absolute top-0 left-0 w-0.5 h-full ${
                       t.status === "completed" ? "bg-emerald-500" : 
                       t.status === "hold" ? "bg-amber-500" : "bg-red-500"
                     }`} />
                     
-                    <div className="flex justify-between items-start mb-4 pl-2">
+                    <div className="flex justify-between items-start mb-2 pl-1.5">
                        <div className="flex flex-col">
-                         <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 text-sm group-hover:text-brand transition-colors">
-                            <Calendar className="size-4 text-slate-400" /> {formatDate(t.created_at)}
+                         <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1 text-xs group-hover:text-brand transition-colors">
+                            <Calendar className="size-3 text-slate-400" /> {formatDate(t.created_at)}
                          </div>
-                         <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-1 font-semibold flex items-center gap-1">
-                            <Receipt className="size-3" /> {t.invoice_code || t.id.substring(0, 8).toUpperCase()}
+                         <div className="text-[9px] text-slate-400 dark:text-slate-500 font-mono mt-0.5 font-semibold flex items-center gap-1">
+                            <Receipt className="size-2.5" /> {t.invoice_code || t.id.substring(0, 8).toUpperCase()}
                          </div>
                        </div>
                        <div>
                           {t.status === "completed" ? (
-                            <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800/50 text-[10px] font-extrabold uppercase tracking-wider shadow-sm">Lunas</span>
+                            <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/50 text-[9px] font-extrabold uppercase tracking-wider shadow-sm">Lunas</span>
                           ) : t.status === "hold" ? (
-                            <span className="bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 px-2 py-1 rounded border border-amber-200 dark:border-amber-800/50 text-[10px] font-extrabold uppercase tracking-wider shadow-sm">Di-Hold</span>
+                            <span className="bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800/50 text-[9px] font-extrabold uppercase tracking-wider shadow-sm">Di-Hold</span>
                           ) : (
-                            <span className="bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 px-2 py-1 rounded border border-red-200 dark:border-red-800/50 text-[10px] font-extrabold uppercase tracking-wider shadow-sm">Batal</span>
+                            <span className="bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/50 text-[9px] font-extrabold uppercase tracking-wider shadow-sm">Batal</span>
                           )}
                        </div>
                     </div>
 
-                    <div className="flex justify-between items-center mb-4 pl-2">
+                    <div className="flex justify-between items-center mb-1.5 pl-1.5">
                        <div className="flex flex-col">
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Pelanggan</span>
-                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">
+                          <span className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Pelanggan</span>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">
                             {t.customers?.name || t.customer_name_custom || "-"}
                           </span>
                        </div>
                        <div className="flex flex-col text-right">
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Pesanan</span>
-                          <span className="text-sm font-bold text-brand bg-brand/5 px-2 py-0.5 rounded-md inline-block">
+                          <span className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Pesanan</span>
+                          <span className="text-[10px] font-bold text-brand bg-brand/5 px-1.5 py-0.5 rounded-md inline-block">
                             {t.order_type === "dine_in" ? `Meja ${t.tables?.name || ''}` : t.order_type === "delivery" ? "Delivery" : "Takeaway"}
                           </span>
                        </div>
                     </div>
 
                     {/* Products List */}
-                    <div className="mb-4 pl-2">
-                       <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-1 block">Produk</span>
-                       <div className="space-y-1 mt-1 max-h-32 overflow-y-auto pr-1 scrollbar-hide">
+                    <div className="mb-2 pl-1.5">
+                       <span className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider block">Produk</span>
+                       <div className="space-y-0.5 max-h-24 overflow-y-auto pr-1 scrollbar-hide">
                          {(t.transaction_items || t.items || []).map((item: any, idx: number) => (
-                           <div key={idx} className="flex justify-between text-[11px] border-b border-dashed border-slate-100 dark:border-slate-700/50 pb-1.5 pt-1 last:border-0 last:pb-0">
-                             <div className="flex gap-1.5 overflow-hidden">
+                           <div key={idx} className="flex justify-between text-[10px] border-b border-dashed border-slate-100 dark:border-slate-700/50 pb-1 pt-0.5 last:border-0 last:pb-0">
+                             <div className="flex gap-1 overflow-hidden">
                                <span className="font-bold text-slate-700 dark:text-slate-300 shrink-0">{item.qty || item.quantity || 1}x</span>
                                <span className="text-slate-600 dark:text-slate-400 truncate">{item.product_name || item.products?.name || item.name || "Produk"}</span>
                              </div>
-                             <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0 pl-2">
+                             <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0 pl-1">
                                {formatRupiah((item.qty || item.quantity || 1) * (item.price || 0))}
                              </span>
                            </div>
@@ -641,40 +641,40 @@ export function SalesView() {
                        </div>
                     </div>
 
-                    <div className="flex justify-between items-end mt-auto pt-3 border-t border-slate-100 dark:border-slate-700 pl-2">
+                    <div className="flex justify-between items-end mt-auto pt-2 border-t border-slate-100 dark:border-slate-700 pl-1.5">
                        <div className="flex flex-col">
-                         <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Total Belanja</span>
-                         <div className="flex items-end gap-1.5">
-                           <span className="text-lg font-extrabold text-[#0b172a] dark:text-white leading-none">
+                         <span className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Total Belanja</span>
+                         <div className="flex items-end gap-1">
+                           <span className="text-sm font-extrabold text-[#0b172a] dark:text-white leading-none">
                               {formatRupiah(t.total_amount)}
                            </span>
-                           <span className="text-[10px] text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-1.5 rounded uppercase">
+                           <span className="text-[9px] text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-1 rounded uppercase">
                               {t.payment_method === 'cash' ? 'CASH' : t.payment_method === 'qris' ? 'QRIS' : t.payment_method === 'debit' ? 'CARD' : 'TRF'}
                            </span>
                          </div>
                        </div>
                        
-                       <div className="flex items-center gap-1">
+                       <div className="flex items-center gap-0.5">
                          <Button 
                             variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openReceipt(t); }} 
-                            className="h-8 w-8 text-brand hover:bg-brand/10 hover:text-brand bg-slate-50 dark:bg-slate-800/50"
+                            className="h-6 w-6 text-brand hover:bg-brand/10 hover:text-brand bg-slate-50 dark:bg-slate-800/50"
                             title="Lihat Struk"
                          >
-                            <Eye className="size-4" />
+                            <Eye className="size-3" />
                          </Button>
                          <Button 
                             variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenEdit(t); }} 
-                            className="h-8 w-8 text-amber-600 hover:bg-amber-50 hover:text-amber-700 bg-slate-50 dark:bg-slate-800/50"
+                            className="h-6 w-6 text-amber-600 hover:bg-amber-50 hover:text-amber-700 bg-slate-50 dark:bg-slate-800/50"
                             title="Edit"
                          >
-                            <Pencil className="size-4" />
+                            <Pencil className="size-3" />
                          </Button>
                          <Button 
                             variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} 
-                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600 bg-slate-50 dark:bg-slate-800/50"
+                            className="h-6 w-6 text-red-500 hover:bg-red-50 hover:text-red-600 bg-slate-50 dark:bg-slate-800/50"
                             title="Hapus"
                          >
-                            <Trash2 className="size-4" />
+                            <Trash2 className="size-3" />
                          </Button>
                        </div>
                     </div>
