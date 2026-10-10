@@ -449,12 +449,6 @@ export function ReportsView() {
           >
             <Plus className="size-3 md:size-4" /> Tambah Transaksi
           </Button>
-          <Button
-            onClick={() => setIsReportModalOpen(true)}
-            className="bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-bold flex items-center gap-1.5 md:gap-2 shadow-sm rounded-xl text-[10px] md:text-sm h-9 md:h-11 px-3 md:px-5"
-          >
-            <Printer className="size-3 md:size-4" /> Cetak Laporan
-          </Button>
         </div>
       </div>
 
