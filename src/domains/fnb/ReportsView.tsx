@@ -575,11 +575,6 @@ export function ReportsView() {
                 <span className="text-lg font-black text-brand">{formatRupiah(totalRevenue)}</span>
               </div>
             </div>
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-               <Button onClick={() => setIsReportModalOpen(true)} className="w-full bg-brand hover:bg-brand/90 text-white font-bold h-10 text-sm shadow-sm shadow-brand/20">
-                  <Printer className="size-4 mr-2" /> Cetak Laporan PDF
-               </Button>
-            </div>
           </div>
 
           {/* Rincian Penjualan */}
