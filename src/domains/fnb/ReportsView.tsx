@@ -548,7 +548,7 @@ export function ReportsView() {
       </div>
 
       {/* Ringkasan Penjualan & Produk (Laporan Keuangan) */}
-      <div className="flex-1 overflow-auto p-3 bg-slate-50/50 dark:bg-slate-900/50">
+      <div className="p-3 bg-slate-50/50 dark:bg-slate-900/50 rounded-xl md:rounded-2xl">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 max-w-full mx-auto">
           {/* Metode Pembayaran */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-4 h-fit lg:col-span-1">

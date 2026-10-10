@@ -560,7 +560,7 @@ export function SalesView() {
               </p>
             </div>
           ) : (
-            <div className="overflow-y-auto w-full pb-4 h-full bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="w-full pb-4 bg-slate-50/50 dark:bg-slate-900/50">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 p-3">
                 {filteredTransactions.map(t => (
                   <div key={t.id} onClick={() => openReceipt(t)} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col relative overflow-hidden group">
