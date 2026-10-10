@@ -764,15 +764,6 @@ export function SalesView() {
         </div>
       </div>
 
-      {/* Mobile Fixed Bottom Button */}
-      <div className="fixed bottom-16 md:bottom-auto md:hidden left-0 right-0 p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-40">
-        <Button 
-          onClick={() => setIsReportModalOpen(true)}
-          className="w-full bg-[#0b172a] hover:bg-slate-800 text-white font-extrabold text-sm h-12 rounded-lg shadow-md"
-        >
-          Lihat Laporan Selengkapnya
-        </Button>
-      </div>
 
       {/* Filter Modal */}
       <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
