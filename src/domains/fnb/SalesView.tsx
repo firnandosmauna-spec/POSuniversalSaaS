@@ -629,6 +629,24 @@ export function SalesView() {
                        </div>
                     </div>
 
+                    {/* Products List */}
+                    <div className="mb-4 pl-2">
+                       <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-1 block">Produk</span>
+                       <div className="space-y-1 mt-1 max-h-32 overflow-y-auto pr-1 scrollbar-hide">
+                         {(t.transaction_items || t.items || []).map((item: any, idx: number) => (
+                           <div key={idx} className="flex justify-between text-[11px] border-b border-dashed border-slate-100 dark:border-slate-700/50 pb-1.5 pt-1 last:border-0 last:pb-0">
+                             <div className="flex gap-1.5 overflow-hidden">
+                               <span className="font-bold text-slate-700 dark:text-slate-300 shrink-0">{item.qty || item.quantity || 1}x</span>
+                               <span className="text-slate-600 dark:text-slate-400 truncate">{item.product_name || item.products?.name || item.name || "Produk"}</span>
+                             </div>
+                             <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0 pl-2">
+                               {formatRupiah((item.qty || item.quantity || 1) * (item.price || 0))}
+                             </span>
+                           </div>
+                         ))}
+                       </div>
+                    </div>
+
                     <div className="flex justify-between items-end mt-auto pt-3 border-t border-slate-100 dark:border-slate-700 pl-2">
                        <div className="flex flex-col">
                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Total Belanja</span>
