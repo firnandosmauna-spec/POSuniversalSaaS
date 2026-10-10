@@ -183,6 +183,21 @@ export default function RetailPOSView() {
     return matchSearch && matchCat;
   });
 
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && search.trim() !== '') {
+      const scannedCode = search.trim().toLowerCase();
+      // Look for exact SKU match or exact name match
+      const exactMatch = products.find(
+        p => (p.sku && p.sku.toLowerCase() === scannedCode) || p.name.toLowerCase() === scannedCode
+      );
+      
+      if (exactMatch) {
+        addToCart(exactMatch);
+        setSearch(''); // Clear search input for the next scan
+      }
+    }
+  };
+
   const addToCart = (product: RetailProduct) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
@@ -258,6 +273,7 @@ export default function RetailPOSView() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
                 placeholder="Cari SKU Barcode / Nama..."
                 className="pl-9 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-xs rounded-none h-8"
               />

@@ -527,7 +527,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: staffList } = await supabase
           .from("store_users")
           .select("*")
-          .eq("email", emailClean);
+          .or(`email.ilike."${emailClean}",name.ilike."${emailClean}"`);
 
         if (staffList && staffList.length > 0) {
           const staffData = staffList.find((s: any) => s.status === "ACTIVE" && (s.pin_code === passwordClean || !s.pin_code));

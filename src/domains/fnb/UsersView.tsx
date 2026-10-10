@@ -100,8 +100,20 @@ export function UsersView() {
           status: (d.status === "INACTIVE" ? "INACTIVE" : "ACTIVE") as "ACTIVE" | "INACTIVE",
           created_at: d.created_at || new Date().toISOString()
         }));
-        setStaffList(mappedData);
-        localStorage.setItem(tenantStorageKey, JSON.stringify(mappedData));
+        // Protect local un-synced data by merging
+        const saved = localStorage.getItem(tenantStorageKey);
+        let mergedData = mappedData;
+        if (saved) {
+          try {
+            const localData: StaffUser[] = JSON.parse(saved);
+            const supabaseIds = new Set(mappedData.map(d => d.id));
+            const unsyncedData = localData.filter(d => !supabaseIds.has(d.id));
+            mergedData = [...mappedData, ...unsyncedData];
+          } catch (e) {}
+        }
+        
+        setStaffList(mergedData);
+        localStorage.setItem(tenantStorageKey, JSON.stringify(mergedData));
       } else {
         // Fallback to local storage (current key)
         const saved = localStorage.getItem(tenantStorageKey);
@@ -271,7 +283,8 @@ export function UsersView() {
         }
       } else {
         // Create new staff
-        const newStaffId = crypto.randomUUID();
+        const fallbackUUID = () => `staff_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const newStaffId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : fallbackUUID();
         const newStaffItem: StaffUser = {
           id: newStaffId,
           tenant_id: user.id,
@@ -322,10 +335,10 @@ export function UsersView() {
         }
       }
 
-      setIsModalOpen(false);
     } catch (e) {
       console.error("Error saving staff:", e);
     } finally {
+      setIsModalOpen(false);
       setIsSubmitting(false);
     }
   };
@@ -371,21 +384,21 @@ export function UsersView() {
   const cashierCount = staffList.filter((s) => s.role === "Kasir").length;
 
   return (
-    <div className="p-4 md:p-6 h-full flex flex-col space-y-6 overflow-y-auto bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+    <div className="p-2 md:p-6 h-full flex flex-col space-y-3 md:space-y-6 overflow-y-auto bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
       {/* Top Banner & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="size-12 rounded-xl bg-brand/10 border border-brand/20 grid place-items-center text-brand shrink-0">
-            <Users className="size-6 text-brand" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 md:gap-4 bg-white dark:bg-slate-900 p-2.5 md:p-5 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="size-8 md:size-12 rounded-lg md:rounded-xl bg-[#0b172a]/10 border border-[#0b172a]/20 grid place-items-center text-[#0b172a] shrink-0">
+            <Users className="size-4 md:size-6 text-[#0b172a]" />
           </div>
           <div>
-            <h1 className="font-display text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-              Kelola Staf & Akun Pengguna POS
-              <span className="text-xs bg-brand/10 text-brand font-mono font-bold px-2 py-0.5 rounded border border-brand/20">
+            <h1 className="font-display text-base md:text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5 md:gap-2">
+              Kelola Staf & Akun
+              <span className="text-[8px] md:text-xs bg-[#0b172a]/10 text-[#0b172a] font-mono font-bold px-1.5 py-0.5 md:px-2 md:py-0.5 rounded-full border border-[#0b172a]/20">
                 Tenant: {user?.name}
               </span>
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-[9px] md:text-xs text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block">
               Daftarkan kasir, manager, dan koki/operator cabang untuk akses terbatas operasional POS Anda.
             </p>
           </div>
@@ -393,85 +406,85 @@ export function UsersView() {
 
         <Button
           onClick={openAddModal}
-          className="bg-brand hover:bg-brand/90 text-white font-extrabold text-xs h-10 px-4 rounded-lg shadow-sm gap-2 shrink-0"
+          className="bg-[#0b172a] hover:bg-slate-800 text-white font-extrabold text-[9px] md:text-xs h-8 md:h-10 px-2.5 md:px-4 rounded-xl shadow-sm gap-1.5 md:gap-2 shrink-0 w-full sm:w-auto"
         >
-          <UserPlus className="size-4" /> Tambah Staf Baru
+          <UserPlus className="size-3 md:size-4" /> Tambah Staf Baru
         </Button>
       </div>
 
       {/* KPI Cards Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 grid place-items-center shrink-0">
-            <UserCheck className="size-5" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+        <div className="bg-white dark:bg-slate-900 p-2 md:p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex items-center gap-2 md:gap-3">
+          <div className="size-6 md:size-10 rounded-md md:rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 grid place-items-center shrink-0">
+            <UserCheck className="size-3 md:size-5" />
           </div>
           <div>
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+            <span className="text-[8px] md:text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               Staf Aktif
             </span>
-            <span className="text-lg font-black text-slate-900 dark:text-white">{activeStaffCount} Orang</span>
+            <span className="text-sm md:text-lg font-black text-slate-900 dark:text-white leading-tight">{activeStaffCount} <span className="text-[8px] md:text-xs">Orang</span></span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 grid place-items-center shrink-0">
-            <Users className="size-5" />
+        <div className="bg-white dark:bg-slate-900 p-2 md:p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex items-center gap-2 md:gap-3">
+          <div className="size-6 md:size-10 rounded-md md:rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 grid place-items-center shrink-0">
+            <Users className="size-3 md:size-5" />
           </div>
           <div>
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+            <span className="text-[8px] md:text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               Total Kasir
             </span>
-            <span className="text-lg font-black text-slate-900 dark:text-white">{cashierCount} Orang</span>
+            <span className="text-sm md:text-lg font-black text-slate-900 dark:text-white leading-tight">{cashierCount} <span className="text-[8px] md:text-xs">Orang</span></span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 grid place-items-center shrink-0">
-            <Building2 className="size-5" />
+        <div className="bg-white dark:bg-slate-900 p-2 md:p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex items-center gap-2 md:gap-3">
+          <div className="size-6 md:size-10 rounded-md md:rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 grid place-items-center shrink-0">
+            <Building2 className="size-3 md:size-5" />
           </div>
           <div>
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-              Cabang Terhubung
+            <span className="text-[8px] md:text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+              Cabang
             </span>
-            <span className="text-lg font-black text-slate-900 dark:text-white">{branches.length} Outlet</span>
+            <span className="text-sm md:text-lg font-black text-slate-900 dark:text-white leading-tight">{branches.length} <span className="text-[8px] md:text-xs">Outlet</span></span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 grid place-items-center shrink-0">
-            <ShieldCheck className="size-5" />
+        <div className="bg-white dark:bg-slate-900 p-2 md:p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex items-center gap-2 md:gap-3">
+          <div className="size-6 md:size-10 rounded-md md:rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 grid place-items-center shrink-0">
+            <ShieldCheck className="size-3 md:size-5" />
           </div>
           <div>
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+            <span className="text-[8px] md:text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               Keamanan PIN
             </span>
-            <span className="text-xs font-extrabold text-amber-600 dark:text-amber-400">Terisolasi Tenant</span>
+            <span className="text-[8px] md:text-xs font-extrabold text-amber-600 dark:text-amber-400 leading-tight">Terisolasi Tenant</span>
           </div>
         </div>
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative flex-1 w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+      <div className="bg-white dark:bg-slate-900 p-2 md:p-4 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-3">
+        <div className="relative flex-1 w-full sm:max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 md:size-4 text-slate-400" />
           <Input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari Nama, Email, atau PIN Kasir..."
-            className="pl-9 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-xs rounded-lg h-9"
+            placeholder="Cari Nama, Email, PIN..."
+            className="pl-7 md:pl-9 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] md:text-xs rounded-lg h-7 md:h-9"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-semibold shrink-0">
-            <Filter className="size-3.5" /> Filter:
+        <div className="flex items-center gap-1.5 md:gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-1 text-[9px] md:text-xs text-slate-500 dark:text-slate-400 font-semibold shrink-0">
+            <Filter className="size-3 md:size-3.5" /> <span className="hidden sm:inline">Filter:</span>
           </div>
 
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[9px] md:text-xs font-bold text-slate-800 dark:text-slate-200 rounded-lg px-1.5 md:px-2.5 py-1 md:py-1.5 focus:outline-none shrink-0"
           >
             <option value="ALL">Semua Peran</option>
             <option value="Kasir">Kasir</option>
@@ -483,7 +496,7 @@ export function UsersView() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[9px] md:text-xs font-bold text-slate-800 dark:text-slate-200 rounded-lg px-1.5 md:px-2.5 py-1 md:py-1.5 focus:outline-none shrink-0"
           >
             <option value="ALL">Semua Status</option>
             <option value="ACTIVE">🟢 Aktif</option>
@@ -493,57 +506,62 @@ export function UsersView() {
       </div>
 
       {/* Staff Users Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs flex-1 min-h-[300px]">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm flex-1 min-h-[300px]">
         {isLoading ? (
-          <div className="py-16 text-center text-slate-400 space-y-2">
-            <div className="size-8 border-4 border-slate-200 border-t-brand rounded-full animate-spin mx-auto"></div>
-            <p className="text-xs font-medium">Memuat data staf...</p>
+          <div className="py-8 md:py-16 text-center text-slate-400 space-y-2">
+            <div className="size-6 md:size-8 border-2 md:border-4 border-slate-200 border-t-[#0b172a] rounded-full animate-spin mx-auto"></div>
+            <p className="text-[10px] md:text-xs font-medium">Memuat data staf...</p>
           </div>
         ) : filteredStaff.length === 0 ? (
-          <div className="py-16 text-center text-slate-400 space-y-3">
-            <Users className="size-12 mx-auto opacity-20 text-slate-400" />
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tidak ada data staf yang ditemukan</p>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          <div className="py-8 md:py-16 text-center text-slate-400 space-y-2 md:space-y-3">
+            <Users className="size-8 md:size-12 mx-auto opacity-20 text-slate-400" />
+            <p className="text-[10px] md:text-sm font-semibold text-slate-700 dark:text-slate-300">Tidak ada data staf yang ditemukan</p>
+            <p className="text-[9px] md:text-xs text-slate-500 max-w-sm mx-auto">
               Klik tombol "Tambah Staf Baru" untuk mendaftarkan akun kasir atau manajer toko Anda.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto w-full pb-4 md:pb-0 h-full">
+            <table className="w-full text-left border-collapse min-w-max md:min-w-full">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  <th className="py-3 px-4">Nama Staf & Email</th>
-                  <th className="py-3 px-4">PIN Kasir</th>
-                  <th className="py-3 px-4">Peran (Role)</th>
-                  <th className="py-3 px-4">Hak Cabang</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Aksi</th>
+                <tr className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[8px] md:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="py-1.5 md:py-3 px-1.5 md:px-4">Nama Staf & Email</th>
+                  <th className="py-1.5 md:py-3 px-1.5 md:px-4 hidden sm:table-cell">PIN Kasir</th>
+                  <th className="py-1.5 md:py-3 px-1.5 md:px-4">Peran (Role)</th>
+                  <th className="py-1.5 md:py-3 px-1.5 md:px-4 hidden sm:table-cell">Hak Cabang</th>
+                  <th className="py-1.5 md:py-3 px-1.5 md:px-4">Status</th>
+                  <th className="py-1.5 md:py-3 px-1.5 md:px-4 text-right">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-[9px] md:text-xs font-medium text-slate-700 dark:text-slate-200">
                 {filteredStaff.map((staff) => (
                   <tr key={staff.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-850 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="size-9 rounded-full bg-brand/10 text-brand font-bold grid place-items-center text-xs shrink-0">
+                    <td className="py-1.5 md:py-3.5 px-1.5 md:px-4">
+                      <div className="flex items-center gap-1.5 md:gap-3">
+                        <div className="size-6 md:size-9 rounded-full bg-[#0b172a]/10 text-[#0b172a] font-bold grid place-items-center text-[9px] md:text-xs shrink-0">
                           {staff.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white leading-snug">{staff.name}</p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
-                            <Mail className="size-3 text-slate-400" /> {staff.email}
+                          <p className="text-[8px] md:text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                            <Mail className="size-2 md:size-3 text-slate-400" /> {staff.email}
                           </p>
+                          {/* Info PIN dan Cabang khusus mobile */}
+                          <div className="flex flex-col gap-0.5 mt-0.5 sm:hidden">
+                            <span className="text-[8px] font-mono text-amber-600 bg-amber-50 px-1 inline-block w-max rounded">PIN: {staff.pin_code || "1234"}</span>
+                            <span className="text-[8px] text-slate-400 flex items-center gap-0.5"><Building2 className="size-2" /> {staff.branch_name || "Cabang Utama"}</span>
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-800 dark:text-slate-200">
-                      <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs">
-                        <KeyRound className="size-3 text-amber-500" />
+                    <td className="py-1.5 md:py-3.5 px-1.5 md:px-4 font-mono font-bold text-slate-800 dark:text-slate-200 hidden sm:table-cell">
+                      <div className="inline-flex items-center gap-1 px-1.5 md:px-2 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[9px] md:text-xs">
+                        <KeyRound className="size-2.5 md:size-3 text-amber-500" />
                         <span>{staff.pin_code || "1234"}</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${
+                    <td className="py-1.5 md:py-3.5 px-1.5 md:px-4">
+                      <span className={`inline-flex items-center gap-0.5 md:gap-1 px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-full text-[8px] md:text-[11px] font-extrabold border ${
                         staff.role === "Owner Tenant"
                           ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-900"
                           : staff.role === "Manager Cabang"
@@ -555,57 +573,57 @@ export function UsersView() {
                         {staff.role}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-                        <Building2 className="size-3.5 text-brand" />
+                    <td className="py-1.5 md:py-3.5 px-1.5 md:px-4 hidden sm:table-cell">
+                      <div className="flex items-center gap-1 md:gap-1.5 text-[9px] md:text-xs text-slate-600 dark:text-slate-400">
+                        <Building2 className="size-3 md:size-3.5 text-[#0b172a]" />
                         <span>{staff.branch_name || "Cabang Utama"}</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-1.5 md:py-3.5 px-1.5 md:px-4">
                       {staff.status === "ACTIVE" ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-900 text-[11px]">
-                          <CheckCircle2 className="size-3.5" /> Aktif
+                        <span className="inline-flex items-center gap-0.5 md:gap-1 text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 md:px-2 rounded-full border border-emerald-200 dark:border-emerald-900 text-[8px] md:text-[11px]">
+                          <CheckCircle2 className="size-2.5 md:size-3.5" /> Aktif
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-red-600 font-bold bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded border border-red-200 dark:border-red-900 text-[11px]">
-                          <XCircle className="size-3.5" /> Nonaktif
+                        <span className="inline-flex items-center gap-0.5 md:gap-1 text-red-600 font-bold bg-red-50 dark:bg-red-950/60 px-1.5 py-0.5 md:px-2 rounded-full border border-red-200 dark:border-red-900 text-[8px] md:text-[11px]">
+                          <XCircle className="size-2.5 md:size-3.5" /> Nonaktif
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="py-1.5 md:py-3.5 px-1.5 md:px-4 text-right">
+                      <div className="flex items-center justify-end gap-0.5 md:gap-1.5">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => toggleStaffStatus(staff)}
-                          className={`size-8 p-0 rounded-lg ${
+                          className={`size-6 md:size-8 p-0 rounded-lg ${
                             staff.status === "ACTIVE"
                               ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50"
                               : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
                           }`}
                           title={staff.status === "ACTIVE" ? "Nonaktifkan Akun" : "Aktifkan Akun"}
                         >
-                          {staff.status === "ACTIVE" ? <UserX className="size-4" /> : <UserCheck className="size-4" />}
+                          {staff.status === "ACTIVE" ? <UserX className="size-3 md:size-4" /> : <UserCheck className="size-3 md:size-4" />}
                         </Button>
 
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => openEditModal(staff)}
-                          className="size-8 p-0 rounded-lg text-slate-400 hover:text-brand hover:bg-brand/10"
+                          className="size-6 md:size-8 p-0 rounded-lg text-slate-400 hover:text-[#0b172a] hover:bg-[#0b172a]/10"
                           title="Edit Akun Staf"
                         >
-                          <Pencil className="size-4" />
+                          <Pencil className="size-3 md:size-4" />
                         </Button>
 
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteStaff(staff.id)}
-                          className="size-8 p-0 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+                          className="size-6 md:size-8 p-0 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
                           title="Hapus Akun Staf"
                         >
-                          <Trash2 className="size-4" />
+                          <Trash2 className="size-3 md:size-4" />
                         </Button>
                       </div>
                     </td>
@@ -622,7 +640,7 @@ export function UsersView() {
         <DialogContent className="sm:max-w-md rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-              <UserPlus className="size-5 text-brand" />
+              <UserPlus className="size-5 text-[#0b172a]" />
               {editingStaff ? "Edit Akun Staf Kasir" : "Tambah Staf / Akun Kasir Baru"}
             </DialogTitle>
           </DialogHeader>
@@ -732,7 +750,7 @@ export function UsersView() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-brand text-white hover:bg-brand/90 text-xs font-bold px-4"
+                className="bg-[#0b172a] text-white hover:bg-slate-800 text-xs font-bold px-4 rounded-xl"
               >
                 {isSubmitting ? "Menyimpan..." : "Simpan Akun Staf"}
               </Button>

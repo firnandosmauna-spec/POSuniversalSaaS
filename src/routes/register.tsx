@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth, BusinessType } from "@/shared/auth/AuthContext";
+import { X } from "lucide-react";
 
 type RegisterSearch = {
   type?: string | undefined;
@@ -84,15 +85,18 @@ function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
+      <div className="w-full max-w-md relative rounded-3xl bg-white p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
+        <Link to="/" className="absolute right-5 top-5 text-slate-400 hover:text-[#0b172a] hover:bg-slate-100 rounded-full p-2 transition-colors">
+          <X className="size-5" />
+        </Link>
         <div className="mb-8 text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="grid size-8 place-items-center rounded-lg bg-brand">
+            <div className="grid size-8 place-items-center rounded-lg bg-[#0b172a]">
               <span className="font-display text-base font-bold leading-none text-white">
                 U
               </span>
             </div>
-            <span className="font-display text-lg font-semibold text-brand">
+            <span className="font-display text-lg font-semibold text-[#0b172a]">
               UniversalPOS
             </span>
           </Link>
@@ -120,7 +124,7 @@ function RegisterPage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0b172a] focus:outline-none focus:ring-1 focus:ring-[#0b172a]"
               placeholder="Cth: Budi Santoso"
             />
           </div>
@@ -134,7 +138,7 @@ function RegisterPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0b172a] focus:outline-none focus:ring-1 focus:ring-[#0b172a]"
               placeholder="Cth: budi@contoh.com"
             />
           </div>
@@ -148,7 +152,7 @@ function RegisterPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0b172a] focus:outline-none focus:ring-1 focus:ring-[#0b172a]"
               placeholder="Minimal 6 karakter"
             />
           </div>
@@ -162,7 +166,7 @@ function RegisterPage() {
               required
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0b172a] focus:outline-none focus:ring-1 focus:ring-[#0b172a]"
               placeholder="Cth: Kopi Kenangan"
             />
           </div>
@@ -175,7 +179,7 @@ function RegisterPage() {
               required
               value={businessType}
               onChange={(e) => setBusinessType(e.target.value as BusinessType)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand bg-white font-bold"
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0b172a] focus:outline-none focus:ring-1 focus:ring-[#0b172a] bg-white font-bold"
             >
               <option value="" disabled>Pilih Kategori Bisnis Anda</option>
               <option value="PRINTING">🖨️ Percetakan Digital & Outdoor</option>
@@ -201,7 +205,7 @@ function RegisterPage() {
               required
               value={selectedPlan}
               onChange={(e) => setSelectedPlan(e.target.value)}
-              className="w-full rounded-lg border border-brand/40 bg-brand/5 px-4 py-2.5 text-sm font-bold text-brand focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-xl border border-[#0b172a]/20 bg-[#0b172a]/5 px-4 py-2.5 text-sm font-bold text-[#0b172a] focus:border-[#0b172a] focus:outline-none focus:ring-1 focus:ring-[#0b172a]"
             >
               <option value="Starter">🌱 Starter (Gratis Selamanya - 1 Toko, 2 Kasir)</option>
               <option value="Growth">🚀 Growth (Rp 299rb/Bulan - 14 Hari Gratis)</option>
@@ -212,7 +216,7 @@ function RegisterPage() {
           <Button
             type="submit"
             disabled={!name || !email || !password || !businessName || !businessType || isLoading}
-            className="w-full mt-4 bg-brand text-white hover:bg-brand/90 py-6 text-base"
+            className="w-full mt-4 bg-[#0b172a] text-white hover:bg-slate-800 rounded-xl py-6 text-base shadow-sm transition-all active:scale-[0.98]"
           >
             {isLoading ? "Mendaftarkan..." : "Daftar & Masuk ke Kasir"}
           </Button>

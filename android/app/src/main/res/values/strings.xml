@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">POSUniversalSaaS</string>
+    <string name="title_activity_main">POSUniversalSaaS</string>
+    <string name="package_name">com.posuniversalsaas.app</string>
+    <string name="custom_url_scheme">com.posuniversalsaas.app</string>
+</resources>

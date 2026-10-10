@@ -120,13 +120,13 @@ function Index() {
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
       {/* Navigation */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-brand">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0b172a]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-10 lg:py-4">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="grid size-9 place-items-center rounded-lg bg-white">
-              <span className="font-display text-xl font-bold leading-none text-brand">U</span>
+            <div className="grid size-8 sm:size-9 place-items-center rounded-xl bg-white shadow-sm shrink-0">
+              <span className="font-display text-lg sm:text-xl font-bold leading-none text-[#0b172a]">U</span>
             </div>
-            <span className="font-display text-lg font-semibold tracking-tight text-white">
+            <span className="font-display text-base sm:text-lg font-semibold tracking-tight text-white hidden sm:block">
               UniversalPOS
             </span>
           </Link>
@@ -143,29 +143,30 @@ function Index() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             <Button
               variant="ghost"
-              className="text-white/80 hover:bg-white/10 hover:text-white inline-flex"
+              size="sm"
+              className="text-white/80 hover:bg-white/10 hover:text-white inline-flex px-2 sm:px-4 text-xs sm:text-sm"
               asChild
             >
               <Link to="/login">Masuk</Link>
             </Button>
-            <Button className="rounded-full bg-white text-ink hover:bg-mist" asChild>
-              <Link to="/register">{cms.hero.ctaText || "Buat Akun"}</Link>
+            <Button size="sm" className="rounded-full bg-white text-ink hover:bg-mist px-3 sm:px-4 text-xs sm:text-sm" asChild>
+              <Link to="/register">Daftar</Link>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-brand">
-        <div className="pointer-events-none absolute -right-40 -top-40 size-[520px] rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-52 -left-32 size-[440px] rounded-full bg-accent/20" />
-        <div className="relative mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section className="relative overflow-hidden bg-[#0b172a]">
+        <div className="pointer-events-none absolute -right-40 -top-40 size-[520px] rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-52 -left-32 size-[440px] rounded-full bg-white/5" />
+        <div className="relative mx-auto max-w-7xl px-6 py-12 lg:px-10 lg:py-16">
           <div className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
-              <span className="size-1.5 rounded-full bg-accent" />
+              <span className="size-1.5 rounded-full bg-emerald-400" />
               {cms.hero.badgeText}
             </span>
             <h1 className="mt-6 font-display text-5xl font-extrabold leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl">
@@ -190,10 +191,10 @@ function Index() {
       </section>
 
       {/* Supported Businesses Section (Anti-Slop Craftsmanship) */}
-      <section className="border-b border-slate-200/80 bg-slate-50/70 py-16 lg:py-24">
+      <section className="border-b border-slate-200/80 bg-slate-50/70 py-12 lg:py-16">
         <div className="mx-auto max-w-7xl px-6 lg:px-10">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <span className="inline-block rounded-full bg-brand/10 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-brand mb-3">
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <span className="inline-block rounded-full bg-[#0b172a]/10 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[#0b172a] mb-3">
               Solusi POS Sesuai Industri
             </span>
             <h2 className="text-3xl font-bold tracking-tight text-ink sm:text-4xl">
@@ -220,18 +221,18 @@ function Index() {
                   key={i}
                   to="/register"
                   search={{ type: code }}
-                  className="group relative flex flex-col justify-between rounded-2xl bg-white p-5 border border-slate-200/90 shadow-sm hover:border-brand/50 hover:shadow-md transition-all duration-200 hover:-translate-y-1"
+                  className="group relative flex flex-col justify-between rounded-2xl bg-white p-5 border border-slate-200/90 shadow-sm hover:border-[#0b172a]/50 hover:shadow-md transition-all duration-200 hover:-translate-y-1"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <div className="size-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center font-bold transition-colors group-hover:bg-brand group-hover:text-white">
+                      <div className="size-10 rounded-xl bg-[#0b172a]/10 text-[#0b172a] flex items-center justify-center font-bold transition-colors group-hover:bg-[#0b172a] group-hover:text-white">
                         <IconComponent className="size-5" />
                       </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 group-hover:bg-brand/10 group-hover:text-brand transition-colors">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 group-hover:bg-[#0b172a]/10 group-hover:text-[#0b172a] transition-colors">
                         {config.category}
                       </span>
                     </div>
-                    <h3 className="font-bold text-slate-900 text-base group-hover:text-brand transition-colors">
+                    <h3 className="font-bold text-slate-900 text-base group-hover:text-[#0b172a] transition-colors">
                       {config.name}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
@@ -239,9 +240,9 @@ function Index() {
                     </p>
                   </div>
 
-                  <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700 group-hover:text-brand transition-colors">
+                  <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700 group-hover:text-[#0b172a] transition-colors">
                     <span>Mendaftar Akun Kasir</span>
-                    <ChevronRight className="size-4 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-brand" />
+                    <ChevronRight className="size-4 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-[#0b172a]" />
                   </div>
                 </Link>
               );
@@ -252,9 +253,9 @@ function Index() {
 
       {/* Features */}
       <section id="fitur" className="bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto max-w-7xl px-6 py-12 lg:px-10 lg:py-16">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0b172a]">
               {cms.featuresHeader.badgeText}
             </span>
             <h2 className="mt-4 font-display text-4xl font-bold tracking-tight text-ink sm:text-5xl">
@@ -264,7 +265,7 @@ function Index() {
               {cms.featuresHeader.subtitle}
             </p>
           </div>
-          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {cms.features.map((feature, index) => {
               const IconComp = ICON_MAP[feature.iconName] || Building2;
               return (
@@ -278,7 +279,7 @@ function Index() {
                 >
                   <div
                     className={`grid size-11 place-items-center rounded-xl ${
-                      index === 2 ? "bg-ink text-white" : "bg-brand text-white"
+                      index === 2 ? "bg-ink text-white" : "bg-[#0b172a] text-white"
                     }`}
                   >
                     <IconComp className="size-5" />
@@ -302,10 +303,10 @@ function Index() {
 
       {/* How it works */}
       <section className="bg-mist">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
-          <div className="grid items-center gap-16 lg:grid-cols-2">
+        <div className="mx-auto max-w-7xl px-6 py-12 lg:px-10 lg:py-16">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0b172a]">
                 {cms.stepsHeader.badgeText}
               </span>
               <h2 className="mt-4 font-display text-4xl font-bold tracking-tight text-ink sm:text-5xl">
@@ -317,7 +318,7 @@ function Index() {
               <div className="mt-10 space-y-8">
                 {cms.steps.map((step) => (
                   <div key={step.id || step.title} className="flex gap-4">
-                    <Check className="mt-1 size-5 shrink-0 text-brand" />
+                    <Check className="mt-1 size-5 shrink-0 text-[#0b172a]" />
                     <div>
                       <h3 className="font-display text-lg font-semibold text-ink">
                         {step.title}
@@ -334,26 +335,26 @@ function Index() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-xl border border-border bg-mist px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <Smartphone className="size-5 text-brand" />
+                    <Smartphone className="size-5 text-[#0b172a]" />
                     <span className="text-sm font-medium">Kasir POS Mobile</span>
                   </div>
                   <span className="text-sm font-semibold text-ink">Aktif</span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-border bg-mist px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <CreditCard className="size-5 text-brand" />
+                    <CreditCard className="size-5 text-[#0b172a]" />
                     <span className="text-sm font-medium">Multi-Pembayaran</span>
                   </div>
                   <span className="text-sm font-semibold text-ink">QRIS & Kartu</span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-border bg-mist px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <Store className="size-5 text-brand" />
+                    <Store className="size-5 text-[#0b172a]" />
                     <span className="text-sm font-medium">Sinkron Cabang</span>
                   </div>
                   <span className="text-sm font-semibold text-ink">Real-time</span>
                 </div>
-                <div className="rounded-xl bg-brand p-4 text-white">
+                <div className="rounded-xl bg-[#0b172a] p-4 text-white">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Total transaksi</span>
                     <span className="font-display text-xl font-bold">Rp 240.000</span>
@@ -371,9 +372,9 @@ function Index() {
 
       {/* Pricing */}
       <section id="harga" className="bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto max-w-7xl px-6 py-12 lg:px-10 lg:py-16">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0b172a]">
               {cms.pricingHeader.badgeText}
             </span>
             <h2 className="mt-4 font-display text-4xl font-bold tracking-tight text-ink sm:text-5xl">
@@ -383,7 +384,7 @@ function Index() {
               {cms.pricingHeader.subtitle}
             </p>
           </div>
-          <div className="mt-14 grid gap-6 lg:grid-cols-3">
+          <div className="mt-8 grid gap-6 lg:grid-cols-3">
             {cms.pricingPlans.map((plan) => (
               <div
                 key={plan.id || plan.name}
@@ -435,7 +436,7 @@ function Index() {
                     <li key={fIdx} className="flex items-start gap-3">
                       <Check
                         className={`mt-0.5 size-4 shrink-0 ${
-                          plan.highlighted ? "text-accent" : "text-brand"
+                          plan.highlighted ? "text-emerald-400" : "text-[#0b172a]"
                         }`}
                       />
                       <span
@@ -456,7 +457,7 @@ function Index() {
 
       {/* Final CTA */}
       <section className="bg-ink">
-        <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:px-10 lg:py-28">
+        <div className="mx-auto max-w-4xl px-6 py-12 text-center lg:px-10 lg:py-16">
           <h2 className="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl">
             {cms.ctaSection.heading}
           </h2>
@@ -477,12 +478,12 @@ function Index() {
 
       {/* Footer */}
       <footer className="border-t border-white/10 bg-ink">
-        <div className="mx-auto max-w-7xl px-6 py-12 lg:px-10">
+        <div className="mx-auto max-w-7xl px-6 py-8 lg:px-10">
           <div className="grid gap-10 md:grid-cols-4">
             <div className="md:col-span-2">
               <Link to="/" className="flex items-center gap-2.5">
                 <div className="grid size-8 place-items-center rounded-lg bg-white">
-                  <span className="font-display text-base font-bold leading-none text-brand">
+                  <span className="font-display text-base font-bold leading-none text-[#0b172a]">
                     U
                   </span>
                 </div>

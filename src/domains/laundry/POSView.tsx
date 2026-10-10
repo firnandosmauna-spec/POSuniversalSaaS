@@ -123,7 +123,7 @@ export default function LaundryPOSView() {
           minQty: 1
         }));
         setServices(mapped);
-        if (mapped.length > 0) setSelectedService(mapped[0]);
+        if (mapped.length > 0 && mapped[0]) setSelectedService(mapped[0]);
       }
 
       const savedPrf = localStorage.getItem("laundry_parfums");

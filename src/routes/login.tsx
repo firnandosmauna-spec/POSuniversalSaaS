@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth, BusinessType } from "@/shared/auth/AuthContext";
+import { X } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -36,15 +37,18 @@ function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
+      <div className="w-full max-w-md relative rounded-3xl bg-white p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
+        <Link to="/" className="absolute right-5 top-5 text-slate-400 hover:text-[#0b172a] hover:bg-slate-100 rounded-full p-2 transition-colors">
+          <X className="size-5" />
+        </Link>
         <div className="mb-8 text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="grid size-8 place-items-center rounded-lg bg-brand">
+            <div className="grid size-8 place-items-center rounded-lg bg-[#0b172a]">
               <span className="font-display text-base font-bold leading-none text-white">
                 U
               </span>
             </div>
-            <span className="font-display text-lg font-semibold text-brand">
+            <span className="font-display text-lg font-semibold text-[#0b172a]">
               UniversalPOS
             </span>
           </Link>
@@ -72,7 +76,7 @@ function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0b172a] focus:outline-none focus:ring-1 focus:ring-[#0b172a]"
               placeholder="Email Owner atau Email/Username Kasir"
             />
           </div>
@@ -86,7 +90,7 @@ function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand font-mono"
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0b172a] focus:outline-none focus:ring-1 focus:ring-[#0b172a] font-mono"
               placeholder="Password atau PIN Kasir (4-6 angka)"
             />
           </div>
@@ -94,7 +98,7 @@ function LoginPage() {
           <Button
             type="submit"
             disabled={!email || !password || isLoading}
-            className="w-full mt-4 bg-brand text-white hover:bg-brand/90 py-6 text-base"
+            className="w-full mt-4 bg-[#0b172a] text-white hover:bg-slate-800 rounded-xl py-6 text-base shadow-sm transition-all active:scale-[0.98]"
           >
             {isLoading ? "Masuk..." : "Masuk ke Kasir"}
           </Button>

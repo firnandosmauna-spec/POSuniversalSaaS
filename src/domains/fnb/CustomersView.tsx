@@ -248,29 +248,31 @@ export function CustomersView() {
   );
 
   return (
-    <div className="p-6 h-full flex flex-col">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold text-slate-900">
-          Modul Pelanggan
+    <div className="p-2 md:p-6 h-full flex flex-col">
+      <div className="mb-2 md:mb-6 flex items-center justify-between gap-2">
+        <h1 className="font-display text-lg md:text-2xl font-bold text-slate-900">
+          Pelanggan
         </h1>
-        <Button onClick={() => handleOpenModal()} className="bg-brand text-white hover:bg-brand/90">
-          <Plus className="mr-2 size-4" /> Tambah Pelanggan
+        <Button onClick={() => handleOpenModal()} className="bg-brand text-white hover:bg-brand/90 text-[9px] md:text-sm h-8 md:h-10 px-3 md:px-5 rounded-xl shadow-sm transition-all">
+          <Plus className="mr-1 md:mr-2 size-3 md:size-4" /> 
+          <span className="hidden sm:inline">Tambah Pelanggan</span>
+          <span className="sm:hidden">Tambah</span>
         </Button>
       </div>
       
-      <div className="flex-1 flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+      <div className="flex-1 flex flex-col bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="p-3 md:p-5 border-b border-slate-100 flex justify-between items-center bg-white gap-2">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 md:size-4 text-slate-400" />
             <input
               type="text"
               placeholder="Cari nama atau nomor HP..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand bg-white"
+              className="w-full pl-8 md:pl-10 pr-3 md:pr-4 py-2 md:py-2.5 text-[10px] md:text-sm border-transparent bg-slate-50 hover:bg-slate-100 focus:bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
             />
           </div>
-          <div className="text-sm text-slate-500">
+          <div className="text-[9px] md:text-sm text-slate-500 whitespace-nowrap hidden sm:block bg-slate-50 px-3 py-1.5 rounded-lg">
             Total: <span className="font-bold text-slate-700">{filteredCustomers.length}</span> Pelanggan
           </div>
         </div>
@@ -287,30 +289,36 @@ export function CustomersView() {
               <p>Belum ada data pelanggan.</p>
             </div>
           ) : (
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 sticky top-0">
+            <table className="w-full text-left text-[9px] md:text-sm">
+              <thead className="bg-white border-b border-slate-100 text-slate-500 sticky top-0 z-10">
                 <tr>
-                  <th className="p-4 font-semibold">Nama Pelanggan</th>
-                  <th className="p-4 font-semibold">Nomor HP</th>
-                  <th className="p-4 font-semibold">Email</th>
-                  <th className="p-4 font-semibold">Catatan</th>
-                  <th className="p-4 font-semibold text-right">Aksi</th>
+                  <th className="p-3 md:p-5 font-semibold text-[10px] md:text-xs uppercase tracking-wider">Nama Pelanggan</th>
+                  <th className="p-3 md:p-5 font-semibold text-[10px] md:text-xs uppercase tracking-wider">Nomor HP</th>
+                  <th className="p-3 md:p-5 font-semibold text-[10px] md:text-xs uppercase tracking-wider hidden sm:table-cell">Email</th>
+                  <th className="p-3 md:p-5 font-semibold text-[10px] md:text-xs uppercase tracking-wider hidden sm:table-cell">Catatan</th>
+                  <th className="p-3 md:p-5 font-semibold text-[10px] md:text-xs uppercase tracking-wider text-right w-12 md:w-24">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCustomers.map(customer => (
-                  <tr key={customer.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="p-4 font-medium text-slate-800">{customer.name}</td>
-                    <td className="p-4 text-slate-600">{customer.phone}</td>
-                    <td className="p-4 text-slate-600">{customer.email || "-"}</td>
-                    <td className="p-4 text-slate-500 max-w-[200px] truncate" title={customer.notes || ""}>{customer.notes || "-"}</td>
-                    <td className="p-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenModal(customer)} className="text-blue-600 hover:text-blue-800 hover:bg-blue-50">
-                          <Pencil className="size-4" />
+                  <tr key={customer.id} className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors group">
+                    <td className="p-3 md:p-5 font-bold text-slate-800 text-[10px] md:text-sm">
+                      {customer.name}
+                      <div className="sm:hidden mt-0.5 text-[9px] font-normal text-slate-500 flex flex-col gap-0.5">
+                        {customer.email && <span>{customer.email}</span>}
+                        {customer.notes && <span className="italic truncate max-w-[150px]">{customer.notes}</span>}
+                      </div>
+                    </td>
+                    <td className="p-3 md:p-5 text-slate-600 font-medium text-[10px] md:text-sm">{customer.phone}</td>
+                    <td className="p-3 md:p-5 text-slate-600 text-[10px] md:text-sm hidden sm:table-cell">{customer.email || "-"}</td>
+                    <td className="p-3 md:p-5 text-slate-500 text-[10px] md:text-sm max-w-[200px] truncate hidden sm:table-cell" title={customer.notes || ""}>{customer.notes || "-"}</td>
+                    <td className="p-2 md:p-5 text-right">
+                      <div className="flex justify-end gap-1 md:gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(customer)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-7 w-7 md:h-9 md:w-9 p-0 rounded-lg">
+                          <Pencil className="size-3.5 md:size-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(customer.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                          <Trash2 className="size-4" />
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(customer.id)} className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 h-7 w-7 md:h-9 md:w-9 p-0 rounded-lg">
+                          <Trash2 className="size-3.5 md:size-4" />
                         </Button>
                       </div>
                     </td>
@@ -323,51 +331,55 @@ export function CustomersView() {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edit Pelanggan" : "Tambah Pelanggan Baru"}</DialogTitle>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl p-6 border-0 shadow-2xl">
+          <DialogHeader className="mb-2">
+            <DialogTitle className="text-xl font-bold text-slate-800">{editingId ? "Ubah Pelanggan" : "Tambah Pelanggan Baru"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-semibold text-slate-700 mb-1 block">Nama Pelanggan <span className="text-red-500">*</span></label>
+              <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5 block">Nama Pelanggan <span className="text-rose-500">*</span></label>
               <Input 
                 required 
                 value={formData.name} 
                 onChange={e => setFormData({...formData, name: e.target.value})} 
                 placeholder="Cth: Budi Santoso"
+                className="rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-brand focus:ring-brand/20 h-12 px-4"
               />
             </div>
             <div>
-              <label className="text-sm font-semibold text-slate-700 mb-1 block">Nomor HP/WhatsApp <span className="text-red-500">*</span></label>
+              <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5 block">Nomor HP/WhatsApp <span className="text-rose-500">*</span></label>
               <Input 
                 required 
                 type="tel"
                 value={formData.phone} 
                 onChange={e => setFormData({...formData, phone: e.target.value})} 
                 placeholder="Cth: 08123456789"
+                className="rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-brand focus:ring-brand/20 h-12 px-4"
               />
             </div>
             <div>
-              <label className="text-sm font-semibold text-slate-700 mb-1 block">Email</label>
+              <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5 block">Email</label>
               <Input 
                 type="email"
                 value={formData.email} 
                 onChange={e => setFormData({...formData, email: e.target.value})} 
                 placeholder="Cth: budi@email.com (Opsional)"
+                className="rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-brand focus:ring-brand/20 h-12 px-4"
               />
             </div>
             <div>
-              <label className="text-sm font-semibold text-slate-700 mb-1 block">Catatan Tambahan</label>
+              <label className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5 block">Catatan Tambahan</label>
               <Input 
                 value={formData.notes} 
                 onChange={e => setFormData({...formData, notes: e.target.value})} 
-                placeholder={user?.businessType === "LAUNDRY" ? "Cth: Alergi deterjen, minta pisah warna (Opsional)" : "Cth: Suka kopi tanpa gula (Opsional)"}
+                placeholder={user?.businessType === "LAUNDRY" ? "Cth: Alergi deterjen (Opsional)" : "Cth: Suka kopi tanpa gula (Opsional)"}
+                className="rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-brand focus:ring-brand/20 h-12 px-4"
               />
             </div>
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-brand text-white">
-                {isSubmitting ? "Menyimpan..." : "Simpan"}
+            <DialogFooter className="pt-4 gap-2 sm:gap-0">
+              <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} className="rounded-xl font-semibold">Batal</Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-brand text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all h-10 px-6">
+                {isSubmitting ? "Menyimpan..." : "Simpan Pelanggan"}
               </Button>
             </DialogFooter>
           </form>

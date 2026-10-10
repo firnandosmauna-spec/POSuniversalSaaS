@@ -58,6 +58,40 @@ export default function App() {
     setIsLoading(true);
   };
 
+  // Handlers for printing receipt and closing shift
+  const handlePrintReceipt = () => {
+    if (webViewRef.current) {
+      const printJS = `if (window.print) window.print();`;
+      webViewRef.current.injectJavaScript(printJS);
+    }
+  };
+  const handleCloseShift = () => {
+    Alert.alert(
+      "Tutup Shift Kasir",
+      "Apakah Anda yakin ingin menutup shift kasir?",
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Tutup",
+          style: "destructive",
+          onPress: () => {
+            const logoutJS = `
+              try {
+                localStorage.removeItem("pos_user");
+                localStorage.removeItem("pos_active_business_type");
+                localStorage.removeItem("pos_active_branch");
+                sessionStorage.clear();
+              } catch(e) {}
+              window.location.href = "/";
+              true;
+            `;
+            webViewRef.current?.injectJavaScript(logoutJS);
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.container, isLandscape && styles.containerLandscape]}>
       <StatusBar hidden={isLandscape} style="light" backgroundColor="#0f172a" />
@@ -112,6 +146,14 @@ export default function App() {
               }}
             >
               <Text style={styles.logoutButtonText}>🚪 Keluar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.printButton} onPress={handlePrintReceipt}>
+              <Text style={styles.printButtonText}>🖨️ Print Struk</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.closeShiftButton} onPress={handleCloseShift}>
+              <Text style={styles.closeShiftButtonText}>🔒 Tutup Kasir</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -435,6 +477,32 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563eb",
   },
   saveButtonText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  printButton: {
+    backgroundColor: "#2563eb",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginLeft: 8,
+    justifyContent: "center",
+  },
+  printButtonText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  closeShiftButton: {
+    backgroundColor: "#dc2626",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginLeft: 8,
+    justifyContent: "center",
+  },
+  closeShiftButtonText: {
     color: "#ffffff",
     fontSize: 12,
     fontWeight: "bold",
