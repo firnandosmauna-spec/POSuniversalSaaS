@@ -213,61 +213,21 @@ export function SalesView() {
     return true;
   });
 
-  // Calculations for summary board
-  let grossSales = 0;
-  let discountTotal = 0;
+  // Calculations for report
   let netSales = 0;
-  let cancelledTotal = 0;
-  let moneyReceived = 0;
   let cashTotal = 0;
   let nonCashTotal = 0;
 
-  const categorySales: Record<string, { [productName: string]: { qty: number, revenue: number } }> = {};
-
   filteredTransactions.forEach(t => {
     const amount = Number(t.total_amount) || 0;
-    const discount = Number(t.discount_amount) || 0;
     
-    if (t.status === "cancelled") {
-      cancelledTotal += amount;
-    } else {
+    if (t.status !== "cancelled") {
       netSales += amount;
-      discountTotal += discount;
-      moneyReceived += amount;
       if (t.payment_method === 'cash') cashTotal += amount;
       else nonCashTotal += amount;
-
-      // Calculate best sellers per category
-      const items = t.transaction_items || t.items || [];
-      items.forEach((item: any) => {
-        let cat = "Umum";
-        if (item.products?.category) cat = item.products.category;
-        else if (item.category) cat = item.category;
-
-        const pName = item.product_name || item.name || "Unknown Product";
-        const qty = item.qty || item.quantity || 0;
-        const price = item.price || 0;
-        const revenue = qty * price;
-
-        if (!categorySales[cat]) categorySales[cat] = {};
-        if (!categorySales[cat][pName]) categorySales[cat][pName] = { qty: 0, revenue: 0 };
-        
-        categorySales[cat][pName].qty += qty;
-        categorySales[cat][pName].revenue += revenue;
-      });
     }
   });
 
-  const topProductsByCategory = Object.keys(categorySales).map(cat => {
-    const products = Object.keys(categorySales[cat]).map(pName => ({
-      name: pName,
-      ...categorySales[cat][pName]
-    })).sort((a, b) => b.qty - a.qty).slice(0, 5); // top 5
-
-    return { category: cat, products };
-  }).sort((a, b) => a.category.localeCompare(b.category));
-
-  grossSales = netSales + discountTotal;
   const totalTxCount = filteredTransactions.filter(t => t.status !== 'cancelled').length;
   const totalRevenue = netSales;
   const avgOrderValue = totalTxCount > 0 ? totalRevenue / totalTxCount : 0;
