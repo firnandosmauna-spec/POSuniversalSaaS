@@ -27,6 +27,7 @@ import { Route as AppExpensesRouteImport } from './routes/app/expenses'
 import { Route as AppKitchenRouteImport } from './routes/app/kitchen'
 import { Route as AppPosRouteImport } from './routes/app/pos'
 import { Route as AppProductsRouteImport } from './routes/app/products'
+import { Route as AppReportsRouteImport } from './routes/app/reports'
 import { Route as AppSalesRouteImport } from './routes/app/sales'
 import { Route as AppSettingsRouteImport } from './routes/app/settings'
 import { Route as AppShiftsRouteImport } from './routes/app/shifts'
@@ -123,6 +124,11 @@ const AppProductsRoute = AppProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AppRoute,
 } as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSalesRoute = AppSalesRouteImport.update({
   id: '/sales',
   path: '/sales',
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/app/kitchen': typeof AppKitchenRoute
   '/app/pos': typeof AppPosRoute
   '/app/products': typeof AppProductsRoute
+  '/app/reports': typeof AppReportsRoute
   '/app/sales': typeof AppSalesRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/shifts': typeof AppShiftsRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/app/kitchen': typeof AppKitchenRoute
   '/app/pos': typeof AppPosRoute
   '/app/products': typeof AppProductsRoute
+  '/app/reports': typeof AppReportsRoute
   '/app/sales': typeof AppSalesRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/shifts': typeof AppShiftsRoute
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   '/app/kitchen': typeof AppKitchenRoute
   '/app/pos': typeof AppPosRoute
   '/app/products': typeof AppProductsRoute
+  '/app/reports': typeof AppReportsRoute
   '/app/sales': typeof AppSalesRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/shifts': typeof AppShiftsRoute
@@ -244,6 +253,7 @@ export interface FileRouteTypes {
     | '/app/kitchen'
     | '/app/pos'
     | '/app/products'
+    | '/app/reports'
     | '/app/sales'
     | '/app/settings'
     | '/app/shifts'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/app/kitchen'
     | '/app/pos'
     | '/app/products'
+    | '/app/reports'
     | '/app/sales'
     | '/app/settings'
     | '/app/shifts'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/app/kitchen'
     | '/app/pos'
     | '/app/products'
+    | '/app/reports'
     | '/app/sales'
     | '/app/settings'
     | '/app/shifts'
@@ -442,6 +454,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/reports': {
+      id: '/app/reports'
+      path: '/reports'
+      fullPath: '/app/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/sales': {
       id: '/app/sales'
       path: '/sales'
@@ -488,6 +507,7 @@ interface AppRouteChildren {
   AppKitchenRoute: typeof AppKitchenRoute
   AppPosRoute: typeof AppPosRoute
   AppProductsRoute: typeof AppProductsRoute
+  AppReportsRoute: typeof AppReportsRoute
   AppSalesRoute: typeof AppSalesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppShiftsRoute: typeof AppShiftsRoute
@@ -504,6 +524,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppKitchenRoute: AppKitchenRoute,
   AppPosRoute: AppPosRoute,
   AppProductsRoute: AppProductsRoute,
+  AppReportsRoute: AppReportsRoute,
   AppSalesRoute: AppSalesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppShiftsRoute: AppShiftsRoute,

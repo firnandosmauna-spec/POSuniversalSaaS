@@ -16,10 +16,10 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { WebView } from "react-native-webview";
 
-// Default dev server URL for POS Universal SaaS
-const DEFAULT_URL = "http://localhost:8082";
+// Default Live Server URL for POS Universal SaaS (Vercel)
+const DEFAULT_URL = "https://pos-mu.vercel.app";
 // Helper fallback for Android Emulator to connect to localhost
-const EMULATOR_URL = "http://10.0.2.2:8082";
+const EMULATOR_URL = "https://pos-mu.vercel.app";
 
 export default function App() {
   const { width, height } = useWindowDimensions();

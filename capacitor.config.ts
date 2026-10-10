@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'POSUniversalSaaS',
   webDir: '.output/public',
   server: {
-    url: 'http://192.168.18.22:5175',
+    url: 'https://mypos-mu.vercel.app',
     cleartext: true
   }
 };

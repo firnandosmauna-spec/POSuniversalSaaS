@@ -20,6 +20,11 @@
         "BLUETOOTH_CONNECT",
         "BLUETOOTH_SCAN"
       ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a9b86027-ad60-4f0a-bbf5-f476acd6db76"
+      }
     }
   }
 }

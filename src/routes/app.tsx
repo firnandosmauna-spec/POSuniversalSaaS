@@ -313,7 +313,7 @@ function AppLayout() {
           { 
             name: "Laporan Penjualan", 
             icon: FileText, 
-            to: "/app/sales",
+            to: "/app/reports",
             colorClass: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/50 group-hover:bg-blue-600 group-hover:text-white group-[.active]:bg-blue-600 group-[.active]:text-white group-[.active]:shadow-md" 
           },
           { 

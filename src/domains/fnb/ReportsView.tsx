@@ -29,7 +29,7 @@ import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { PrintingSalesView } from "@/domains/printing/SalesView";
 
-export function SalesView() {
+export function ReportsView() {
   const { user, activeBranchId, activeBranchName, branches } = useAuth();
   const [reportBranchId, setReportBranchId] = useState<string>("all");
   const [showMobileTable, setShowMobileTable] = useState(false);
@@ -602,130 +602,75 @@ export function SalesView() {
         </Button>
       </div>
 
-      {/* Table Container (Always visible now) */}
-      <div className="flex bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex-1 flex-col overflow-hidden min-h-[300px]">
-        <div className="flex-1 overflow-auto p-0">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-              <Loader2 className="size-8 animate-spin mb-4 text-brand" />
-              <p>Memuat data penjualan...</p>
-            </div>
-          ) : filteredTransactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-              <Receipt className="size-12 mb-4 opacity-20" />
-              <h2 className="mb-2 font-display text-lg font-semibold text-slate-700 dark:text-slate-300">
-                Belum ada penjualan
-              </h2>
-              <p className="text-sm text-center max-w-sm">
-                Tidak ada transaksi yang cocok dengan filter waktu atau kata kunci pencarian.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-y-auto w-full pb-4 h-full bg-slate-50/50 dark:bg-slate-900/50">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 p-3">
-                {filteredTransactions.map(t => (
-                  <div key={t.id} onClick={() => openReceipt(t)} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col relative overflow-hidden group">
-                    {/* Status Ribbon (Decorative) */}
-                    <div className={`absolute top-0 left-0 w-1 h-full ${
-                      t.status === "completed" ? "bg-emerald-500" : 
-                      t.status === "hold" ? "bg-amber-500" : "bg-red-500"
-                    }`} />
-                    
-                    <div className="flex justify-between items-start mb-4 pl-2">
-                       <div className="flex flex-col">
-                         <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 text-sm group-hover:text-brand transition-colors">
-                            <Calendar className="size-4 text-slate-400" /> {formatDate(t.created_at)}
-                         </div>
-                         <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-1 font-semibold flex items-center gap-1">
-                            <Receipt className="size-3" /> {t.invoice_code || t.id.substring(0, 8).toUpperCase()}
-                         </div>
-                       </div>
-                       <div>
-                          {t.status === "completed" ? (
-                            <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800/50 text-[10px] font-extrabold uppercase tracking-wider shadow-sm">Lunas</span>
-                          ) : t.status === "hold" ? (
-                            <span className="bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 px-2 py-1 rounded border border-amber-200 dark:border-amber-800/50 text-[10px] font-extrabold uppercase tracking-wider shadow-sm">Di-Hold</span>
-                          ) : (
-                            <span className="bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 px-2 py-1 rounded border border-red-200 dark:border-red-800/50 text-[10px] font-extrabold uppercase tracking-wider shadow-sm">Batal</span>
-                          )}
-                       </div>
-                    </div>
-
-                    <div className="flex justify-between items-center mb-4 pl-2">
-                       <div className="flex flex-col">
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Pelanggan</span>
-                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">
-                            {t.customers?.name || t.customer_name_custom || "-"}
-                          </span>
-                       </div>
-                       <div className="flex flex-col text-right">
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Pesanan</span>
-                          <span className="text-sm font-bold text-brand bg-brand/5 px-2 py-0.5 rounded-md inline-block">
-                            {t.order_type === "dine_in" ? `Meja ${t.tables?.name || ''}` : t.order_type === "delivery" ? "Delivery" : "Takeaway"}
-                          </span>
-                       </div>
-                    </div>
-
-                    {/* Products List */}
-                    <div className="mb-4 pl-2">
-                       <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-1 block">Produk</span>
-                       <div className="space-y-1 mt-1 max-h-32 overflow-y-auto pr-1 scrollbar-hide">
-                         {(t.transaction_items || t.items || []).map((item: any, idx: number) => (
-                           <div key={idx} className="flex justify-between text-[11px] border-b border-dashed border-slate-100 dark:border-slate-700/50 pb-1.5 pt-1 last:border-0 last:pb-0">
-                             <div className="flex gap-1.5 overflow-hidden">
-                               <span className="font-bold text-slate-700 dark:text-slate-300 shrink-0">{item.qty || item.quantity || 1}x</span>
-                               <span className="text-slate-600 dark:text-slate-400 truncate">{item.product_name || item.products?.name || item.name || "Produk"}</span>
-                             </div>
-                             <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0 pl-2">
-                               {formatRupiah((item.qty || item.quantity || 1) * (item.price || 0))}
-                             </span>
-                           </div>
-                         ))}
-                       </div>
-                    </div>
-
-                    <div className="flex justify-between items-end mt-auto pt-3 border-t border-slate-100 dark:border-slate-700 pl-2">
-                       <div className="flex flex-col">
-                         <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Total Belanja</span>
-                         <div className="flex items-end gap-1.5">
-                           <span className="text-lg font-extrabold text-[#0b172a] dark:text-white leading-none">
-                              {formatRupiah(t.total_amount)}
-                           </span>
-                           <span className="text-[10px] text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-1.5 rounded uppercase">
-                              {t.payment_method === 'cash' ? 'CASH' : t.payment_method === 'qris' ? 'QRIS' : t.payment_method === 'debit' ? 'CARD' : 'TRF'}
-                           </span>
-                         </div>
-                       </div>
-                       
-                       <div className="flex items-center gap-1">
-                         <Button 
-                            variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openReceipt(t); }} 
-                            className="h-8 w-8 text-brand hover:bg-brand/10 hover:text-brand bg-slate-50 dark:bg-slate-800/50"
-                            title="Lihat Struk"
-                         >
-                            <Eye className="size-4" />
-                         </Button>
-                         <Button 
-                            variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenEdit(t); }} 
-                            className="h-8 w-8 text-amber-600 hover:bg-amber-50 hover:text-amber-700 bg-slate-50 dark:bg-slate-800/50"
-                            title="Edit"
-                         >
-                            <Pencil className="size-4" />
-                         </Button>
-                         <Button 
-                            variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} 
-                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600 bg-slate-50 dark:bg-slate-800/50"
-                            title="Hapus"
-                         >
-                            <Trash2 className="size-4" />
-                         </Button>
-                       </div>
-                    </div>
-                  </div>
-                ))}
+      {/* Ringkasan Penjualan & Produk (Laporan Keuangan) */}
+      <div className="flex-1 overflow-auto p-4 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
+          {/* Metode Pembayaran */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-5 h-fit">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+              <Wallet className="size-4 text-brand" /> 
+              Metode Pembayaran
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-slate-500 dark:text-slate-400">Tunai (Cash)</span>
+                  <span className="font-bold text-slate-800 dark:text-white">{formatRupiah(cashTotal)}</span>
+                </div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
+                  <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: totalRevenue > 0 ? `${(cashTotal / totalRevenue) * 100}%` : '0%' }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-slate-500 dark:text-slate-400">Non-Tunai (Qris/Card)</span>
+                  <span className="font-bold text-slate-800 dark:text-white">{formatRupiah(nonCashTotal)}</span>
+                </div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
+                  <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: totalRevenue > 0 ? `${(nonCashTotal / totalRevenue) * 100}%` : '0%' }}></div>
+                </div>
+              </div>
+              <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Total Omzet</span>
+                <span className="text-lg font-black text-brand">{formatRupiah(totalRevenue)}</span>
               </div>
             </div>
-          )}
+            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+               <Button onClick={() => setIsReportModalOpen(true)} className="w-full bg-brand hover:bg-brand/90 text-white font-bold h-11 shadow-sm shadow-brand/20">
+                  <Printer className="size-4 mr-2" /> Cetak Laporan PDF
+               </Button>
+            </div>
+          </div>
+
+          {/* Produk Terlaris Per Kategori */}
+          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-5 h-fit">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+              <Package className="size-4 text-brand" /> 
+              Penjualan Per Produk (Kategori)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-hide">
+              {Object.keys(topProductsByCategory).length === 0 ? (
+                <div className="col-span-full text-center text-sm text-slate-400 py-4">Belum ada data penjualan produk</div>
+              ) : (
+                Object.entries(topProductsByCategory).map(([category, products]) => (
+                  <div key={category} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50 h-fit">
+                    <div className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-2 tracking-wider">{category}</div>
+                    <div className="space-y-2">
+                      {products.map((p, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-xs border-b border-dashed border-slate-100 pb-1.5 last:border-0 last:pb-0">
+                          <span className="text-slate-700 dark:text-slate-300 truncate pr-2 font-medium">{p.name}</span>
+                          <div className="flex gap-2 shrink-0">
+                            <span className="text-slate-400">{p.qty}x</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-100 w-16 text-right">{formatRupiah(p.revenue)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
