@@ -626,7 +626,7 @@ export function SalesView() {
                     {/* Products List */}
                     <div className="mb-2 pl-1.5">
                        <span className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider block">Produk</span>
-                       <div className="space-y-0.5 max-h-24 overflow-y-auto pr-1 scrollbar-hide">
+                       <div className="space-y-0.5 pr-1">
                          {(t.transaction_items || t.items || []).map((item: any, idx: number) => (
                            <div key={idx} className="flex justify-between text-[10px] border-b border-dashed border-slate-100 dark:border-slate-700/50 pb-1 pt-0.5 last:border-0 last:pb-0">
                              <div className="flex gap-1 overflow-hidden">
