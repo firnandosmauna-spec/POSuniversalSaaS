@@ -14,7 +14,8 @@ import {
   Pencil,
   Trash2,
   RefreshCw,
-  Package
+  Package,
+  Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -599,6 +600,74 @@ export function SalesView() {
             )}
           </div>
         </Button>
+      </div>
+
+      {/* Ringkasan Penjualan & Produk (New Request) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        {/* Metode Pembayaran */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
+          <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <Wallet className="size-4 text-brand" /> 
+            Metode Pembayaran
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-slate-500 dark:text-slate-400">Tunai (Cash)</span>
+                <span className="font-bold text-slate-800 dark:text-white">{formatRupiah(cashTotal)}</span>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
+                <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: totalRevenue > 0 ? `${(cashTotal / totalRevenue) * 100}%` : '0%' }}></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-slate-500 dark:text-slate-400">Non-Tunai (Qris/Card)</span>
+                <span className="font-bold text-slate-800 dark:text-white">{formatRupiah(nonCashTotal)}</span>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
+                <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: totalRevenue > 0 ? `${(nonCashTotal / totalRevenue) * 100}%` : '0%' }}></div>
+              </div>
+            </div>
+            <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Total Omzet</span>
+              <span className="text-lg font-black text-brand">{formatRupiah(totalRevenue)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Produk Terlaris Per Kategori */}
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
+          <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <Package className="size-4 text-brand" /> 
+            Penjualan Per Produk (Kategori)
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[160px] overflow-y-auto pr-2 scrollbar-hide">
+            {Object.keys(topProductsByCategory).length === 0 ? (
+              <div className="col-span-full text-center text-sm text-slate-400 py-4">Belum ada data penjualan produk</div>
+            ) : (
+              Object.entries(topProductsByCategory).map(([category, products]) => (
+                <div key={category} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50">
+                  <div className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-2 tracking-wider">{category}</div>
+                  <div className="space-y-2">
+                    {products.slice(0, 3).map((p, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-xs">
+                        <span className="text-slate-700 dark:text-slate-300 truncate pr-2 font-medium">{p.name}</span>
+                        <div className="flex gap-2 shrink-0">
+                          <span className="text-slate-400">{p.qty}x</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-100 w-16 text-right">{formatRupiah(p.revenue)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {products.length > 3 && (
+                      <div className="text-[10px] text-brand font-medium text-center pt-1">+ {products.length - 3} produk lainnya</div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Table Container (Always visible now) */}
