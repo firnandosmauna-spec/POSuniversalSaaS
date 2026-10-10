@@ -191,8 +191,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const userMeta = session.user.user_metadata || {};
-          const bType = (userMeta["businessType"] as BusinessType) || savedType || localUserObj?.businessType || "PRINTING";
+          const bType = (userMeta["businessType"] as BusinessType) || savedType || localUserObj?.businessType || "FNB";
           localStorage.setItem("pos_active_business_type", bType);
+          localStorage.setItem(`pos_tenant_btype_${session.user.id}`, bType); // Save mapping for staff
           const activeUser: User = {
             id: session.user.id,
             email: session.user.email || "",
@@ -223,7 +224,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
         } else if (localUserObj) {
-          if (savedType) localUserObj.businessType = savedType;
+          // Restore staff or offline session
+          const tType = localStorage.getItem(`pos_tenant_btype_${localUserObj.id}`);
+          if (tType) {
+            localUserObj.businessType = tType as BusinessType;
+            localStorage.setItem("pos_active_business_type", tType);
+          } else if (savedType) {
+            localUserObj.businessType = savedType;
+          }
           setUser(localUserObj);
 
           // Inisialisasi cabang utama unik per tenant jika belum ada
@@ -488,6 +496,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userMeta = data.session.user.user_metadata || {};
           const bType = (userMeta["businessType"] as BusinessType) || savedType || "FNB";
           localStorage.setItem("pos_active_business_type", bType);
+          localStorage.setItem(`pos_tenant_btype_${data.session.user.id}`, bType);
           const activeUser: User = {
             id: data.session.user.id,
             email: data.session.user.email || emailClean,
@@ -532,7 +541,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (staffList && staffList.length > 0) {
           const staffData = staffList.find((s: any) => s.status === "ACTIVE" && (s.pin_code === passwordClean || !s.pin_code));
           if (staffData) {
-            const bType = savedType || "FNB";
+            const tType = localStorage.getItem(`pos_tenant_btype_${staffData.tenant_id}`);
+            const bType = (tType as BusinessType) || savedType || "FNB";
+            localStorage.setItem("pos_active_business_type", bType);
             const staffUser: User = {
               id: staffData.tenant_id,
               email: staffData.email || emailClean,
@@ -572,7 +583,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 });
 
                 if (match) {
-                  const bType = savedType || "FNB";
+                  const tType = localStorage.getItem(`pos_tenant_btype_${match.tenant_id}`);
+                  const bType = (tType as BusinessType) || savedType || "FNB";
+                  localStorage.setItem("pos_active_business_type", bType);
                   const staffUser: User = {
                     id: match.tenant_id,
                     email: match.email || emailClean,
