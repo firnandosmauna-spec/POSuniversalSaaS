@@ -677,6 +677,14 @@ export function ReportsView() {
                             </tr>
                           ))}
                         </tbody>
+                        <tfoot className="bg-slate-100/80 dark:bg-slate-800/80 font-bold text-slate-800 dark:text-white">
+                          <tr>
+                            <td colSpan={2} className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">TOTAL</td>
+                            <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-center">{products.reduce((acc, p) => acc + p.qty, 0)}</td>
+                            <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-center">-</td>
+                            <td className="p-2 text-right text-brand">{formatRupiah(products.reduce((acc, p) => acc + p.revenue, 0))}</td>
+                          </tr>
+                        </tfoot>
                       </table>
                     </div>
                   </div>
@@ -1125,6 +1133,14 @@ export function ReportsView() {
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot className="bg-slate-100 font-bold text-slate-800">
+                        <tr>
+                          <td colSpan={2} className="p-2 border-r border-slate-200 text-right">TOTAL</td>
+                          <td className="p-2 border-r border-slate-200 text-center">{products.reduce((acc, p) => acc + p.qty, 0)}</td>
+                          <td className="p-2 border-r border-slate-200 text-center">-</td>
+                          <td className="p-2 text-right">{formatRupiah(products.reduce((acc, p) => acc + p.revenue, 0))}</td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 ))}
