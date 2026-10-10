@@ -442,28 +442,6 @@ export function SalesView() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
-          {/* Search Toggle Icon */}
-          <button 
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className={`p-2 md:p-2.5 rounded-xl transition-colors ${isSearchOpen ? 'bg-[#0b172a] text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-          >
-            <Search className="size-4 md:size-5" />
-          </button>
-          
-          {/* Filter Toggle Icon */}
-          <button 
-            onClick={() => setIsFilterModalOpen(true)}
-            className="p-2 md:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors relative"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 md:size-5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-            {(filterStatus !== 'all' || filterPayment !== 'all') && (
-              <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
-              </span>
-            )}
-          </button>
-
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-[#0b172a] hover:bg-slate-800 text-white font-bold flex items-center gap-1.5 md:gap-2 shadow-md rounded-xl text-[10px] md:text-sm h-9 md:h-11 px-3 md:px-5"
@@ -479,23 +457,7 @@ export function SalesView() {
         </div>
       </div>
 
-      {isSearchOpen && (
-        <div className="bg-white dark:bg-slate-900 px-4 md:px-8 py-3 border-b border-slate-100 dark:border-slate-800 animate-in fade-in slide-in-from-top-2">
-          <div className="relative max-w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-            <input
-              type="text"
-              autoFocus
-              placeholder="Ketik ID transaksi, nama, dll..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 h-11 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Filter Waktu & Search Bar (Mobile Adapted) */}
+      {/* Filter Waktu & Search Bar */}
       <div className="mb-2 md:mb-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-4 bg-white dark:bg-slate-900 p-4 rounded-none md:rounded-xl md:border border-slate-100 dark:border-slate-800 shadow-none md:shadow-sm">
         <div className="flex flex-col w-full gap-3">
           
@@ -516,71 +478,112 @@ export function SalesView() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide w-full pb-1 md:pb-0">
-            <div className="shrink-0 relative flex items-center justify-between bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-medium w-auto cursor-pointer">
-              <div className="flex items-center gap-1.5 text-slate-700">
-                <span>{startDate ? formatShortDate(startDate) : "Mulai"}</span>
-                <span className="text-slate-400 font-normal">-</span>
-                <span>{endDate ? formatShortDate(endDate) : "Akhir"}</span>
+          <div className="flex flex-row justify-between w-full">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 md:pb-0 flex-1">
+              <div className="shrink-0 relative flex items-center justify-between bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-medium w-auto cursor-pointer">
+                <div className="flex items-center gap-1.5 text-slate-700">
+                  <span>{startDate ? formatShortDate(startDate) : "Mulai"}</span>
+                  <span className="text-slate-400 font-normal">-</span>
+                  <span>{endDate ? formatShortDate(endDate) : "Akhir"}</span>
+                </div>
+                <Calendar className="size-3.5 text-slate-600 ml-2" />
+                
+                {/* Invisible native inputs to handle clicks on mobile */}
+                <div className="absolute inset-0 flex opacity-0 cursor-pointer">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setDateFilter("custom");
+                    }}
+                    className="w-1/2 h-full cursor-pointer"
+                  />
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setDateFilter("custom");
+                    }}
+                    className="w-1/2 h-full cursor-pointer"
+                  />
+                </div>
               </div>
-              <Calendar className="size-3.5 text-slate-600 ml-2" />
-              
-              {/* Invisible native inputs to handle clicks on mobile */}
-              <div className="absolute inset-0 flex opacity-0 cursor-pointer">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
-                    setDateFilter("custom");
-                  }}
-                  className="w-1/2 h-full cursor-pointer"
-                />
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
-                    setDateFilter("custom");
-                  }}
-                  className="w-1/2 h-full cursor-pointer"
-                />
-              </div>
+
+              <button
+                onClick={() => setDateFilter("today")}
+                className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
+                  dateFilter === "today" 
+                    ? "bg-[#0b172a] border-[#0b172a] text-white" 
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                Hari ini
+              </button>
+              <button
+                onClick={() => setDateFilter("yesterday")}
+                className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
+                  dateFilter === "yesterday" 
+                    ? "bg-[#0b172a] border-[#0b172a] text-white" 
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                Kemarin
+              </button>
+              <button
+                onClick={() => setDateFilter("month")}
+                className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
+                  dateFilter === "month" 
+                    ? "bg-[#0b172a] border-[#0b172a] text-white" 
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                1 Bulan
+              </button>
             </div>
 
-            <button
-              onClick={() => setDateFilter("today")}
-              className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                dateFilter === "today" 
-                  ? "bg-[#0b172a] border-[#0b172a] text-white" 
-                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              Hari ini
-            </button>
-            <button
-              onClick={() => setDateFilter("yesterday")}
-              className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                dateFilter === "yesterday" 
-                  ? "bg-[#0b172a] border-[#0b172a] text-white" 
-                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              Kemarin
-            </button>
-            <button
-              onClick={() => setDateFilter("month")}
-              className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                dateFilter === "month" 
-                  ? "bg-[#0b172a] border-[#0b172a] text-white" 
-                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              1 Bulan
-            </button>
+            {/* Action Icons: Search & Filter */}
+            <div className="flex items-center gap-2 shrink-0 ml-4">
+              {isSearchOpen ? (
+                <div className="relative animate-in fade-in slide-in-from-right-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Cari..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-32 md:w-48 pl-8 pr-3 h-8 text-xs border border-brand/30 dark:border-brand/30 rounded-lg bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand"
+                  />
+                  <button onClick={() => setIsSearchOpen(false)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setIsSearchOpen(true)}
+                  className="p-1.5 md:p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <Search className="size-4" />
+                </button>
+              )}
+              
+              <button 
+                onClick={() => setIsFilterModalOpen(true)}
+                className="p-1.5 md:p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors relative"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                {(filterStatus !== 'all' || filterPayment !== 'all') && (
+                  <span className="absolute top-1 right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
-
       </div>
 
       {/* Table Container (Always visible now) */}
