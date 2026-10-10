@@ -44,6 +44,7 @@ export function ReportsView() {
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "week" | "month" | "custom">("today");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [productPaymentFilter, setProductPaymentFilter] = useState<"all" | "cash" | "non_cash">("all");
 
   // Receipt & Report Modals
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
@@ -235,6 +236,10 @@ export function ReportsView() {
 
   filteredTransactions.forEach(t => {
     if (t.status === "cancelled") return;
+    
+    // Apply payment method filter for product sales
+    if (productPaymentFilter === "cash" && t.payment_method !== "cash") return;
+    if (productPaymentFilter === "non_cash" && t.payment_method === "cash") return;
 
     const items = t.transaction_items || t.items || [];
     items.forEach((item: any) => {
@@ -579,10 +584,24 @@ export function ReportsView() {
 
           {/* Rincian Penjualan */}
           <div className="lg:col-span-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm p-4 h-fit">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <Package className="size-4 text-brand" /> 
-              Rincian Penjualan
-            </h3>
+            <div className="flex flex-row justify-between items-center mb-4">
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <Package className="size-4 text-brand" /> 
+                Rincian Penjualan
+              </h3>
+              <div className="flex items-center gap-2">
+                <select 
+                  value={productPaymentFilter} 
+                  onChange={(e) => setProductPaymentFilter(e.target.value as any)}
+                  className="appearance-none bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium py-1.5 pl-3 pr-8 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand border border-slate-200 dark:border-slate-700 bg-no-repeat"
+                  style={{ backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23475569%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')", backgroundPosition: "right 8px center", backgroundSize: "8px" }}
+                >
+                  <option value="all">Semua Pembayaran</option>
+                  <option value="cash">Tunai</option>
+                  <option value="non_cash">Non-Tunai (QRIS/Transfer)</option>
+                </select>
+              </div>
+            </div>
             <div className="flex flex-col gap-6">
               {Object.keys(topProductsByCategory).length === 0 ? (
                 <div className="text-center text-sm text-slate-400 py-4">Belum ada data penjualan produk</div>
