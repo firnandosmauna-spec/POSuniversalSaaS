@@ -97,10 +97,10 @@ function LoginPage() {
 
           <Button
             type="submit"
-            disabled={!email || !password || isLoading}
-            className="w-full mt-4 bg-[#0b172a] text-white hover:bg-slate-800 rounded-xl py-6 text-base shadow-sm transition-all active:scale-[0.98]"
+            disabled={isLoading}
+            className="w-full mt-4 bg-[#0b172a] text-white hover:bg-slate-800 rounded-xl py-6 text-base shadow-sm transition-all active:scale-[0.98] disabled:opacity-70"
           >
-            {isLoading ? "Masuk..." : "Masuk ke Kasir"}
+            {isLoading ? "Memproses..." : "Masuk ke Kasir"}
           </Button>
         </form>
         
