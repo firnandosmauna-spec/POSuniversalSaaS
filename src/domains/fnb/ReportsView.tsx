@@ -648,23 +648,36 @@ export function ReportsView() {
               <Package className="size-4 text-brand" /> 
               Penjualan Per Produk (Kategori)
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-hide">
+            <div className="flex flex-col gap-6 max-h-[500px] overflow-y-auto pr-2 scrollbar-hide">
               {Object.keys(topProductsByCategory).length === 0 ? (
-                <div className="col-span-full text-center text-sm text-slate-400 py-4">Belum ada data penjualan produk</div>
+                <div className="text-center text-sm text-slate-400 py-4">Belum ada data penjualan produk</div>
               ) : (
                 Object.entries(topProductsByCategory).map(([category, products]) => (
                   <div key={category} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50 h-fit">
-                    <div className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-2 tracking-wider">{category}</div>
-                    <div className="space-y-2">
-                      {products.map((p, idx) => (
-                        <div key={idx} className="flex justify-between items-center text-xs border-b border-dashed border-slate-100 pb-1.5 last:border-0 last:pb-0">
-                          <span className="text-slate-700 dark:text-slate-300 truncate pr-2 font-medium">{p.name}</span>
-                          <div className="flex gap-2 shrink-0">
-                            <span className="text-slate-400">{p.qty}x</span>
-                            <span className="font-bold text-slate-800 dark:text-slate-100 w-16 text-right">{formatRupiah(p.revenue)}</span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 mb-2 tracking-wider bg-slate-200 dark:bg-slate-700 inline-block px-3 py-1 rounded-md">{category}</div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-left border-collapse border border-slate-200 dark:border-slate-700">
+                        <thead>
+                          <tr className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold">
+                            <th className="p-2 border-r border-slate-200 dark:border-slate-700">Produk</th>
+                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-right w-24">Harga</th>
+                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center w-20">Jumlah</th>
+                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center w-20">Stok</th>
+                            <th className="p-2 text-right w-28">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {products.map((p, idx) => (
+                            <tr key={idx} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                              <td className="p-2 border-r border-slate-200 dark:border-slate-700 uppercase font-semibold text-slate-700 dark:text-slate-200">{p.name}</td>
+                              <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right text-slate-600 dark:text-slate-300">{formatRupiah(p.price)}</td>
+                              <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-bold text-slate-800 dark:text-white">{p.qty}</td>
+                              <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-mono text-slate-600 dark:text-slate-300">{p.stock}</td>
+                              <td className="p-2 text-right font-bold text-brand">{formatRupiah(p.revenue)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 ))
