@@ -143,16 +143,6 @@ export default function FnbPOSView() {
   const taxAmount = (taxableAmount * taxRate) / 100;
   const total = taxableAmount + taxAmount;
 
-const DEFAULT_FNB_PRODUCTS: Product[] = [
-  { id: "fnb_1", name: "Nasi Goreng Spesial Telur Ceplok", price: 25000, category: "Makanan Utama", stock: 50, image_url: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=300" },
-  { id: "fnb_2", name: "Mie Goreng Jawa Seafood", price: 28000, category: "Makanan Utama", stock: 35, image_url: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=300" },
-  { id: "fnb_3", name: "Ayam Bakar Madu + Nasi", price: 32000, category: "Makanan Utama", stock: 40, image_url: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=300" },
-  { id: "fnb_4", name: "Es Teh Manis Jumbo", price: 6000, category: "Minuman", stock: 100, image_url: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300" },
-  { id: "fnb_5", name: "Kopi Susu Gula Aren", price: 18000, category: "Minuman", stock: 60, image_url: "https://images.unsplash.com/photo-1541167760496-1628856ab772?w=300" },
-  { id: "fnb_6", name: "Matcha Latte Ice", price: 22000, category: "Minuman", stock: 45, image_url: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=300" },
-  { id: "fnb_7", name: "Kentang Goreng Crispy", price: 15000, category: "Camilan", stock: 50, image_url: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=300" },
-  { id: "fnb_8", name: "Roti Bakar Cokelat Keju", price: 18000, category: "Camilan", stock: 30, image_url: "https://images.unsplash.com/photo-1584776296944-ab6fb57b0bdd?w=300" }
-];
 
   const fetchProducts = async () => {
     if (!user) return;

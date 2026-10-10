@@ -147,15 +147,6 @@ export function ProductsView() {
     }
   };
 
-  const DEFAULT_FNB_CATEGORIES = [
-    { id: "cat_main", name: "Makanan Utama" },
-    { id: "cat_drink", name: "Minuman" },
-    { id: "cat_snack", name: "Camilan" },
-    { id: "cat_dessert", name: "Dessert" },
-    { id: "cat_package", name: "Paket Menu" },
-    { id: "cat_other", name: "Lain-lain" }
-  ];
-
   const fetchCategories = async (loadedProducts?: Product[]) => {
     if (!user) return;
     try {
@@ -164,8 +155,6 @@ export function ProductsView() {
       
       if (data && data.length > 0) {
         currentCategories = data;
-      } else {
-        currentCategories = [...DEFAULT_FNB_CATEGORIES];
       }
 
       // Dynamically extract unique categories from products
