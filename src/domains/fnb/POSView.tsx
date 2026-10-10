@@ -104,6 +104,7 @@ export default function FnbPOSView() {
   // Fitur Hold
   const [isHeldOrdersOpen, setIsHeldOrdersOpen] = useState(false);
   const [heldOrders, setHeldOrders] = useState<any[]>([]);
+  const [activeHoldId, setActiveHoldId] = useState<string | null>(null);
 
   // Fitur Riwayat Transaksi (Kasir)
   const [isTransactionHistoryOpen, setIsTransactionHistoryOpen] = useState(false);
@@ -312,10 +313,7 @@ export default function FnbPOSView() {
       setDiscountType("nominal");
       setDiscount(order.discount_amount);
       
-      // Hapus data hold agar jadi draft
-      // Hapus items terlebih dahulu untuk menghindari error foreign key (jika tidak ada cascade)
-      await supabase.from("transaction_items").delete().eq("transaction_id", order.id);
-      await supabase.from("transactions").delete().eq("id", order.id);
+      setActiveHoldId(order.id);
       
       // Update local state immediately
       setHeldOrders(prev => prev.filter(o => o.id !== order.id));
@@ -402,7 +400,10 @@ export default function FnbPOSView() {
     );
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+    setActiveHoldId(null);
+  };
 
   const handleCheckout = () => {
     const isKasir = user?.role?.toLowerCase().includes("kasir");
@@ -434,32 +435,53 @@ export default function FnbPOSView() {
 
       // 1. Simpan Transaksi Induk (resilient to missing invoice_code column or DB schema difference)
       try {
-        const { data, error: trxError } = await supabase
-          .from("transactions")
-          .insert({
-            tenant_id: user.id,
-            shift_id: activeShift ? activeShift.id : null,
-            order_type: orderType,
-            table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
-            customer_id: selectedCustomerId || null,
-            total_amount: total,
-            discount_amount: discountAmount,
-            tax_amount: taxAmount,
-            payment_method: isHold ? "none" : method,
-            status: isHold ? "hold" : "completed",
-            invoice_code: generatedInvoiceCode
-          })
-          .select()
-          .single();
+        if (activeHoldId) {
+          const { data, error: updateError } = await supabase
+            .from("transactions")
+            .update({
+              shift_id: activeShift ? activeShift.id : null,
+              order_type: orderType,
+              table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
+              customer_id: selectedCustomerId || null,
+              total_amount: total,
+              discount_amount: discountAmount,
+              tax_amount: taxAmount,
+              payment_method: isHold ? "none" : method,
+              status: isHold ? "hold" : "completed"
+            })
+            .eq("id", activeHoldId)
+            .select()
+            .single();
+          if (!updateError) transaction = data;
+        }
 
-        if (trxError) {
-          // If invoice_code column doesn't exist in Supabase DB schema, retry without invoice_code
-          if (trxError.message?.includes("invoice_code") || trxError.code === "PGRST204" || trxError.message?.toLowerCase().includes("column")) {
-            const { data: retryData } = await supabase
-              .from("transactions")
-              .insert({
-                tenant_id: user.id,
-                shift_id: activeShift ? activeShift.id : null,
+        if (!transaction) {
+          const { data, error: trxError } = await supabase
+            .from("transactions")
+            .insert({
+              tenant_id: user.id,
+              shift_id: activeShift ? activeShift.id : null,
+              order_type: orderType,
+              table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
+              customer_id: selectedCustomerId || null,
+              total_amount: total,
+              discount_amount: discountAmount,
+              tax_amount: taxAmount,
+              payment_method: isHold ? "none" : method,
+              status: isHold ? "hold" : "completed",
+              invoice_code: generatedInvoiceCode
+            })
+            .select()
+            .single();
+
+          if (trxError) {
+            // If invoice_code column doesn't exist in Supabase DB schema, retry without invoice_code
+            if (trxError.message?.includes("invoice_code") || trxError.code === "PGRST204" || trxError.message?.toLowerCase().includes("column")) {
+              const { data: retryData } = await supabase
+                .from("transactions")
+                .insert({
+                  tenant_id: user.id,
+                  shift_id: activeShift ? activeShift.id : null,
                 order_type: orderType,
                 table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
                 customer_id: selectedCustomerId || null,
@@ -498,6 +520,10 @@ export default function FnbPOSView() {
       
       // 2. Simpan Detail Produk (Items)
       try {
+        if (activeHoldId && transaction) {
+          await supabase.from("transaction_items").delete().eq("transaction_id", transaction.id);
+        }
+
         const itemsToInsert = cart.map(item => ({
           tenant_id: user.id,
           transaction_id: transaction.id,
