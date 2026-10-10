@@ -401,6 +401,9 @@ export function SalesView() {
     if (!confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) return;
 
     try {
+      const { error: itemError } = await supabase.from("transaction_items").delete().eq("transaction_id", id);
+      if (itemError) throw itemError;
+
       const { error } = await supabase.from("transactions").delete().eq("id", id);
       if (error) throw error;
 
@@ -408,8 +411,7 @@ export function SalesView() {
       fetchTransactions();
     } catch (err: any) {
       console.error("Error deleting transaction:", err);
-      setTransactions((prev) => prev.filter((t) => t.id !== id));
-      alert("Transaksi berhasil dihapus dari daftar.");
+      alert("Gagal menghapus transaksi. Pastikan internet stabil atau hapus rincian pesanan terlebih dahulu.");
     }
   };
 
