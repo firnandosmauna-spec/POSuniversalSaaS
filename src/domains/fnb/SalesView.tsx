@@ -652,39 +652,7 @@ export function SalesView() {
           </div>
         </div>
 
-        {/* Produk Terlaris per Kategori */}
-        {topProductsByCategory.length > 0 && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden mb-3 shadow-sm mx-3 md:mx-0">
-            <div className="bg-white dark:bg-slate-800 px-3 py-2.5 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-                <Package className="size-4 text-brand" /> Produk Terlaris per Kategori
-              </h3>
-            </div>
-            <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {topProductsByCategory.map((cat, idx) => (
-                <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-2.5 border border-slate-100 dark:border-slate-700">
-                  <h4 className="font-bold text-[11px] text-slate-700 dark:text-slate-300 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">
-                    {cat.category}
-                  </h4>
-                  <div className="space-y-1.5">
-                    {cat.products.map((p, pIdx) => (
-                      <div key={pIdx} className="flex justify-between items-center text-[10px]">
-                        <div className="flex items-center gap-1.5 overflow-hidden">
-                          <span className="font-mono font-bold text-[9px] text-slate-400 w-3">{pIdx + 1}.</span>
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">{p.name}</span>
-                        </div>
-                        <div className="flex flex-col items-end shrink-0 pl-2 leading-none">
-                          <span className="font-bold text-slate-700 dark:text-slate-300">{p.qty}x</span>
-                          <span className="text-[8px] text-slate-400 mt-0.5">{formatRupiah(p.revenue)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
       </div>
 
       {/* Table Container (Hidden on Mobile by default as per screenshot, togglable) */}
