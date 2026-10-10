@@ -79,7 +79,7 @@ export function SalesView() {
           *,
           transaction_items(
             *,
-            products(category)
+            products(category, stock, name, price)
           )
         `)
         .eq("tenant_id", user.id)
@@ -227,6 +227,34 @@ export function SalesView() {
       else nonCashTotal += amount;
     }
   });
+
+  // Product Report Calculation
+  const productSalesMap: Record<string, { name: string; price: number; qty: number; stock: number; revenue: number }> = {};
+
+  filteredTransactions.forEach(t => {
+    if (t.status === "cancelled") return;
+
+    const items = t.transaction_items || t.items || [];
+    items.forEach((item: any) => {
+      const pName = item.product_name || item.products?.name || item.name || "Unknown Product";
+      const pPrice = item.price || item.products?.price || 0;
+      const qty = item.qty || item.quantity || 0;
+      const stock = item.products?.stock ?? "-";
+      const revenue = qty * pPrice;
+
+      if (!productSalesMap[pName]) {
+        productSalesMap[pName] = { name: pName, price: pPrice, qty: 0, stock: (stock as number), revenue: 0 };
+      }
+      
+      productSalesMap[pName].qty += qty;
+      productSalesMap[pName].revenue += revenue;
+      if (item.products?.stock !== undefined) {
+          productSalesMap[pName].stock = item.products.stock;
+      }
+    });
+  });
+
+  const productReportData = Object.values(productSalesMap).sort((a, b) => b.qty - a.qty);
 
   const totalTxCount = filteredTransactions.filter(t => t.status !== 'cancelled').length;
   const totalRevenue = netSales;
@@ -1101,26 +1129,26 @@ export function SalesView() {
                   </div>
                 </div>
 
-                {/* Tabel Transaksi */}
-                <h3 className="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wide">Rincian Transaksi ({filteredTransactions.length})</h3>
+                {/* Tabel Produk Terjual */}
+                <h3 className="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wide">Rincian Penjualan Produk ({productReportData.length})</h3>
                 <table className="w-full text-xs text-left border-collapse border border-slate-200 mb-6">
                   <thead>
                     <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold">
-                      <th className="p-2 border-r border-slate-200">No. Trx</th>
-                      <th className="p-2 border-r border-slate-200">Waktu</th>
-                      <th className="p-2 border-r border-slate-200">Kasir</th>
-                      <th className="p-2 border-r border-slate-200">Metode</th>
+                      <th className="p-2 border-r border-slate-200">Produk</th>
+                      <th className="p-2 border-r border-slate-200 text-right">Harga</th>
+                      <th className="p-2 border-r border-slate-200 text-center">Jumlah</th>
+                      <th className="p-2 border-r border-slate-200 text-center">Stok</th>
                       <th className="p-2 text-right">Total</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTransactions.map((t) => (
-                      <tr key={t.id} onClick={() => openReceipt(t)} className="border-b border-slate-200 cursor-pointer hover:bg-slate-50">
-                        <td className="p-2 border-r border-slate-200 uppercase font-mono">{t.id.substring(0, 8)}</td>
-                        <td className="p-2 border-r border-slate-200">{formatDate(t.created_at)}</td>
-                        <td className="p-2 border-r border-slate-200">{t.cashier_shifts?.cashier_name || 'Kasir'}</td>
-                        <td className="p-2 border-r border-slate-200 capitalize">{t.payment_method === 'cash' ? 'Tunai' : 'Non-Tunai'}</td>
-                        <td className="p-2 text-right font-bold">{formatRupiah(t.total_amount)}</td>
+                    {productReportData.map((p, idx) => (
+                      <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                        <td className="p-2 border-r border-slate-200 uppercase font-semibold">{p.name}</td>
+                        <td className="p-2 border-r border-slate-200 text-right">{formatRupiah(p.price)}</td>
+                        <td className="p-2 border-r border-slate-200 text-center font-bold">{p.qty}</td>
+                        <td className="p-2 border-r border-slate-200 text-center font-mono">{p.stock}</td>
+                        <td className="p-2 text-right font-bold">{formatRupiah(p.revenue)}</td>
                       </tr>
                     ))}
                   </tbody>
