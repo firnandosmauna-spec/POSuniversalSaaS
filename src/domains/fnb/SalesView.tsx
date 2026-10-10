@@ -706,99 +706,91 @@ export function SalesView() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto w-full pb-4 h-full">
-              <table className="w-full text-left text-[10px] md:text-sm">
-              <thead className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 sticky top-0">
-                <tr>
-                  <th className="p-2 md:p-4 font-bold">Waktu & ID</th>
-                  <th className="p-2 md:p-4 font-bold hidden sm:table-cell">Kasir</th>
-                  <th className="p-2 md:p-4 font-bold">Tipe & Cust</th>
-                  <th className="p-2 md:p-4 font-bold text-center hidden sm:table-cell">Status</th>
-                  <th className="p-2 md:p-4 font-bold text-right">Total</th>
-                  <th className="p-2 md:p-4 font-bold text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
+            <div className="overflow-y-auto w-full pb-4 h-full bg-slate-50/50 dark:bg-slate-900/50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 p-3">
                 {filteredTransactions.map(t => (
-                  <tr key={t.id} onClick={() => openReceipt(t)} className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
-                    <td className="p-2 md:p-4">
-                      <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 md:gap-2 text-[10px] md:text-sm">
-                        <Calendar className="size-3 md:size-4 text-slate-400" />
-                        {formatDate(t.created_at)}
-                      </div>
-                      <div className="text-[8px] md:text-xs text-slate-400 dark:text-slate-500 mt-0.5 md:mt-1 uppercase font-mono font-bold hidden md:block">
-                        {t.invoice_code || t.id.substring(0, 8)}
-                      </div>
-                    </td>
-                    <td className="p-1.5 md:p-4 font-medium text-slate-700 dark:text-slate-300 hidden sm:table-cell">
-                      {t.cashier_shifts?.cashier_name || "Kasir"}
-                    </td>
-                    <td className="p-1.5 md:p-4">
-                      <div className="font-semibold text-slate-800 dark:text-slate-200 text-[9px] md:text-sm">
-                        {t.order_type === "dine_in" ? `Meja ${t.tables?.name || ''}` : "Takeaway"}
-                      </div>
-                      {(t.customers?.name || t.customer_name_custom) && (
-                        <div className="text-[8px] md:text-xs text-brand font-medium mt-0.5">
-                          {t.customers?.name || t.customer_name_custom}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-1.5 md:p-4 text-center hidden sm:table-cell">
-                      {t.status === "completed" ? (
-                        <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 md:px-2.5 md:py-0.5 rounded-full text-[8px] md:text-xs font-semibold border border-emerald-200 dark:border-emerald-800">
-                          Selesai
-                        </span>
-                      ) : t.status === "hold" ? (
-                        <span className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 md:px-2.5 md:py-0.5 rounded-full text-[8px] md:text-xs font-semibold border border-amber-200 dark:border-amber-800">
-                          Di-Hold
-                        </span>
-                      ) : (
-                        <span className="bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 px-1.5 py-0.5 md:px-2.5 md:py-0.5 rounded-full text-[8px] md:text-xs font-semibold border border-red-200 dark:border-red-800">
-                          {t.status === "cancelled" ? "Batal" : t.status}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-1.5 md:p-4 text-right">
-                      <div className="font-bold text-slate-800 dark:text-white text-[10px] md:text-sm">{formatRupiah(t.total_amount)}</div>
-                      <div className="text-[8px] md:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {t.payment_method === 'cash' ? 'Tunai' : t.payment_method === 'debit' ? 'Card' : t.payment_method}
-                      </div>
-                    </td>
-                    <td className="p-1 md:p-4 text-center">
-                      <div className="flex items-center justify-center gap-0.5 md:gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={(e) => { e.stopPropagation(); openReceipt(t); }} 
-                          className="text-brand hover:bg-brand/10 p-0.5 md:p-1.5 h-6 w-6 md:h-8 md:w-8"
-                          title="Lihat & Cetak Struk"
-                        >
-                          <Eye className="size-3 md:size-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={(e) => { e.stopPropagation(); handleOpenEdit(t); }} 
-                          className="text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950 p-0.5 md:p-1.5 h-6 w-6 md:h-8 md:w-8"
-                          title="Edit Transaksi"
-                        >
-                          <Pencil className="size-3 md:size-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} 
-                          className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 p-0.5 md:p-1.5 h-6 w-6 md:h-8 md:w-8"
-                          title="Hapus Transaksi"
-                        >
-                          <Trash2 className="size-3 md:size-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
+                  <div key={t.id} onClick={() => openReceipt(t)} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col relative overflow-hidden group">
+                    {/* Status Ribbon (Decorative) */}
+                    <div className={`absolute top-0 left-0 w-1 h-full ${
+                      t.status === "completed" ? "bg-emerald-500" : 
+                      t.status === "hold" ? "bg-amber-500" : "bg-red-500"
+                    }`} />
+                    
+                    <div className="flex justify-between items-start mb-4 pl-2">
+                       <div className="flex flex-col">
+                         <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 text-sm group-hover:text-brand transition-colors">
+                            <Calendar className="size-4 text-slate-400" /> {formatDate(t.created_at)}
+                         </div>
+                         <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-1 font-semibold flex items-center gap-1">
+                            <Receipt className="size-3" /> {t.invoice_code || t.id.substring(0, 8).toUpperCase()}
+                         </div>
+                       </div>
+                       <div>
+                          {t.status === "completed" ? (
+                            <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800/50 text-[10px] font-extrabold uppercase tracking-wider shadow-sm">Lunas</span>
+                          ) : t.status === "hold" ? (
+                            <span className="bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 px-2 py-1 rounded border border-amber-200 dark:border-amber-800/50 text-[10px] font-extrabold uppercase tracking-wider shadow-sm">Di-Hold</span>
+                          ) : (
+                            <span className="bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 px-2 py-1 rounded border border-red-200 dark:border-red-800/50 text-[10px] font-extrabold uppercase tracking-wider shadow-sm">Batal</span>
+                          )}
+                       </div>
+                    </div>
+
+                    <div className="flex justify-between items-center mb-4 pl-2">
+                       <div className="flex flex-col">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Pelanggan</span>
+                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">
+                            {t.customers?.name || t.customer_name_custom || "-"}
+                          </span>
+                       </div>
+                       <div className="flex flex-col text-right">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Pesanan</span>
+                          <span className="text-sm font-bold text-brand bg-brand/5 px-2 py-0.5 rounded-md inline-block">
+                            {t.order_type === "dine_in" ? `Meja ${t.tables?.name || ''}` : t.order_type === "delivery" ? "Delivery" : "Takeaway"}
+                          </span>
+                       </div>
+                    </div>
+
+                    <div className="flex justify-between items-end mt-auto pt-3 border-t border-slate-100 dark:border-slate-700 pl-2">
+                       <div className="flex flex-col">
+                         <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Total Belanja</span>
+                         <div className="flex items-end gap-1.5">
+                           <span className="text-lg font-extrabold text-[#0b172a] dark:text-white leading-none">
+                              {formatRupiah(t.total_amount)}
+                           </span>
+                           <span className="text-[10px] text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-1.5 rounded uppercase">
+                              {t.payment_method === 'cash' ? 'CASH' : t.payment_method === 'qris' ? 'QRIS' : t.payment_method === 'debit' ? 'CARD' : 'TRF'}
+                           </span>
+                         </div>
+                       </div>
+                       
+                       <div className="flex items-center gap-1">
+                         <Button 
+                            variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openReceipt(t); }} 
+                            className="h-8 w-8 text-brand hover:bg-brand/10 hover:text-brand bg-slate-50 dark:bg-slate-800/50"
+                            title="Lihat Struk"
+                         >
+                            <Eye className="size-4" />
+                         </Button>
+                         <Button 
+                            variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenEdit(t); }} 
+                            className="h-8 w-8 text-amber-600 hover:bg-amber-50 hover:text-amber-700 bg-slate-50 dark:bg-slate-800/50"
+                            title="Edit"
+                         >
+                            <Pencil className="size-4" />
+                         </Button>
+                         <Button 
+                            variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} 
+                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600 bg-slate-50 dark:bg-slate-800/50"
+                            title="Hapus"
+                         >
+                            <Trash2 className="size-4" />
+                         </Button>
+                       </div>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
             </div>
           )}
         </div>
