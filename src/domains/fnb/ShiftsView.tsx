@@ -95,7 +95,7 @@ export function ShiftsView() {
   const [expenses, setExpenses] = useState<number>(0);
 
   // Date Filters
-  const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "month" | "custom">("month");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "month" | "custom">("today");
   const [customStartDate, setCustomStartDate] = useState<string>("");
   const [customEndDate, setCustomEndDate] = useState<string>("");
 

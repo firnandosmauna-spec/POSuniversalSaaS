@@ -81,7 +81,7 @@ export function PrintingSalesView() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [paymentFilter, setPaymentFilter] = useState<string>("ALL");
-  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("month");
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("today");
 
   // Selected SPK for Modal / Detail / Pelunasan
   const [selectedJob, setSelectedJob] = useState<PrintingJobOrder | null>(null);
