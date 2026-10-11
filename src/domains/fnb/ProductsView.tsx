@@ -184,7 +184,7 @@ export function ProductsView() {
 
       setCategories(currentCategories);
     } catch (error) {
-      setCategories(DEFAULT_FNB_CATEGORIES);
+      setCategories(["Makanan", "Minuman", "Snack", "Dessert"]);
     }
   };
 

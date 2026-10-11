@@ -80,7 +80,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan }: Barcode
             Html5Qrcode.getCameras()
               .then((devices) => {
                 if (devices && devices.length > 0) {
-                  startScanner(devices[0].id)
+                  startScanner(devices[0]!.id)
                     .then(() => setIsInitializing(false))
                     .catch((fallbackErr) => {
                       console.error("Fallback camera error:", fallbackErr);

@@ -66,7 +66,7 @@ export function SalesView() {
 
   // Filter Modal State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "hold" | "cancelled">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "hold" | "cancelled" | "refund">("all");
   const [filterPayment, setFilterPayment] = useState<"all" | "cash" | "qris" | "non_cash">("all");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const fetchTransactions = async () => {
@@ -271,7 +271,7 @@ export function SalesView() {
     if (!topProductsByCategory[p.category]) {
       topProductsByCategory[p.category] = [];
     }
-    topProductsByCategory[p.category].push(p);
+    topProductsByCategory[p.category]!.push(p);
   });
 
   const totalTxCount = filteredTransactions.filter(t => t.status !== 'cancelled').length;

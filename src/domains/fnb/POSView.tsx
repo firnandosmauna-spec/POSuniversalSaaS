@@ -498,9 +498,10 @@ export default function FnbPOSView() {
         } else {
           transaction = data;
         }
-      } catch (e) {
-        console.error("Supabase transaction insert fallback:", e);
-      }
+      } // end if (!transaction)
+    } catch (e) {
+      console.error("Supabase transaction insert fallback:", e);
+    }
 
       // Fallback local transaction object if DB table missing or offline
       if (!transaction) {

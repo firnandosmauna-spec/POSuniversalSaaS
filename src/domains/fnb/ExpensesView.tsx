@@ -128,7 +128,7 @@ export function ExpensesView() {
     
     // Update states if active
     if (selectedCategory === catToRemove) setSelectedCategory("all");
-    if (category === catToRemove) setCategory(updated[0]);
+    if (category === catToRemove) setCategory(updated[0] || "");
   };
 
   const getLocalExpenses = (): ExpenseItem[] => {
@@ -191,7 +191,7 @@ export function ExpensesView() {
     } else {
       setEditingExpense(null);
       setTitle("");
-      setCategory(EXPENSE_CATEGORIES[0] || "Bahan Baku & Bumbu");
+      setCategory(categories[0] || "Bahan Baku & Bumbu");
       setAmount("");
       setPaymentMethod("Kas Laci (Petty Cash)");
       setStaffName(user?.name || "");
