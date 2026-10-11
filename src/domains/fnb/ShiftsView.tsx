@@ -501,7 +501,7 @@ export function ShiftsView() {
   });
 
   return (
-    <div className="p-2 md:p-6 h-full flex flex-col">
+    <div className="p-2 md:p-6 pb-24 md:pb-8 min-h-full flex flex-col overflow-y-auto">
       <div className="mb-4 md:mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-display text-lg md:text-2xl font-bold text-slate-900 tracking-tight">
@@ -518,7 +518,7 @@ export function ShiftsView() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6 flex-1 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-start">
         {/* Kolom Kiri: Status Shift Aktif */}
         <div className="col-span-1 flex flex-col gap-3 md:gap-6">
           {activeShift ? (
@@ -612,7 +612,7 @@ export function ShiftsView() {
         </div>
 
         {/* Kolom Kanan: Riwayat Shift */}
-        <div className="col-span-2 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="col-span-1 lg:col-span-2 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-3 md:p-5 border-b border-slate-50 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 className="font-display font-bold text-slate-800 text-[13px] md:text-base">Riwayat Shift Kasir</h2>
             
@@ -648,7 +648,7 @@ export function ShiftsView() {
               )}
             </div>
           </div>
-          <div className="flex-1 flex flex-col overflow-hidden p-0">
+          <div className="flex flex-col p-0">
             {/* Shift Summary Cards */}
             {filteredShifts.filter(s => s.status === 'closed').length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4 p-3 md:p-5 bg-slate-50/50 border-b border-slate-100">
@@ -685,7 +685,7 @@ export function ShiftsView() {
               </div>
             )}
 
-            <div className="flex-1 overflow-auto">
+            <div className="overflow-x-auto">
               {isLoading ? (
                 <div className="flex items-center justify-center h-32">
                   <Loader2 className="size-6 animate-spin text-[#0b172a]" />
