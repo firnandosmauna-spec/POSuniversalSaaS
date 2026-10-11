@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Clock, Plus, LogOut, CheckCircle2, Wallet, Receipt, Calculator, Loader2, Pencil, Trash2, Printer } from "lucide-react";
+import { Clock, Plus, LogOut, CheckCircle2, Wallet, Receipt, Calculator, Loader2, Pencil, Trash2, Printer, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,6 +23,9 @@ type Shift = {
   status: "open" | "closed";
   start_time: string;
   end_time: string | null;
+  cash_sales?: number;
+  non_cash_sales?: number;
+  expenses?: number;
 };
 
 export function ShiftsView() {
@@ -86,6 +89,8 @@ export function ShiftsView() {
 
   // Close shift data
   const [cashSales, setCashSales] = useState<number>(0);
+  const [nonCashSales, setNonCashSales] = useState<number>(0);
+  const [expenses, setExpenses] = useState<number>(0);
 
   // Date Filters
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "month" | "custom">("month");
@@ -118,6 +123,9 @@ export function ShiftsView() {
       setShifts(loadedShifts);
       const openShift = loadedShifts.find(s => s.status === "open");
       setActiveShift(openShift || null);
+      if (openShift) {
+        fetchActiveShiftStats(openShift);
+      }
     } catch (error) {
       console.warn("Error fetching shifts from Supabase (using local fallback):", error);
       const saved = localStorage.getItem(tenantStorageKey);
@@ -126,6 +134,9 @@ export function ShiftsView() {
         setShifts(loadedShifts);
         const openShift = loadedShifts.find(s => s.status === "open");
         setActiveShift(openShift || null);
+        if (openShift) {
+          fetchActiveShiftStats(openShift);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -200,48 +211,101 @@ export function ShiftsView() {
     }
   };
 
-  const prepareCloseShift = async () => {
-    if (!activeShift || !user) return;
+  const fetchActiveShiftStats = async (shift: Shift) => {
+    if (!user || !shift) return;
     try {
       let totalCashSales = 0;
+      let totalNonCashSales = 0;
+      let totalExpenses = 0;
 
-      // Try fetching cash sales from Supabase transactions
+      // 1. Fetch transactions
       try {
         const { data, error } = await supabase
           .from("transactions")
-          .select("total_amount")
+          .select("total_amount, payment_method, created_at, shift_id")
           .eq("tenant_id", user.id)
-          .eq("shift_id", activeShift.id)
-          .eq("payment_method", "cash")
           .eq("status", "completed");
 
         if (!error && data) {
-          totalCashSales = data.reduce((acc, curr) => acc + Number(curr.total_amount || 0), 0);
+          data.forEach((curr: any) => {
+            const isThisShift = curr.shift_id === shift.id || (new Date(curr.created_at) >= new Date(shift.start_time));
+            if (isThisShift) {
+              const amount = Number(curr.total_amount || 0);
+              const isCash = curr.payment_method?.toLowerCase() === "cash" || curr.payment_method?.toLowerCase() === "tunai";
+              if (isCash) totalCashSales += amount;
+              else totalNonCashSales += amount;
+            }
+          });
         }
       } catch (err) {
         console.warn("Supabase transactions calculation error:", err);
       }
 
-      // Fallback: Check local transactions if Supabase returns 0 or errored
-      if (totalCashSales === 0) {
+      // Fallback: Check local transactions
+      if (totalCashSales === 0 && totalNonCashSales === 0) {
         try {
           const localTrxKey = `pos_tenant_${user.id}_transactions`;
-          const savedTrx = localStorage.getItem(localTrxKey);
+          const savedTrx = localStorage.getItem(localTrxKey) || localStorage.getItem(`pos_transactions_${user.id}`);
           if (savedTrx) {
             const trxs = JSON.parse(savedTrx);
-            totalCashSales = trxs
-              .filter((t: any) => (t.shift_id === activeShift.id || !t.shift_id) && (t.payment_method === "cash" || t.payment_method === "Tunai") && t.status === "completed")
-              .reduce((acc: number, curr: any) => acc + Number(curr.total_amount || curr.total || 0), 0);
+            trxs.forEach((curr: any) => {
+              const isThisShift = curr.shift_id === shift.id || (new Date(curr.created_at) >= new Date(shift.start_time));
+              if (isThisShift && curr.status === "completed") {
+                const amount = Number(curr.total_amount || curr.total || 0);
+                const isCash = curr.payment_method?.toLowerCase() === "cash" || curr.payment_method?.toLowerCase() === "tunai";
+                if (isCash) totalCashSales += amount;
+                else totalNonCashSales += amount;
+              }
+            });
+          }
+        } catch (e) {}
+      }
+
+      // 2. Fetch expenses during this shift
+      try {
+        const { data: expData, error: expError } = await supabase
+          .from("store_expenses")
+          .select("amount, created_at, payment_method")
+          .eq("tenant_id", user.id);
+
+        if (!expError && expData) {
+          expData.forEach((exp: any) => {
+            if (new Date(exp.created_at) >= new Date(shift.start_time)) {
+              totalExpenses += Number(exp.amount || 0);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn("Supabase expenses calculation error:", err);
+      }
+
+      // Fallback: local expenses
+      if (totalExpenses === 0) {
+        try {
+          const savedExp = localStorage.getItem("pos_store_expenses");
+          if (savedExp) {
+            const localExpList = JSON.parse(savedExp);
+            localExpList.forEach((exp: any) => {
+              if (new Date(exp.created_at) >= new Date(shift.start_time)) {
+                totalExpenses += Number(exp.amount || 0);
+              }
+            });
           }
         } catch (e) {}
       }
 
       setCashSales(totalCashSales);
-      setIsCloseShiftModalOpen(true);
-    } catch (error) {
-      console.error(error);
-      setIsCloseShiftModalOpen(true);
+      setNonCashSales(totalNonCashSales);
+      setExpenses(totalExpenses);
+    } catch (e) {
+      console.error(e);
     }
+  };
+
+  const prepareCloseShift = async () => {
+    if (!activeShift || !user) return;
+    await fetchActiveShiftStats(activeShift);
+    setIsCloseShiftModalOpen(true);
   };
 
   const handleCloseShift = async (e: React.FormEvent) => {
@@ -255,13 +319,17 @@ export function ShiftsView() {
 
     setIsSubmitting(true);
     
-    const expected = activeShift.starting_cash + cashSales;
+    // Total uang laci seharusnya = Modal Awal + Pendapatan Tunai - Pengeluaran
+    const expected = (activeShift.starting_cash || 0) + cashSales - expenses;
     const actual = parseFloat(actualEndingCash) || 0;
     const nowIso = new Date().toISOString();
 
     // 1. Update local state & LocalStorage immediately
-    const updatedShift = {
+    const updatedShift: Shift = {
       ...activeShift,
+      cash_sales: cashSales,
+      non_cash_sales: nonCashSales,
+      expenses: expenses,
       expected_ending_cash: expected,
       actual_ending_cash: actual,
       end_time: nowIso,
@@ -284,15 +352,30 @@ export function ShiftsView() {
 
     // 2. Sync to Supabase asynchronously
     try {
-      await supabase
+      const { error: updErr } = await supabase
         .from("cashier_shifts")
         .update({
           expected_ending_cash: expected,
           actual_ending_cash: actual,
           end_time: nowIso,
-          status: "closed"
+          status: "closed",
+          cash_sales: cashSales,
+          non_cash_sales: nonCashSales,
+          expenses: expenses
         })
         .eq("id", activeShift.id);
+
+      if (updErr) {
+        await supabase
+          .from("cashier_shifts")
+          .update({
+            expected_ending_cash: expected,
+            actual_ending_cash: actual,
+            end_time: nowIso,
+            status: "closed"
+          })
+          .eq("id", activeShift.id);
+      }
     } catch (error) {
       console.warn("Supabase shift update optional sync failure:", error);
     } finally {
@@ -467,13 +550,47 @@ export function ShiftsView() {
                 </div>
               </div>
               
-              <div className="space-y-3 md:space-y-4 mb-5 md:mb-8">
-                <div className="bg-slate-50/80 p-3 md:p-4 rounded-xl border border-slate-100 flex justify-between items-center">
-                  <div className="flex items-center gap-2 md:gap-2 text-slate-600">
-                    <Wallet className="size-4 md:size-4 text-slate-400" />
-                    <span className="text-[11px] md:text-sm font-bold">Kas Awal</span>
+              <div className="space-y-2 mb-5 md:mb-6">
+                <div className="bg-slate-50 p-2.5 md:p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Wallet className="size-3.5 md:size-4 text-slate-400" />
+                    <span className="text-[11px] md:text-xs font-bold">Modal Awal</span>
                   </div>
-                  <span className="font-extrabold text-slate-800 text-sm md:text-base">{formatRupiah(activeShift.starting_cash)}</span>
+                  <span className="font-extrabold text-slate-800 text-xs md:text-sm">{formatRupiah(activeShift.starting_cash)}</span>
+                </div>
+
+                <div className="bg-emerald-50/60 p-2.5 md:p-3 rounded-xl border border-emerald-100 flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <TrendingUp className="size-3.5 md:size-4 text-emerald-500" />
+                    <span className="text-[11px] md:text-xs font-bold">Pendapatan Tunai</span>
+                  </div>
+                  <span className="font-extrabold text-emerald-700 text-xs md:text-sm">+{formatRupiah(cashSales)}</span>
+                </div>
+
+                <div className="bg-blue-50/60 p-2.5 md:p-3 rounded-xl border border-blue-100 flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <Receipt className="size-3.5 md:size-4 text-blue-500" />
+                    <span className="text-[11px] md:text-xs font-bold">Non Tunai (QRIS)</span>
+                  </div>
+                  <span className="font-extrabold text-blue-700 text-xs md:text-sm">{formatRupiah(nonCashSales)}</span>
+                </div>
+
+                <div className="bg-rose-50/60 p-2.5 md:p-3 rounded-xl border border-rose-100 flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-rose-700">
+                    <TrendingDown className="size-3.5 md:size-4 text-rose-500" />
+                    <span className="text-[11px] md:text-xs font-bold">Pengeluaran</span>
+                  </div>
+                  <span className="font-extrabold text-rose-700 text-xs md:text-sm">-{formatRupiah(expenses)}</span>
+                </div>
+
+                <div className="bg-[#0b172a] text-white p-3 rounded-xl border border-slate-800 flex justify-between items-center shadow-xs">
+                  <div>
+                    <span className="text-[10px] md:text-[11px] font-bold text-slate-300 block">Total Uang Laci Seharusnya</span>
+                    <span className="text-[8px] md:text-[9px] text-slate-400 font-medium">(Modal + Tunai - Pengeluaran)</span>
+                  </div>
+                  <span className="font-black text-emerald-400 text-xs md:text-sm">
+                    {formatRupiah((activeShift.starting_cash || 0) + cashSales - expenses)}
+                  </span>
                 </div>
               </div>
               
@@ -734,18 +851,29 @@ export function ShiftsView() {
           </DialogHeader>
           <form onSubmit={handleCloseShift} className="space-y-5 p-5 bg-slate-50/30">
             
-            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-3">
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-500 font-medium">Kas Awal</span>
-                <span className="font-bold text-slate-700">{formatRupiah(activeShift?.starting_cash || 0)}</span>
+                <span className="text-slate-600 font-medium">Modal Awal</span>
+                <span className="font-bold text-slate-800">{formatRupiah(activeShift?.starting_cash || 0)}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-slate-500 font-medium">Penjualan Tunai</span>
-                <span className="font-bold text-slate-700">+{formatRupiah(cashSales)}</span>
+                <span className="text-emerald-700 font-medium">Pendapatan Tunai</span>
+                <span className="font-bold text-emerald-700">+{formatRupiah(cashSales)}</span>
               </div>
-              <div className="border-t border-slate-100 pt-3 flex justify-between">
-                <span className="font-bold text-[11px] text-slate-800 uppercase">Ekspektasi Uang</span>
-                <span className="font-black text-[#0b172a] text-sm">{formatRupiah((activeShift?.starting_cash || 0) + cashSales)}</span>
+              <div className="flex justify-between text-xs">
+                <span className="text-blue-700 font-medium">Non Tunai (QRIS)</span>
+                <span className="font-bold text-blue-700">{formatRupiah(nonCashSales)}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-rose-700 font-medium">Pengeluaran</span>
+                <span className="font-bold text-rose-700">-{formatRupiah(expenses)}</span>
+              </div>
+              <div className="border-t border-slate-100 pt-2.5 flex justify-between items-center">
+                <div>
+                  <span className="font-bold text-[11px] text-slate-800 uppercase block">Total Uang Laci Seharusnya</span>
+                  <span className="text-[9px] text-slate-400 font-medium">(Modal + Tunai - Pengeluaran)</span>
+                </div>
+                <span className="font-black text-[#0b172a] text-sm">{formatRupiah((activeShift?.starting_cash || 0) + cashSales - expenses)}</span>
               </div>
             </div>
 
@@ -807,18 +935,36 @@ export function ShiftsView() {
                     </div>
                   </div>
 
-                  <div className="space-y-2.5 text-xs border-b border-dashed border-slate-300 pb-4 mb-4">
+                  <div className="space-y-2 text-xs border-b border-dashed border-slate-300 pb-3 mb-3">
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Modal Kas Awal</span>
+                      <span className="text-slate-600">Modal Awal</span>
                       <span className="font-bold">{formatRupiah(selectedShiftForPrint.starting_cash)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Ekspektasi Uang</span>
-                      <span className="font-bold">{formatRupiah(selectedShiftForPrint.expected_ending_cash || 0)}</span>
+                      <span className="text-slate-600">Pendapatan Tunai</span>
+                      <span className="font-bold text-slate-800">
+                        +{formatRupiah(selectedShiftForPrint.cash_sales ?? Math.max(0, (selectedShiftForPrint.expected_ending_cash || 0) - selectedShiftForPrint.starting_cash))}
+                      </span>
                     </div>
-                    <div className="flex justify-between text-sm mt-2 pt-2 border-t border-dashed border-slate-200">
-                      <span className="font-bold">Uang Fisik</span>
-                      <span className="font-black">{formatRupiah(selectedShiftForPrint.actual_ending_cash || 0)}</span>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Non Tunai (QRIS)</span>
+                      <span className="font-bold text-slate-800">
+                        {formatRupiah(selectedShiftForPrint.non_cash_sales || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Pengeluaran</span>
+                      <span className="font-bold text-slate-800">
+                        -{formatRupiah(selectedShiftForPrint.expenses || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs pt-2 border-t border-dashed border-slate-200">
+                      <span className="font-bold text-slate-700">Total Uang Laci Seharusnya</span>
+                      <span className="font-black text-slate-900">{formatRupiah(selectedShiftForPrint.expected_ending_cash || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs pt-1">
+                      <span className="font-bold text-slate-700">Uang Fisik Kasir</span>
+                      <span className="font-black text-slate-900">{formatRupiah(selectedShiftForPrint.actual_ending_cash || 0)}</span>
                     </div>
                   </div>
 
