@@ -533,11 +533,48 @@ export function ShiftsView() {
               )}
             </div>
           </div>
-          <div className="flex-1 overflow-auto p-0">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <Loader2 className="size-6 animate-spin text-[#0b172a]" />
+          <div className="flex-1 flex flex-col overflow-hidden p-0">
+            {/* Shift Summary Cards */}
+            {filteredShifts.filter(s => s.status === 'closed').length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4 p-3 md:p-5 bg-slate-50/50 border-b border-slate-100">
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <p className="text-[10px] md:text-xs text-slate-500 font-bold mb-1">Total Modal Awal</p>
+                  <p className="font-display font-extrabold text-slate-800 text-sm md:text-base">
+                    {formatRupiah(filteredShifts.reduce((sum, s) => s.status === 'closed' ? sum + (s.starting_cash || 0) : sum, 0))}
+                  </p>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <p className="text-[10px] md:text-xs text-slate-500 font-bold mb-1">Total Kas Akhir (Fisik)</p>
+                  <p className="font-display font-extrabold text-slate-800 text-sm md:text-base">
+                    {formatRupiah(filteredShifts.reduce((sum, s) => s.status === 'closed' ? sum + (s.actual_ending_cash || 0) : sum, 0))}
+                  </p>
+                </div>
+                <div className="bg-[#0b172a] p-3 rounded-xl border border-[#0b172a] shadow-sm">
+                  <p className="text-[10px] md:text-xs text-slate-300 font-bold mb-1">Pemasukan Kasir Bersih</p>
+                  <p className="font-display font-extrabold text-emerald-400 text-sm md:text-base">
+                    {formatRupiah(filteredShifts.reduce((sum, s) => s.status === 'closed' ? sum + ((s.actual_ending_cash || 0) - (s.starting_cash || 0)) : sum, 0))}
+                  </p>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <p className="text-[10px] md:text-xs text-slate-500 font-bold mb-1">Total Selisih</p>
+                  <p className={`font-display font-extrabold text-sm md:text-base ${
+                    filteredShifts.reduce((sum, s) => s.status === 'closed' ? sum + ((s.actual_ending_cash || 0) - (s.expected_ending_cash || 0)) : sum, 0) < 0 
+                      ? "text-red-600" 
+                      : filteredShifts.reduce((sum, s) => s.status === 'closed' ? sum + ((s.actual_ending_cash || 0) - (s.expected_ending_cash || 0)) : sum, 0) > 0 
+                        ? "text-emerald-600" 
+                        : "text-slate-800"
+                  }`}>
+                    {formatRupiah(filteredShifts.reduce((sum, s) => s.status === 'closed' ? sum + ((s.actual_ending_cash || 0) - (s.expected_ending_cash || 0)) : sum, 0))}
+                  </p>
+                </div>
               </div>
+            )}
+
+            <div className="flex-1 overflow-auto">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="size-6 animate-spin text-[#0b172a]" />
+                </div>
             ) : filteredShifts.length === 0 ? (
               <div className="text-center p-8 text-slate-500 font-medium text-[11px] md:text-sm">Belum ada riwayat shift untuk rentang waktu ini.</div>
             ) : (
@@ -635,6 +672,7 @@ export function ShiftsView() {
                 </tbody>
               </table>
             )}
+            </div>
           </div>
         </div>
       </div>
