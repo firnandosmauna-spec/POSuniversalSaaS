@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
+import { generateUUID } from "@/shared/utils/uuid";
 import { PrintingProductsView } from "@/domains/printing/ProductsView";
 
 type Product = {
@@ -188,7 +189,7 @@ export function ProductsView() {
           const exists = currentCategories.some(c => c.name.toLowerCase() === catName.toLowerCase());
           if (!exists) {
             const newCat = {
-              id: crypto.randomUUID(),
+              id: generateUUID(),
               name: catName,
               tenant_id: user.id
             };
@@ -301,13 +302,7 @@ export function ProductsView() {
         }
       }
 
-      const fallbackUUID = () => {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-          const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-          return v.toString(16);
-        });
-      };
-      const productId = editingProduct ? editingProduct.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : fallbackUUID());
+      const productId = editingProduct ? editingProduct.id : generateUUID();
       let finalStock = -1;
       if (trackStock) {
         const currentStock = editingProduct?.stock && editingProduct.stock !== -1 ? editingProduct.stock : 0;
@@ -423,7 +418,7 @@ export function ProductsView() {
             const categoryExists = categories.some(c => c.name.toLowerCase() === catName.toLowerCase());
             if (!categoryExists) {
               const newCat = {
-                id: crypto.randomUUID(),
+                id: generateUUID(),
                 name: newProductItem.category,
                 tenant_id: user.id
               };

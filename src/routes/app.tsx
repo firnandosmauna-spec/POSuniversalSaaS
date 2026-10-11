@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/shared/lib/supabase";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { printElement } from "@/shared/utils/printHelper";
+import { generateUUID, isValidUUID } from "@/shared/utils/uuid";
 import { 
   LayoutDashboard, 
   Calculator, 
@@ -160,17 +161,51 @@ function AppLayout() {
           if (saved) localShifts = JSON.parse(saved);
         } catch(e) {}
 
+        // Query Supabase for any active open shift
         const { data, error } = await supabase
           .from("cashier_shifts")
-          .select("id")
+          .select("id, cashier_name, starting_cash, status, start_time")
           .eq("tenant_id", user.id)
           .eq("status", "open")
-          .maybeSingle();
+          .order("start_time", { ascending: false })
+          .limit(1);
 
-        if (!error && data) {
+        if (!error && data && data.length > 0) {
+          const activeDbShift = data[0];
           setHasActiveShift(true);
+          // Sync to localStorage so both Mobile and Web stay in sync
+          const existingIdx = localShifts.findIndex((s: any) => s.id === activeDbShift.id);
+          if (existingIdx === -1) {
+            localStorage.setItem(tenantKey, JSON.stringify([activeDbShift, ...localShifts]));
+          }
         } else {
-          setHasActiveShift(localShifts.some((s: any) => s.status === "open"));
+          // Check if there is an open shift in localStorage
+          const localOpen = localShifts.find((s: any) => s.status === "open");
+          if (localOpen) {
+            setHasActiveShift(true);
+            // If local shift has invalid UUID, migrate it and sync to Supabase
+            if (!isValidUUID(localOpen.id)) {
+              localOpen.id = generateUUID();
+              localStorage.setItem(tenantKey, JSON.stringify(localShifts));
+            }
+            // Auto-sync local open shift to Supabase
+            (async () => {
+              try {
+                await supabase.from("cashier_shifts").upsert({
+                  id: localOpen.id,
+                  tenant_id: user.id,
+                  cashier_name: localOpen.cashier_name,
+                  starting_cash: localOpen.starting_cash || 0,
+                  status: "open",
+                  start_time: localOpen.start_time || new Date().toISOString()
+                });
+              } catch (syncErr) {
+                console.warn("Background shift sync error:", syncErr);
+              }
+            })();
+          } else {
+            setHasActiveShift(false);
+          }
         }
       } catch (err) {
         setHasActiveShift(false);
@@ -216,9 +251,7 @@ function AppLayout() {
     }
     setIsSubmitting(true);
     try {
-      const safeId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
-        ? crypto.randomUUID() 
-        : 'shift-' + Date.now() + '-' + Math.random().toString(36).substring(2,9);
+      const safeId = generateUUID();
         
       const newShift = {
         id: safeId,
@@ -238,7 +271,7 @@ function AppLayout() {
         if (saved) currentShifts = JSON.parse(saved);
       } catch(e) {}
       
-      const updatedShifts = [newShift, ...currentShifts];
+      const updatedShifts = [newShift, ...currentShifts.filter((s: any) => s.status !== "open")];
       localStorage.setItem(tenantKey, JSON.stringify(updatedShifts));
 
       try {
@@ -250,7 +283,9 @@ function AppLayout() {
           status: "open",
           start_time: newShift.start_time
         });
-      } catch(e) {}
+      } catch(e) {
+        console.warn("Supabase shift insert warning:", e);
+      }
       
       window.dispatchEvent(new CustomEvent('shiftOpened'));
       setHasActiveShift(true);

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
+import { generateUUID } from "@/shared/utils/uuid";
 import { printElement } from "@/shared/utils/printHelper";
 import { PrintingSalesView } from "@/domains/printing/SalesView";
 
@@ -203,7 +204,7 @@ export function ReportsView() {
       t.branch_id === reportBranchId ||
       t.branchId === reportBranchId ||
       t.branch_name === (branches?.find(b => b.id === reportBranchId)?.name || activeBranchName) ||
-      (!t.branch_id && !t.branchId && reportBranchId?.startsWith("main"));
+      (!t.branch_id && !t.branchId);
 
     if (!matchesBranch) return false;
 
@@ -296,7 +297,7 @@ export function ReportsView() {
     const amount = parseFloat(formTotalAmount) || 0;
 
     const newTrx = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       tenant_id: user.id,
       created_at: new Date().toISOString(),
       order_type: formOrderType,

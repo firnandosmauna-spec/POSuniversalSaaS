@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
+import { generateUUID, isValidUUID } from "@/shared/utils/uuid";
 import { printElement } from "@/shared/utils/printHelper";
 import { PrintingSalesView } from "@/domains/printing/SalesView";
 import { toast } from "sonner";
@@ -111,8 +112,9 @@ export function SalesView() {
             (async () => {
               for (const trx of newLocalTrx) {
                 try {
+                  const syncId = isValidUUID(trx.id) ? trx.id : generateUUID();
                   const { error: insErr } = await supabase.from("transactions").insert({
-                    id: trx.id,
+                    id: syncId,
                     tenant_id: user.id,
                     created_at: trx.created_at,
                     order_type: trx.order_type || "take_away",
@@ -122,13 +124,17 @@ export function SalesView() {
                     discount_amount: trx.discount_amount || 0,
                     tax_amount: trx.tax_amount || 0,
                     customer_name_custom: trx.customer_name_custom || trx.customer_name || null,
-                    invoice_code: trx.invoice_code || null
+                    invoice_code: trx.invoice_code || null,
+                    branch_id: trx.branch_id || activeBranchId || null,
+                    branch_name: trx.branch_name || activeBranchName || null,
+                    cashier_name: trx.cashier_name || "Kasir",
+                    shift_id: (trx.shift_id && isValidUUID(trx.shift_id)) ? trx.shift_id : null
                   });
 
                   if (!insErr && trx.transaction_items && trx.transaction_items.length > 0) {
                     const itemsToInsert = trx.transaction_items.map((it: any) => ({
                       tenant_id: user.id,
-                      transaction_id: trx.id,
+                      transaction_id: syncId,
                       product_id: it.product_id,
                       product_name: it.product_name,
                       price: it.price || 0,
@@ -241,7 +247,7 @@ export function SalesView() {
       t.branch_id === reportBranchId ||
       t.branchId === reportBranchId ||
       t.branch_name === (branches?.find(b => b.id === reportBranchId)?.name || activeBranchName) ||
-      (!t.branch_id && !t.branchId && reportBranchId?.startsWith("main"));
+      (!t.branch_id && !t.branchId);
 
     if (!matchesBranch) return false;
 
@@ -335,7 +341,7 @@ export function SalesView() {
     const amount = parseFloat(formTotalAmount) || 0;
 
     const newTrx = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       tenant_id: user.id,
       created_at: new Date().toISOString(),
       order_type: formOrderType,

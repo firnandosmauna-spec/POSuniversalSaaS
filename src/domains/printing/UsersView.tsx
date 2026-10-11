@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { supabase } from "@/shared/lib/supabase";
+import { generateUUID } from "@/shared/utils/uuid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -210,7 +211,7 @@ export function PrintingUsersView() {
       });
     } else {
       const newStaff: PrintingStaffUser = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         tenant_id: user ? user.id : "tenant_demo",
         name: formName.trim(),
         email: formEmail.trim(),

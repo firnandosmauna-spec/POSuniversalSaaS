@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { supabase } from "@/shared/lib/supabase";
+import { generateUUID, isValidUUID } from "@/shared/utils/uuid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -198,11 +199,7 @@ export function PrintingProductsView() {
     let updated: PrintingMaterial[];
     
     // Ensure currentId is a valid UUID, otherwise Supabase throws 400 Bad Request
-    let currentId = editingMaterial ? editingMaterial.id : crypto.randomUUID();
-    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-    if (!uuidRegex.test(currentId)) {
-      currentId = crypto.randomUUID();
-    }
+    let currentId = (editingMaterial && isValidUUID(editingMaterial.id)) ? editingMaterial.id : generateUUID();
 
     if (editingMaterial) {
       // Edit

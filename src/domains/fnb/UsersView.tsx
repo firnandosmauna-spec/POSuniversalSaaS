@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { supabase } from "@/shared/lib/supabase";
+import { generateUUID } from "@/shared/utils/uuid";
 import { PrintingUsersView } from "@/domains/printing/UsersView";
 
 export type StaffRole = "Owner Tenant" | "Manager Cabang" | "Kasir" | "Koki / Operator";
@@ -282,9 +283,8 @@ export function UsersView() {
           }
         }
       } else {
-        // Create new staff
-        const fallbackUUID = () => `staff_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        const newStaffId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : fallbackUUID();
+        // Create new staff with valid UUID
+        const newStaffId = generateUUID();
         const newStaffItem: StaffUser = {
           id: newStaffId,
           tenant_id: user.id,

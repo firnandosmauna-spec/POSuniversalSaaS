@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { generateUUID } from "@/shared/utils/uuid";
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
 
@@ -355,7 +356,7 @@ export function KitchenView() {
       const saved = localStorage.getItem(lsKey);
       const currentTrx = saved ? JSON.parse(saved) : [];
       const dummyTrx = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         created_at: new Date().toISOString(),
         order_type: "dine_in",
         status: "completed",

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { generateUUID } from "../utils/uuid";
 
 export type BusinessType = 
   | "CAFE" 
@@ -320,7 +321,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // 1. Initial Staff Account
       const initialStaff = [{
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         tenant_id: tenantId,
         name: name || "Owner Utama",
         email: email || "owner@pos.id",

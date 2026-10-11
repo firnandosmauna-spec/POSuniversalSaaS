@@ -149,7 +149,7 @@ export function DashboardView() {
       tx.branch_id === activeBranchId ||
       tx.branchId === activeBranchId ||
       tx.branch_name === activeBranchName ||
-      (!tx.branch_id && !tx.branchId && activeBranchId?.startsWith("main"));
+      (!tx.branch_id && !tx.branchId);
 
     if (!matchesBranch) return false;
     if (!tx.created_at) return false;

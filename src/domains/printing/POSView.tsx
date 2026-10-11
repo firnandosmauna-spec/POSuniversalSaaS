@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { supabase } from "@/shared/lib/supabase";
 import { generateInvoiceCode, getInvoiceSettings } from "@/shared/utils/invoiceGenerator";
+import { generateUUID } from "@/shared/utils/uuid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -544,7 +545,7 @@ const { user, activeBranchId, activeBranchName } = useAuth();
       const dpVal = paymentType === "DP" ? Math.min(dpInput, cartTotalAmount) : cartTotalAmount;
       const remainingVal = Math.max(0, cartTotalAmount - dpVal);
 
-      const newTxId = crypto.randomUUID();
+      const newTxId = generateUUID();
 
       const newJobOrder: PrintingJobOrder = {
         id: newTxId,

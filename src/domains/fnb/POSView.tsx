@@ -19,6 +19,7 @@ import {
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { getInvoiceSettings, generateInvoiceCode } from "@/shared/utils/invoiceGenerator";
+import { generateUUID, isValidUUID } from "@/shared/utils/uuid";
 import BarcodeScannerModal from "@/components/pos/BarcodeScannerModal";
 import { Capacitor } from "@capacitor/core";
 
@@ -62,7 +63,7 @@ type CartItem = {
 };
 
 export default function FnbPOSView() {
-  const { user } = useAuth();
+  const { user, activeBranchId, activeBranchName } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -248,9 +249,16 @@ export default function FnbPOSView() {
     if (!user) return;
     let foundShift: any = null;
     try {
-      const { data, error } = await supabase.from("cashier_shifts").select("*").eq("tenant_id", user.id).eq("status", "open").maybeSingle();
-      if (!error && data) {
-        foundShift = data;
+      const { data, error } = await supabase
+        .from("cashier_shifts")
+        .select("*")
+        .eq("tenant_id", user.id)
+        .eq("status", "open")
+        .order("start_time", { ascending: false })
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        foundShift = data[0];
       }
     } catch (error) {}
 
@@ -260,6 +268,10 @@ export default function FnbPOSView() {
         if (saved) {
           const list = JSON.parse(saved);
           foundShift = list.find((s: any) => s.status === "open") || null;
+          if (foundShift && !isValidUUID(foundShift.id)) {
+            foundShift.id = generateUUID();
+            localStorage.setItem(`pos_tenant_${user.id}_shifts`, JSON.stringify(list));
+          }
         }
       } catch (e) {}
     }
@@ -288,7 +300,7 @@ export default function FnbPOSView() {
 
       // Merge with localStorage transactions (offline/fallback POS transactions)
       try {
-        const saved = localStorage.getItem(`pos_transactions_${user.id}`);
+        const saved = localStorage.getItem(`pos_transactions_${user.id}`) || localStorage.getItem(`pos_tenant_${user.id}_transactions`);
         if (saved) {
           const localTrx = JSON.parse(saved);
           const existingIds = new Set(fetchedTransactions.map((o: any) => o.id));
@@ -461,7 +473,10 @@ export default function FnbPOSView() {
           const { data, error: updateError } = await supabase
             .from("transactions")
             .update({
-              shift_id: activeShift ? activeShift.id : null,
+              shift_id: (activeShift && isValidUUID(activeShift.id)) ? activeShift.id : null,
+              branch_id: activeBranchId || null,
+              branch_name: activeBranchName || null,
+              cashier_name: activeShift?.cashier_name || user.name || "Kasir",
               order_type: orderType,
               table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
               customer_id: selectedCustomerId || null,
@@ -478,11 +493,15 @@ export default function FnbPOSView() {
         }
 
         if (!transaction) {
+          const validShiftId = (activeShift && isValidUUID(activeShift.id)) ? activeShift.id : null;
           const { data, error: trxError } = await supabase
             .from("transactions")
             .insert({
               tenant_id: user.id,
-              shift_id: activeShift ? activeShift.id : null,
+              shift_id: validShiftId,
+              branch_id: activeBranchId || null,
+              branch_name: activeBranchName || null,
+              cashier_name: activeShift?.cashier_name || user.name || "Kasir",
               order_type: orderType,
               table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
               customer_id: selectedCustomerId || null,
@@ -503,34 +522,41 @@ export default function FnbPOSView() {
                 .from("transactions")
                 .insert({
                   tenant_id: user.id,
-                  shift_id: activeShift ? activeShift.id : null,
-                order_type: orderType,
-                table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
-                customer_id: selectedCustomerId || null,
-                total_amount: total,
-                discount_amount: discountAmount,
-                tax_amount: taxAmount,
-                payment_method: isHold ? "none" : method,
-                status: isHold ? "hold" : "completed"
-              })
-              .select()
-              .single();
-            transaction = retryData;
+                  shift_id: validShiftId,
+                  branch_id: activeBranchId || null,
+                  branch_name: activeBranchName || null,
+                  cashier_name: activeShift?.cashier_name || user.name || "Kasir",
+                  order_type: orderType,
+                  table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
+                  customer_id: selectedCustomerId || null,
+                  total_amount: total,
+                  discount_amount: discountAmount,
+                  tax_amount: taxAmount,
+                  payment_method: isHold ? "none" : method,
+                  status: isHold ? "hold" : "completed"
+                })
+                .select()
+                .single();
+              transaction = retryData;
+            }
+          } else {
+            transaction = data;
           }
-        } else {
-          transaction = data;
-        }
-      } // end if (!transaction)
-    } catch (e) {
-      console.error("Supabase transaction insert fallback:", e);
-    }
+        } // end if (!transaction)
+      } catch (e) {
+        console.error("Supabase transaction insert fallback:", e);
+      }
 
       // Fallback local transaction object if DB table missing or offline
       if (!transaction) {
         transaction = {
-          id: (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`),
+          id: generateUUID(),
           created_at: new Date().toISOString(),
           tenant_id: user.id,
+          shift_id: (activeShift && isValidUUID(activeShift.id)) ? activeShift.id : null,
+          branch_id: activeBranchId || null,
+          branch_name: activeBranchName || null,
+          cashier_name: activeShift?.cashier_name || user.name || "Kasir",
           total_amount: total,
           order_type: orderType,
           table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,

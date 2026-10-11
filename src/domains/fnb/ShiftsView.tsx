@@ -14,6 +14,7 @@ import { supabase } from "@/shared/lib/supabase";
 import { printWithWebBluetoothSafe } from "@/shared/lib/bluetoothPrinterSafe";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { printElement } from "@/shared/utils/printHelper";
+import { generateUUID, isValidUUID } from "@/shared/utils/uuid";
 
 type Shift = {
   id: string;
@@ -100,11 +101,38 @@ export function ShiftsView() {
 
   const tenantStorageKey = user ? `pos_tenant_${user.id}_shifts` : "pos_tenant_demo_shifts";
 
+  const isSameDate = (d1: string | Date, d2: string | Date) => {
+    const a = new Date(d1);
+    const b = new Date(d2);
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  };
+
   const fetchShifts = async () => {
     if (!user) return;
     setIsLoading(true);
     try {
       let loadedShifts: Shift[] = [];
+      let localShifts: Shift[] = [];
+      
+      const saved = localStorage.getItem(tenantStorageKey);
+      if (saved) {
+        try {
+          localShifts = JSON.parse(saved) as Shift[];
+          // Migrate any invalid local UUIDs to valid UUIDs
+          let migrated = false;
+          localShifts.forEach(s => {
+            if (!isValidUUID(s.id)) {
+              s.id = generateUUID();
+              migrated = true;
+            }
+          });
+          if (migrated) {
+            localStorage.setItem(tenantStorageKey, JSON.stringify(localShifts));
+          }
+        } catch (e) {}
+      }
+
+      // Fetch from Supabase
       const { data, error } = await supabase
         .from("cashier_shifts")
         .select("*")
@@ -112,12 +140,46 @@ export function ShiftsView() {
         .order("start_time", { ascending: false });
 
       if (!error && data && data.length > 0) {
-        loadedShifts = data as Shift[];
+        const dbShifts = data as Shift[];
+        const dbIds = new Set(dbShifts.map(s => s.id));
+        // Include any local shift not yet in DB
+        const extraLocal = localShifts.filter(s => !dbIds.has(s.id));
+        loadedShifts = [...dbShifts, ...extraLocal];
         localStorage.setItem(tenantStorageKey, JSON.stringify(loadedShifts));
+
+        // Auto-sync any local shift that was missing from Supabase
+        extraLocal.forEach(async (ls) => {
+          try {
+            await supabase.from("cashier_shifts").upsert({
+              id: ls.id,
+              tenant_id: user.id,
+              cashier_name: ls.cashier_name,
+              starting_cash: ls.starting_cash || 0,
+              expected_ending_cash: ls.expected_ending_cash,
+              actual_ending_cash: ls.actual_ending_cash,
+              status: ls.status,
+              start_time: ls.start_time,
+              end_time: ls.end_time
+            });
+          } catch(e) {}
+        });
       } else {
-        const saved = localStorage.getItem(tenantStorageKey);
-        if (saved) {
-          loadedShifts = JSON.parse(saved) as Shift[];
+        loadedShifts = localShifts;
+        // Auto-push any local open shift to Supabase if Supabase has 0 shifts
+        const openLocal = localShifts.find(s => s.status === "open");
+        if (openLocal) {
+          (async () => {
+            try {
+              await supabase.from("cashier_shifts").upsert({
+                id: openLocal.id,
+                tenant_id: user.id,
+                cashier_name: openLocal.cashier_name,
+                starting_cash: openLocal.starting_cash || 0,
+                status: "open",
+                start_time: openLocal.start_time
+              });
+            } catch(e) {}
+          })();
         }
       }
       
@@ -131,13 +193,15 @@ export function ShiftsView() {
       console.warn("Error fetching shifts from Supabase (using local fallback):", error);
       const saved = localStorage.getItem(tenantStorageKey);
       if (saved) {
-        const loadedShifts = JSON.parse(saved) as Shift[];
-        setShifts(loadedShifts);
-        const openShift = loadedShifts.find(s => s.status === "open");
-        setActiveShift(openShift || null);
-        if (openShift) {
-          fetchActiveShiftStats(openShift);
-        }
+        try {
+          const loadedShifts = JSON.parse(saved) as Shift[];
+          setShifts(loadedShifts);
+          const openShift = loadedShifts.find(s => s.status === "open");
+          setActiveShift(openShift || null);
+          if (openShift) {
+            fetchActiveShiftStats(openShift);
+          }
+        } catch(e) {}
       }
     } finally {
       setIsLoading(false);
@@ -164,9 +228,7 @@ export function ShiftsView() {
     setIsSubmitting(true);
     
     try {
-      const safeId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
-        ? crypto.randomUUID() 
-        : 'shift-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+      const safeId = generateUUID();
         
       const newShift: Shift = {
         id: safeId,
@@ -180,7 +242,7 @@ export function ShiftsView() {
       };
 
       // 1. Update local state immediately for 100% reliable UI operation
-      const updatedShifts = [newShift, ...shifts];
+      const updatedShifts = [newShift, ...shifts.filter(s => s.status !== "open")];
       setShifts(updatedShifts);
       setActiveShift(newShift);
       localStorage.setItem(tenantStorageKey, JSON.stringify(updatedShifts));
@@ -189,7 +251,7 @@ export function ShiftsView() {
       setCashierName("");
       setStartingCash("");
 
-      // 2. Sync to Supabase asynchronously
+      // 2. Sync to Supabase asynchronously with guaranteed valid UUID
       try {
         await supabase
           .from("cashier_shifts")
@@ -204,6 +266,9 @@ export function ShiftsView() {
       } catch (error) {
         console.warn("Supabase shift insert optional sync failure:", error);
       }
+
+      window.dispatchEvent(new CustomEvent('shiftOpened'));
+      toast.success("Shift kasir berhasil dibuka.");
     } catch (e) {
       console.error("Error opening shift:", e);
       toast.error("Terjadi kesalahan saat membuka shift.");
@@ -219,6 +284,8 @@ export function ShiftsView() {
       let totalNonCashSales = 0;
       let totalExpenses = 0;
 
+      const shiftStart = new Date(shift.start_time);
+
       // 1. Fetch transactions
       try {
         const { data, error } = await supabase
@@ -229,7 +296,11 @@ export function ShiftsView() {
 
         if (!error && data) {
           data.forEach((curr: any) => {
-            const isThisShift = curr.shift_id === shift.id || (new Date(curr.created_at) >= new Date(shift.start_time));
+            const isThisShift = 
+              curr.shift_id === shift.id || 
+              (new Date(curr.created_at) >= shiftStart) ||
+              (!curr.shift_id && isSameDate(curr.created_at, shift.start_time) && (!shift.end_time || new Date(curr.created_at) <= new Date(shift.end_time)));
+            
             if (isThisShift) {
               const amount = Number(curr.total_amount || 0);
               const isCash = curr.payment_method?.toLowerCase() === "cash" || curr.payment_method?.toLowerCase() === "tunai";
@@ -250,7 +321,11 @@ export function ShiftsView() {
           if (savedTrx) {
             const trxs = JSON.parse(savedTrx);
             trxs.forEach((curr: any) => {
-              const isThisShift = curr.shift_id === shift.id || (new Date(curr.created_at) >= new Date(shift.start_time));
+              const isThisShift = 
+                curr.shift_id === shift.id || 
+                (new Date(curr.created_at) >= shiftStart) ||
+                (!curr.shift_id && isSameDate(curr.created_at, shift.start_time) && (!shift.end_time || new Date(curr.created_at) <= new Date(shift.end_time)));
+              
               if (isThisShift && curr.status === "completed") {
                 const amount = Number(curr.total_amount || curr.total || 0);
                 const isCash = curr.payment_method?.toLowerCase() === "cash" || curr.payment_method?.toLowerCase() === "tunai";
@@ -350,6 +425,8 @@ export function ShiftsView() {
 
     // Buka otomatis pratinjau cetak struk
     openShiftReportPrint(updatedShift);
+    window.dispatchEvent(new CustomEvent('shiftClosed'));
+    toast.success("Shift kasir berhasil ditutup.");
 
     // 2. Sync to Supabase asynchronously
     try {
