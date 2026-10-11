@@ -17,6 +17,7 @@ type Product = {
   cost_price: number;
   price: number;
   stock: number | null;
+  min_stock?: number;
   category: string | null;
   image_url: string | null;
   status: string;
@@ -75,11 +76,28 @@ export function ProductsView() {
     }
   };
 
+  const getLocalMinStocks = (): Record<string, number> => {
+    try {
+      const saved = localStorage.getItem("pos_product_min_stocks");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  };
+
   const saveLocalStation = (productId: string, station: "dapur" | "bar") => {
     try {
       const current = getLocalStations();
       current[productId] = station;
       localStorage.setItem("pos_product_stations", JSON.stringify(current));
+    } catch {}
+  };
+
+  const saveLocalMinStock = (productId: string, minStockVal: number) => {
+    try {
+      const current = getLocalMinStocks();
+      current[productId] = minStockVal;
+      localStorage.setItem("pos_product_min_stocks", JSON.stringify(current));
     } catch {}
   };
 
@@ -106,6 +124,7 @@ export function ProductsView() {
     if (!user) return;
     setIsLoading(true);
     const localStations = getLocalStations();
+    const localMinStocks = getLocalMinStocks();
     let loadedProducts: Product[] = [];
 
     try {
@@ -118,6 +137,7 @@ export function ProductsView() {
       if (!error && data && data.length > 0) {
         loadedProducts = data.map((p: any) => ({
           ...p,
+          min_stock: p.min_stock !== undefined ? p.min_stock : (localMinStocks[p.id] || 0),
           target_station: p.target_station || localStations[p.id] || (isBarName(p.name) ? "bar" : "dapur")
         }));
         localStorage.setItem(tenantProductKey, JSON.stringify(loadedProducts));
@@ -222,7 +242,7 @@ export function ProductsView() {
       setTrackStock(product.stock !== null && product.stock !== -1);
       setActiveTab("info");
       setStockAdjustment("recount");
-      setMinStock("0");
+      setMinStock(product.min_stock !== undefined ? product.min_stock.toString() : "0");
       setStockNotes("");
       setIsHistoryOpen(false);
     } else {
@@ -308,6 +328,7 @@ export function ProductsView() {
         cost_price: parseFloat(costPrice) || 0,
         price: parseFloat(price) || 0,
         stock: finalStock,
+        min_stock: parseInt(minStock, 10) || 0,
         category: category || "Umum",
         image_url: imageUrl,
         status,
@@ -363,6 +384,7 @@ export function ProductsView() {
       setProducts(updatedProductsList);
       localStorage.setItem(tenantProductKey, JSON.stringify(updatedProductsList));
       saveLocalStation(productId, targetStation);
+      saveLocalMinStock(productId, parseInt(minStock, 10) || 0);
 
       // 2. Async sync to Supabase
       if (user && !user.id.includes("tenant_")) {

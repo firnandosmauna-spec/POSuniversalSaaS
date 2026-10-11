@@ -51,6 +51,7 @@ type Product = {
   image_url: string | null;
   category: string | null;
   stock: number | null;
+  min_stock?: number;
 };
 
 type CartItem = {
@@ -145,6 +146,15 @@ export default function FnbPOSView() {
   const total = taxableAmount + taxAmount;
 
 
+  const getLocalMinStocks = (): Record<string, number> => {
+    try {
+      const saved = localStorage.getItem("pos_product_min_stocks");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  };
+
   const fetchProducts = async () => {
     if (!user) return;
     setIsLoading(true);
@@ -158,22 +168,34 @@ export default function FnbPOSView() {
         .eq("status", "active")
         .order("name", { ascending: true });
 
+      const localMinStocks = getLocalMinStocks();
+
       if (!error && data && data.length > 0) {
-        loadedProducts = data as Product[];
+        loadedProducts = (data as any[]).map(p => ({
+          ...p,
+          min_stock: p.min_stock !== undefined ? p.min_stock : (localMinStocks[p.id] || 0)
+        }));
         localStorage.setItem(`pos_tenant_${user.id}_products`, JSON.stringify(data));
       } else {
         const saved = localStorage.getItem(`pos_tenant_${user.id}_products`);
         if (saved) {
           const list = JSON.parse(saved);
-          loadedProducts = list.filter((p: any) => p.status === "active" || !p.status);
+          loadedProducts = list.filter((p: any) => p.status === "active" || !p.status).map((p: any) => ({
+            ...p,
+            min_stock: p.min_stock !== undefined ? p.min_stock : (localMinStocks[p.id] || 0)
+          }));
         }
       }
     } catch (error) {
       console.warn("Error fetching products from Supabase (loading local tenant products):", error);
       const saved = localStorage.getItem(`pos_tenant_${user.id}_products`);
       if (saved) {
+        const localMinStocks = getLocalMinStocks();
         const list = JSON.parse(saved);
-        loadedProducts = list.filter((p: any) => p.status === "active" || !p.status);
+        loadedProducts = list.filter((p: any) => p.status === "active" || !p.status).map((p: any) => ({
+          ...p,
+          min_stock: p.min_stock !== undefined ? p.min_stock : (localMinStocks[p.id] || 0)
+        }));
       }
     } finally {
       setProducts(loadedProducts);
@@ -1018,7 +1040,7 @@ export default function FnbPOSView() {
   
                     <div className="w-full text-left pl-0.5 mt-1">
                       <p className="font-medium text-xs text-slate-700 leading-tight mb-0.5 line-clamp-2">{product.name.toLowerCase()}</p>
-                      <p className="font-semibold text-[11px] text-slate-400 leading-none">Stok: {product.stock === null || product.stock === -1 ? '∞' : product.stock}</p>
+                      <p className={`font-semibold text-[11px] leading-none ${(product.stock !== null && product.stock !== -1 && product.min_stock && product.stock <= product.min_stock && product.stock > 0) ? "text-amber-500" : "text-slate-400"}`}>Stok: {product.stock === null || product.stock === -1 ? '∞' : product.stock}</p>
                       <p className="font-bold text-sm text-slate-800 mt-0.5">{formatRupiah(product.price)}</p>
                     </div>
                   </div>
@@ -1030,13 +1052,19 @@ export default function FnbPOSView() {
                       disabled={product.stock === 0}
                       className={`relative w-16 h-16 shrink-0 rounded-lg bg-slate-100 overflow-hidden ${product.stock === 0 ? "opacity-50 cursor-not-allowed" : "active:scale-95 cursor-pointer"}`}
                     >
-                      {product.stock === 0 && (
+                      {product.stock === 0 ? (
                         <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-[1px] flex flex-col items-center justify-center">
                           <span className="bg-red-500 text-white font-bold text-[8px] px-1 py-0.5 rounded shadow-sm transform -rotate-12">
                             HABIS
                           </span>
                         </div>
-                      )}
+                      ) : (product.stock !== null && product.stock !== -1 && product.min_stock && product.stock <= product.min_stock) ? (
+                        <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center justify-center">
+                          <span className="bg-amber-500 text-white font-bold text-[9px] py-0.5 w-full text-center shadow-sm">
+                            SISA {product.stock}
+                          </span>
+                        </div>
+                      ) : null}
                       {product.image_url ? (
                         <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                       ) : (
@@ -1051,7 +1079,7 @@ export default function FnbPOSView() {
                     {/* Details */}
                     <div className="flex-1 flex flex-col justify-center min-w-0 py-0.5" onClick={() => qty === 0 && product.stock !== 0 ? addToCart(product) : null}>
                       <p className="font-bold text-xs text-slate-700 truncate mb-0.5 leading-tight cursor-pointer">{product.name}</p>
-                      <p className="font-medium text-[10px] text-slate-400 mb-1 leading-none">Stok: {product.stock === null || product.stock === -1 ? '∞' : product.stock}</p>
+                      <p className={`font-medium text-[10px] mb-1 leading-none ${(product.stock !== null && product.stock !== -1 && product.min_stock && product.stock <= product.min_stock && product.stock > 0) ? "text-amber-500" : "text-slate-400"}`}>Stok: {product.stock === null || product.stock === -1 ? '∞' : product.stock}</p>
                       <p className="font-extrabold text-sm text-slate-800 leading-none">{formatRupiah(product.price)}</p>
                     </div>
                     
