@@ -408,12 +408,12 @@ export default function FnbPOSView() {
   const handleCheckout = () => {
     const isKasir = user?.role?.toLowerCase().includes("kasir");
     if (isKasir && !activeShift) {
-      alert("Silakan buka shift kasir terlebih dahulu sebelum melakukan transaksi!");
+      toast.error("Silakan buka shift kasir terlebih dahulu sebelum melakukan transaksi!");
       return;
     }
     if (cart.length === 0) return;
     if (orderType === "dine_in" && !selectedTable) {
-      alert("Pilih meja terlebih dahulu untuk Dine In!");
+      toast.error("Pilih meja terlebih dahulu untuk Dine In!");
       return;
     }
     setPaymentMethod("cash");
@@ -607,7 +607,7 @@ export default function FnbPOSView() {
       }
       
       if (isHold) {
-        alert("Pesanan berhasil di-Hold.");
+        toast.success("Pesanan berhasil di-Hold.");
         clearCart();
         setDiscount(0);
         setOrderType("take_away");
@@ -639,7 +639,7 @@ export default function FnbPOSView() {
       
     } catch (error: any) {
       console.error("Error checkout:", error);
-      alert("Gagal melakukan pembayaran: " + error.message);
+      toast.error("Gagal melakukan pembayaran: " + error.message);
     } finally {
       setIsCheckingOut(false);
     }
@@ -709,7 +709,7 @@ export default function FnbPOSView() {
       const currentItems = saved ? JSON.parse(saved) : [];
       localStorage.setItem("pos_store_expenses", JSON.stringify([newItem, ...currentItems]));
 
-      alert("Pencatatan belanja toko berhasil disimpan!");
+      toast.success("Pencatatan belanja toko berhasil disimpan!");
       setIsExpenseModalOpen(false);
       setExpenseTitle("");
       setExpenseAmount("");
@@ -720,7 +720,7 @@ export default function FnbPOSView() {
       const currentItems = saved ? JSON.parse(saved) : [];
       localStorage.setItem("pos_store_expenses", JSON.stringify([newItem, ...currentItems]));
 
-      alert("Pencatatan belanja toko berhasil disimpan!");
+      toast.success("Pencatatan belanja toko berhasil disimpan!");
       setIsExpenseModalOpen(false);
       setExpenseTitle("");
       setExpenseAmount("");
@@ -1243,7 +1243,7 @@ export default function FnbPOSView() {
             </button>
             
             <button 
-              onClick={() => orderType === "dine_in" ? setIsTableDrawerOpen(true) : alert("Pilih tipe pesanan 'Makan di Tempat' untuk memilih meja.")}
+              onClick={() => orderType === "dine_in" ? setIsTableDrawerOpen(true) : toast.error("Pilih tipe pesanan 'Makan di Tempat' untuk memilih meja.")}
               className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-lg relative overflow-hidden transition-all ${(orderType === "dine_in" && selectedTable) ? "bg-cyan-50/70 text-slate-800" : "bg-slate-50/80 text-slate-500 hover:bg-slate-100"}`}
             >
               <LayoutDashboard className={`size-4 ${(orderType === "dine_in" && selectedTable) ? "text-slate-800" : "text-slate-500"}`} />
