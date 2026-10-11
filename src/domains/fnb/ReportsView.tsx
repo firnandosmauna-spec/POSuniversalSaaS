@@ -478,8 +478,8 @@ export function ReportsView() {
             </div>
           </div>
 
-          <div className="flex flex-row justify-between w-full">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 md:pb-0 flex-1">
+          <div className="flex flex-col md:flex-row justify-between w-full gap-3">
+            <div className="flex flex-wrap items-center gap-2 flex-1">
               <div className="shrink-0 relative flex items-center justify-between bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-medium w-auto cursor-pointer">
                 <div className="flex items-center gap-1.5 text-slate-700">
                   <span>{startDate ? formatShortDate(startDate) : "Mulai"}</span>
