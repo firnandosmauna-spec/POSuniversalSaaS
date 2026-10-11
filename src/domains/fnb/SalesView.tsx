@@ -29,6 +29,7 @@ import {
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { PrintingSalesView } from "@/domains/printing/SalesView";
+import { toast } from "sonner";
 
 export function SalesView() {
   const { user, activeBranchId, activeBranchName, branches } = useAuth();
@@ -327,14 +328,14 @@ export function SalesView() {
 
       if (error) throw error;
 
-      alert("Transaksi manual berhasil disimpan!");
+      toast.success("Transaksi manual berhasil disimpan!");
       setIsCreateModalOpen(false);
       resetForm();
       fetchTransactions();
     } catch (err: any) {
       console.error("Error creating transaction:", err);
       setTransactions((prev) => [newTrx, ...prev]);
-      alert("Transaksi manual berhasil dicatat!");
+      toast.success("Transaksi manual berhasil dicatat!");
       setIsCreateModalOpen(false);
       resetForm();
     } finally {
@@ -372,7 +373,7 @@ export function SalesView() {
 
       if (error) throw error;
 
-      alert("Transaksi berhasil diperbarui!");
+      toast.success("Transaksi berhasil diperbarui!");
       setIsEditModalOpen(false);
       setEditingTransaction(null);
       fetchTransactions();
@@ -391,7 +392,7 @@ export function SalesView() {
             : t
         )
       );
-      alert("Transaksi berhasil diperbarui!");
+      toast.success("Transaksi berhasil diperbarui!");
       setIsEditModalOpen(false);
       setEditingTransaction(null);
     } finally {
@@ -407,12 +408,12 @@ export function SalesView() {
       const { error } = await supabase.from("transactions").delete().eq("id", id);
       if (error) throw error;
 
-      alert("Transaksi berhasil dihapus.");
+      toast.success("Transaksi berhasil dihapus.");
       setConfirmDeleteId(null);
       fetchTransactions();
     } catch (err: any) {
       console.error("Error deleting transaction:", err);
-      alert("Gagal menghapus transaksi. Pastikan internet stabil atau hapus rincian pesanan terlebih dahulu.");
+      toast.error("Gagal menghapus transaksi. Pastikan internet stabil.");
     }
   };
 
