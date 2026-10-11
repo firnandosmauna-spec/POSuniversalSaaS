@@ -32,7 +32,7 @@ export function ProductsView() {
   }
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeView, setActiveView] = useState<"menu" | "daftar" | "kategori" | "diskon" | "tipe_pesanan">("menu");
+  const [activeView, setActiveView] = useState<"menu" | "daftar" | "kategori" | "diskon" | "tipe_pesanan">("daftar");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -487,20 +487,51 @@ export function ProductsView() {
     return (
       <div className="flex flex-col h-full bg-white md:bg-transparent overflow-hidden">
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center h-14 px-4 bg-white border-b border-slate-100 shrink-0">
-          <button onClick={() => document.dispatchEvent(new CustomEvent('toggleSidebar'))} className="p-2 -ml-2 mr-2 text-slate-800">
-            <Menu className="size-5" />
-          </button>
-          <h1 className="font-extrabold text-slate-900 text-[17px]">Kelola Produk</h1>
+        <div className="md:hidden flex items-center justify-between h-14 px-4 bg-white border-b border-slate-100 shrink-0">
+          <div className="flex items-center">
+            <button onClick={() => document.dispatchEvent(new CustomEvent('toggleSidebar'))} className="p-2 -ml-2 mr-2 text-slate-800">
+              <Menu className="size-5" />
+            </button>
+            <h1 className="font-extrabold text-slate-900 text-[17px]">Kelola Produk</h1>
+          </div>
+          <Button 
+            onClick={() => handleOpenDialog()}
+            className="bg-[#0b172a] text-white hover:bg-slate-800 rounded-xl h-9 px-3 font-bold flex items-center gap-1.5 text-xs shadow-sm"
+          >
+            <Plus className="size-3.5" />
+            <span>Tambah</span>
+          </Button>
         </div>
 
         {/* Desktop Header */}
         <div className="hidden md:flex mb-4 md:mb-6 items-center justify-between gap-2 px-6 pt-6">
           <h1 className="font-display text-xl md:text-2xl font-bold text-slate-900">Kelola Produk</h1>
+          <Button 
+            onClick={() => handleOpenDialog()}
+            className="bg-[#0b172a] text-white hover:bg-slate-800 rounded-xl h-10 md:h-11 px-4 md:px-5 font-bold flex items-center gap-2 text-xs md:text-sm shadow-sm"
+          >
+            <Plus className="size-4" />
+            <span>Tambah Produk</span>
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-2 md:px-6">
           <div className="bg-white md:border md:border-slate-100 md:shadow-sm md:rounded-2xl flex flex-col">
+            <button 
+              onClick={() => handleOpenDialog()} 
+              className="flex items-center justify-between p-4 border-b border-slate-100 bg-emerald-50/50 hover:bg-emerald-50 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="size-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
+                  <Plus className="size-5" />
+                </div>
+                <div>
+                  <span className="text-[15px] font-bold text-emerald-800 block">Tambah Produk Baru</span>
+                  <span className="text-xs text-emerald-600">Buat item menu, harga, gambar, dan stok</span>
+                </div>
+              </div>
+              <ChevronRight className="size-4 text-emerald-600" />
+            </button>
             <button onClick={() => setActiveView("daftar")} className="flex items-center justify-between p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors">
               <span className="text-[15px] font-medium text-slate-700">Daftar Produk</span>
               <div className="flex items-center gap-2 text-slate-400">
@@ -650,30 +681,51 @@ export function ProductsView() {
   }
 
   return (
-    <div className="p-0 md:p-6 pb-24 md:pb-6 h-full flex flex-col bg-slate-50/50 md:bg-transparent">
-        <div className="flex items-center h-14 px-4 bg-white border-b border-slate-100 md:hidden shrink-0">
-          <button onClick={() => setActiveView("menu")} className="p-2 -ml-2 mr-2 text-slate-800">
-            <ChevronLeft className="size-6" />
-          </button>
-          <h1 className="font-extrabold text-slate-900 text-[17px] flex-1">Daftar Produk</h1>
+    <div className="p-0 md:p-6 pb-24 md:pb-6 h-full flex flex-col bg-slate-50/50 md:bg-transparent relative">
+        <div className="flex items-center justify-between h-14 px-4 bg-white border-b border-slate-100 md:hidden shrink-0">
+          <div className="flex items-center">
+            <button onClick={() => setActiveView("menu")} className="p-2 -ml-2 mr-2 text-slate-800">
+              <ChevronLeft className="size-6" />
+            </button>
+            <h1 className="font-extrabold text-slate-900 text-[17px]">Daftar Produk</h1>
+          </div>
+          <Button 
+            onClick={() => handleOpenDialog()}
+            className="bg-[#0b172a] text-white hover:bg-slate-800 rounded-xl h-9 px-3 font-bold flex items-center gap-1.5 text-xs shadow-sm"
+          >
+            <Plus className="size-3.5" />
+            <span>Tambah</span>
+          </Button>
         </div>
 
         <div className="hidden md:flex mb-4 md:mb-6 items-center justify-between gap-2">
           <div className="flex items-center gap-3">
-            <button onClick={() => setActiveView("menu")} className="p-2 -ml-2 bg-white rounded-full hover:bg-slate-100 text-slate-600 shadow-sm border border-slate-200">
+            <button onClick={() => setActiveView("menu")} className="p-2 -ml-2 bg-white rounded-full hover:bg-slate-100 text-slate-600 shadow-sm border border-slate-200" title="Menu Kategori & Opsi Lain">
               <ChevronLeft className="size-5" />
             </button>
             <h1 className="font-display text-xl md:text-2xl font-bold text-slate-900">
               {getPageTitle()}
             </h1>
+            <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">
+              {products.length} Produk
+            </span>
           </div>
-          <Button 
-            onClick={() => handleOpenDialog()}
-            className="bg-[#0b172a] text-white hover:bg-slate-800 rounded-xl h-10 md:h-11 px-4 md:px-5 font-bold flex items-center gap-2 text-xs md:text-sm shadow-sm"
-          >
-            <Plus className="size-4" />
-            <span>Tambah Produk</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setActiveView("menu")}
+              className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl h-10 md:h-11 px-3 md:px-4 font-bold text-xs md:text-sm"
+            >
+              Kategori & Opsi
+            </Button>
+            <Button 
+              onClick={() => handleOpenDialog()}
+              className="bg-[#0b172a] text-white hover:bg-slate-800 rounded-xl h-10 md:h-11 px-4 md:px-5 font-bold flex items-center gap-2 text-xs md:text-sm shadow-sm"
+            >
+              <Plus className="size-4" />
+              <span>Tambah Produk</span>
+            </Button>
+          </div>
         </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
@@ -1081,14 +1133,21 @@ export function ProductsView() {
           <Loader2 className="size-8 text-[#0b172a] animate-spin" />
         </div>
       ) : products.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 md:p-8 text-center text-slate-500 shadow-sm flex-1 flex flex-col items-center justify-center">
-          <Package className="mx-auto mb-4 size-8 md:size-12 text-slate-300" />
-          <h2 className="mb-2 font-display text-base md:text-lg font-semibold text-slate-700">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 md:p-12 text-center text-slate-500 shadow-sm flex-1 flex flex-col items-center justify-center m-4 md:m-0">
+          <Package className="mx-auto mb-4 size-10 md:size-14 text-slate-300" />
+          <h2 className="mb-2 font-display text-base md:text-xl font-bold text-slate-800">
             Katalog Masih Kosong
           </h2>
-          <p className="text-[10px] md:text-sm max-w-md mx-auto">
-            Mulai tambahkan produk, menu makanan, atau minuman beserta harga dan gambarnya ke dalam katalog.
+          <p className="text-xs md:text-sm text-slate-500 max-w-md mx-auto mb-5 leading-relaxed">
+            Mulai tambahkan produk, menu makanan, atau minuman beserta harga, foto, dan stok ke dalam katalog POS Anda.
           </p>
+          <Button 
+            onClick={() => handleOpenDialog()}
+            className="bg-[#0b172a] text-white hover:bg-slate-800 rounded-xl h-11 px-6 font-bold flex items-center gap-2 text-sm shadow-md"
+          >
+            <Plus className="size-4" />
+            <span>Tambah Produk Pertama</span>
+          </Button>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto pb-20 md:pb-0">
@@ -1148,6 +1207,17 @@ export function ProductsView() {
           </div>
         </div>
       )}
+
+      {/* Floating Action Button (FAB) Tambah Produk untuk Tampilan Mobile */}
+      <div className="fixed bottom-20 right-4 z-40 md:hidden">
+        <button
+          onClick={() => handleOpenDialog()}
+          className="size-14 rounded-full bg-[#0b172a] text-white shadow-2xl hover:bg-slate-800 flex items-center justify-center p-0 border-2 border-white active:scale-95 transition-all shadow-slate-900/40"
+          title="Tambah Produk Baru"
+        >
+          <Plus className="size-7" />
+        </button>
+      </div>
     </div>
   );
 }
