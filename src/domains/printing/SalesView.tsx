@@ -81,7 +81,7 @@ export function PrintingSalesView() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [paymentFilter, setPaymentFilter] = useState<string>("ALL");
-  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("today");
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("month");
 
   // Selected SPK for Modal / Detail / Pelunasan
   const [selectedJob, setSelectedJob] = useState<PrintingJobOrder | null>(null);
@@ -147,6 +147,36 @@ export function PrintingSalesView() {
             }
           });
           localJobs = merged;
+
+          // Auto-sync un-synced local jobs to Supabase so Web version gets them
+          const unSynced = localJobs.filter(lj => !remoteJobs.some(rj => rj.id === lj.id) && !lj.id.startsWith("spk_demo"));
+          if (unSynced.length > 0) {
+            (async () => {
+              for (const job of unSynced) {
+                try {
+                  await supabase.from("transactions").insert({
+                    id: job.id,
+                    tenant_id: user.id,
+                    total_amount: job.totalAmount,
+                    payment_method: job.paymentMethod || "Tunai",
+                    status: "completed",
+                    order_type: "take_away",
+                    created_at: job.createdAt,
+                    customer_name: job.customerName,
+                    customer_phone: job.customerPhone,
+                    invoice_no: job.invoiceNo,
+                    dp_amount: job.dpAmount,
+                    remaining_amount: job.remainingAmount,
+                    payment_status: job.paymentStatus,
+                    job_status: job.jobStatus,
+                    items: job.items,
+                    cashier_name: job.cashierName,
+                    branch_name: job.branchName
+                  });
+                } catch (err) {}
+              }
+            })();
+          }
         }
       }
 

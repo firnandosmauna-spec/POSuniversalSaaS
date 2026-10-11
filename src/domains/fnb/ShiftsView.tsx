@@ -773,7 +773,12 @@ export function ShiftsView() {
       </Dialog>
 
       {/* Pop-up Cetak Laporan Shift */}
-      <Dialog open={isShiftPrintModalOpen} onOpenChange={setIsShiftPrintModalOpen}>
+      <Dialog open={isShiftPrintModalOpen} onOpenChange={(open) => {
+        setIsShiftPrintModalOpen(open);
+        if (!open && !activeShift) {
+          window.dispatchEvent(new CustomEvent('shiftClosed'));
+        }
+      }}>
         <DialogContent className="sm:max-w-[400px] rounded-2xl border-slate-100 p-0 overflow-hidden bg-slate-100">
           {selectedShiftForPrint && (
             <div className="flex flex-col h-[80vh] max-h-[600px]">
@@ -848,7 +853,12 @@ export function ShiftsView() {
                   <Printer className="size-4 mr-2" />
                   Cetak Struk
                 </Button>
-                <Button onClick={() => setIsShiftPrintModalOpen(false)} variant="outline" className="flex-1 font-bold rounded-xl h-11 border-slate-200">
+                <Button onClick={() => {
+                  setIsShiftPrintModalOpen(false);
+                  if (!activeShift) {
+                    window.dispatchEvent(new CustomEvent('shiftClosed'));
+                  }
+                }} variant="outline" className="flex-1 font-bold rounded-xl h-11 border-slate-200">
                   Tutup
                 </Button>
               </div>

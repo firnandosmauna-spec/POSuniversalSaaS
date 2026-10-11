@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { createFileRoute, Outlet, Navigate, Link } from "@tanstack/react-router";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { supabase } from "@/shared/lib/supabase";
 import { 
   LayoutDashboard, 
   Calculator, 
@@ -67,6 +69,135 @@ function AppLayout() {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Shift blocking logic for Kasir
+  const isKasir = user?.role?.toLowerCase().includes("kasir");
+  const [hasActiveShift, setHasActiveShift] = useState<boolean>(true);
+  const [isCheckingShift, setIsCheckingShift] = useState<boolean>(true);
+
+  // For the blocker form
+  const [cashierName, setCashierName] = useState("");
+  const [startingCash, setStartingCash] = useState("");
+  const [staffList, setStaffList] = useState<{id: string, name: string, role: string}[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!isKasir) {
+      setIsCheckingShift(false);
+      setHasActiveShift(true);
+      return;
+    }
+
+    const checkShift = async () => {
+      try {
+        const tenantKey = `pos_tenant_${user.id}_shifts`;
+        let localShifts: any[] = [];
+        try {
+          const saved = localStorage.getItem(tenantKey);
+          if (saved) localShifts = JSON.parse(saved);
+        } catch(e) {}
+
+        const { data, error } = await supabase
+          .from("cashier_shifts")
+          .select("id")
+          .eq("tenant_id", user.id)
+          .eq("status", "open")
+          .maybeSingle();
+
+        if (!error && data) {
+          setHasActiveShift(true);
+        } else {
+          setHasActiveShift(localShifts.some((s: any) => s.status === "open"));
+        }
+      } catch (err) {
+        setHasActiveShift(false);
+      } finally {
+        setIsCheckingShift(false);
+      }
+    };
+    checkShift();
+
+    const handleShiftClosed = () => setHasActiveShift(false);
+    const handleShiftOpened = () => setHasActiveShift(true);
+
+    window.addEventListener('shiftClosed', handleShiftClosed);
+    window.addEventListener('shiftOpened', handleShiftOpened);
+    
+    const fetchStaff = async () => {
+      try {
+        const { data } = await supabase.from("store_users").select("id, name, role").eq("tenant_id", user.id);
+        if (data) {
+          setStaffList(data);
+          const currentStaff = data.find(s => s.name === user.name);
+          if (currentStaff) setCashierName(currentStaff.name);
+          else if (data.length > 0) setCashierName(data[0].name);
+        } else {
+          setCashierName(user.name);
+        }
+      } catch (err) {}
+    };
+    fetchStaff();
+
+    return () => {
+      window.removeEventListener('shiftClosed', handleShiftClosed);
+      window.removeEventListener('shiftOpened', handleShiftOpened);
+    };
+  }, [user, isKasir]);
+
+  const handleOpenShift = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!cashierName || startingCash === "") {
+      toast.error("Silakan lengkapi form buka shift.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const safeId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+        ? crypto.randomUUID() 
+        : 'shift-' + Date.now() + '-' + Math.random().toString(36).substring(2,9);
+        
+      const newShift = {
+        id: safeId,
+        cashier_name: cashierName.trim(),
+        starting_cash: parseFloat(startingCash) || 0,
+        expected_ending_cash: null,
+        actual_ending_cash: null,
+        status: "open",
+        start_time: new Date().toISOString(),
+        end_time: null
+      };
+
+      const tenantKey = `pos_tenant_${user.id}_shifts`;
+      let currentShifts: any[] = [];
+      try {
+        const saved = localStorage.getItem(tenantKey);
+        if (saved) currentShifts = JSON.parse(saved);
+      } catch(e) {}
+      
+      const updatedShifts = [newShift, ...currentShifts];
+      localStorage.setItem(tenantKey, JSON.stringify(updatedShifts));
+
+      try {
+        await supabase.from("cashier_shifts").insert({
+          id: newShift.id,
+          tenant_id: user.id,
+          cashier_name: newShift.cashier_name,
+          starting_cash: newShift.starting_cash,
+          status: "open",
+          start_time: newShift.start_time
+        });
+      } catch(e) {}
+      
+      window.dispatchEvent(new CustomEvent('shiftOpened'));
+      setHasActiveShift(true);
+    } catch(err) {
+      toast.error("Gagal membuka shift.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     try {
       localStorage.setItem("pos_theme", theme);
@@ -104,6 +235,62 @@ function AppLayout() {
   if (!user) {
     // Redirect to landing page if no user is active
     return <Navigate to="/" replace />;
+  }
+
+  if (isKasir && !isCheckingShift && !hasActiveShift) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-900 overflow-hidden font-sans p-4 relative">
+        <div className="absolute inset-0 bg-cover bg-center opacity-10" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=2000')" }} />
+        <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300 relative z-10">
+          <div className="p-6 bg-slate-50 border-b border-slate-100 text-center">
+            <div className="size-16 bg-amber-50 border border-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+               <Clock className="size-8" />
+            </div>
+            <h2 className="font-display text-xl md:text-2xl font-bold text-slate-800">Buka Shift Kasir</h2>
+            <p className="text-slate-500 text-xs md:text-sm mt-2 leading-relaxed px-4">Anda harus membuka shift sebelum dapat masuk dan mengakses menu aplikasi.</p>
+          </div>
+          <form onSubmit={handleOpenShift} className="p-6 space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Nama Kasir</label>
+              <select 
+                value={cashierName}
+                onChange={(e) => setCashierName(e.target.value)}
+                className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-[#0b172a] focus:ring-1 focus:ring-[#0b172a] focus:bg-white transition-colors"
+              >
+                <option value="" disabled>Pilih Kasir</option>
+                {staffList.length > 0 ? (
+                  staffList.map(staff => (
+                    <option key={staff.id} value={staff.name}>{staff.name} {staff.role && `(${staff.role})`}</option>
+                  ))
+                ) : (
+                  <option value={user.name}>{user.name}</option>
+                )}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Uang Kas Awal (Rp)</label>
+              <p className="text-[10px] text-slate-400 font-medium mb-1">Total uang tunai modal kembalian di laci saat ini.</p>
+              <input 
+                type="number"
+                min="0"
+                placeholder="0" 
+                value={startingCash}
+                onChange={(e) => setStartingCash(e.target.value)}
+                className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-bold text-slate-900 outline-none focus:border-[#0b172a] focus:ring-1 focus:ring-[#0b172a] focus:bg-white transition-colors"
+              />
+            </div>
+            <div className="pt-2 flex flex-col gap-3">
+              <Button type="submit" className="w-full h-12 text-[13px] md:text-sm rounded-xl bg-[#0b172a] hover:bg-slate-800 text-white font-bold transition-all shadow-sm" disabled={isSubmitting}>
+                {isSubmitting ? "Membuka Shift..." : "Mulai Shift Sekarang"}
+              </Button>
+              <Button type="button" variant="ghost" onClick={logout} className="w-full h-11 text-xs md:text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl font-bold transition-all">
+                Keluar / Logout
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   const getDomainMenu = () => {

@@ -42,7 +42,7 @@ export function SalesView() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "week" | "month" | "custom">("today");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "week" | "month" | "custom">("month");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -95,15 +95,52 @@ export function SalesView() {
       
       let fetchedTransactions = data || [];
 
-      // Merge with localStorage transactions (offline/fallback POS transactions)
+      // Merge with localStorage transactions (offline/fallback POS transactions) & auto-sync to Supabase
       try {
         const saved = localStorage.getItem(`pos_transactions_${user.id}`);
         if (saved) {
           const localTrx = JSON.parse(saved);
           const existingIds = new Set(fetchedTransactions.map((o: any) => o.id));
           const newLocalTrx = localTrx.filter((lt: any) => !existingIds.has(lt.id));
-          fetchedTransactions = [...newLocalTrx, ...fetchedTransactions];
-          fetchedTransactions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          if (newLocalTrx.length > 0) {
+            fetchedTransactions = [...newLocalTrx, ...fetchedTransactions];
+            fetchedTransactions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+            // Auto-sync un-synced offline transactions to Supabase so Web version can see them
+            (async () => {
+              for (const trx of newLocalTrx) {
+                try {
+                  const { error: insErr } = await supabase.from("transactions").insert({
+                    id: trx.id,
+                    tenant_id: user.id,
+                    created_at: trx.created_at,
+                    order_type: trx.order_type || "take_away",
+                    payment_method: trx.payment_method || "cash",
+                    status: trx.status || "completed",
+                    total_amount: trx.total_amount || 0,
+                    discount_amount: trx.discount_amount || 0,
+                    tax_amount: trx.tax_amount || 0,
+                    customer_name_custom: trx.customer_name_custom || trx.customer_name || null,
+                    invoice_code: trx.invoice_code || null
+                  });
+
+                  if (!insErr && trx.transaction_items && trx.transaction_items.length > 0) {
+                    const itemsToInsert = trx.transaction_items.map((it: any) => ({
+                      tenant_id: user.id,
+                      transaction_id: trx.id,
+                      product_id: it.product_id,
+                      product_name: it.product_name,
+                      price: it.price || 0,
+                      qty: it.qty || 1
+                    }));
+                    await supabase.from("transaction_items").insert(itemsToInsert);
+                  }
+                } catch (syncErr) {
+                  console.warn("Auto-sync local transaction error:", syncErr);
+                }
+              }
+            })();
+          }
         }
       } catch (e) {
         console.error("Failed to merge local transactions", e);
