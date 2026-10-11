@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/drawer";
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
+import { printElement } from "@/shared/utils/printHelper";
 
 type ExpenseItem = {
   id: string;
@@ -343,13 +344,7 @@ export function ExpensesView() {
     });
 
   const printDocument = (elementId: string) => {
-    const printContent = document.getElementById(elementId);
-    if (!printContent) return;
-    const originalContent = document.body.innerHTML;
-    document.body.innerHTML = printContent.innerHTML;
-    window.print();
-    document.body.innerHTML = originalContent;
-    window.location.reload();
+    printElement(elementId, "Laporan Pengeluaran");
   };
 
   return (

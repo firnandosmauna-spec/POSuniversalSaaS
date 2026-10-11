@@ -4,6 +4,8 @@ import { useAuth } from "@/shared/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/shared/lib/supabase";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { printElement } from "@/shared/utils/printHelper";
 import { 
   LayoutDashboard, 
   Calculator, 
@@ -79,6 +81,67 @@ function AppLayout() {
   const [startingCash, setStartingCash] = useState("");
   const [staffList, setStaffList] = useState<{id: string, name: string, role: string}[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Last closed shift reprint modal on blocker screen
+  const [isLastShiftModalOpen, setIsLastLastShiftModalOpen] = useState(false);
+  const [lastClosedShiftForPrint, setLastClosedShiftForPrint] = useState<any | null>(null);
+  const [isLoadingLastShift, setIsLoadingLastShift] = useState(false);
+
+  const formatRupiah = (val: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(val || 0);
+  };
+
+  const handleViewLastClosedShift = async () => {
+    if (!user) return;
+    setIsLoadingLastShift(true);
+    try {
+      // 1. Check local shifts first
+      const tenantKey = `pos_tenant_${user.id}_shifts`;
+      let foundShift: any = null;
+      try {
+        const saved = localStorage.getItem(tenantKey);
+        if (saved) {
+          const list = JSON.parse(saved);
+          const closed = list.filter((s: any) => s.status === "closed");
+          if (closed.length > 0) {
+            foundShift = closed[0];
+          }
+        }
+      } catch (e) {}
+
+      // 2. Fallback to Supabase
+      if (!foundShift) {
+        const { data, error } = await supabase
+          .from("cashier_shifts")
+          .select("*")
+          .eq("tenant_id", user.id)
+          .eq("status", "closed")
+          .order("end_time", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data) {
+          foundShift = data;
+        }
+      }
+
+      if (foundShift) {
+        setLastClosedShiftForPrint(foundShift);
+        setIsLastLastShiftModalOpen(true);
+      } else {
+        toast.info("Belum ada riwayat shift yang ditutup sebelumnya.");
+      }
+    } catch (err) {
+      toast.error("Gagal memuat data shift sebelumnya.");
+    } finally {
+      setIsLoadingLastShift(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -279,16 +342,129 @@ function AppLayout() {
                 className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-bold text-slate-900 outline-none focus:border-[#0b172a] focus:ring-1 focus:ring-[#0b172a] focus:bg-white transition-colors"
               />
             </div>
-            <div className="pt-2 flex flex-col gap-3">
+            <div className="pt-2 flex flex-col gap-2.5">
               <Button type="submit" className="w-full h-12 text-[13px] md:text-sm rounded-xl bg-[#0b172a] hover:bg-slate-800 text-white font-bold transition-all shadow-sm" disabled={isSubmitting}>
                 {isSubmitting ? "Membuka Shift..." : "Mulai Shift Sekarang"}
               </Button>
-              <Button type="button" variant="ghost" onClick={logout} className="w-full h-11 text-xs md:text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl font-bold transition-all">
+              <Button 
+                type="button" 
+                variant="outline" 
+                disabled={isLoadingLastShift}
+                onClick={handleViewLastClosedShift} 
+                className="w-full h-11 text-xs md:text-sm border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+              >
+                <Printer className="size-4 text-slate-600" />
+                {isLoadingLastShift ? "Memuat Struk..." : "Lihat / Cetak Struk Shift Terakhir"}
+              </Button>
+              <Button type="button" variant="ghost" onClick={logout} className="w-full h-10 text-xs md:text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl font-bold transition-all">
                 Keluar / Logout
               </Button>
             </div>
           </form>
         </div>
+
+        {/* Pop-up Cetak Laporan Shift Terakhir pada Layar Buka Shift */}
+        <Dialog open={isLastShiftModalOpen} onOpenChange={setIsLastLastShiftModalOpen}>
+          <DialogContent className="sm:max-w-[400px] rounded-2xl border-slate-100 p-0 overflow-hidden bg-slate-100">
+            {lastClosedShiftForPrint && (
+              <div className="flex flex-col h-[80vh] max-h-[600px]">
+                <div className="bg-white p-4 border-b border-slate-100 text-center flex-shrink-0">
+                  <h3 className="font-display font-bold text-base text-slate-800">Pratinjau Struk Shift Terakhir</h3>
+                </div>
+                
+                <div className="flex-1 overflow-auto p-6" id="blocker-last-shift-printable">
+                  <div className="bg-white shadow-sm p-6 mx-auto w-full max-w-[320px] font-mono text-sm text-slate-800 border-t-[6px] border-[#0b172a] rounded-sm">
+                    <div className="text-center mb-5">
+                      <h2 className="font-black text-lg uppercase mb-1 tracking-tight">LAPORAN SHIFT KASIR</h2>
+                      <p className="text-xs text-slate-500 mb-3 font-semibold">Toko Saya</p>
+                      <div className="border-b border-dashed border-slate-300 pb-3 text-xs space-y-1">
+                        <div className="flex justify-between">
+                          <span>Kasir:</span>
+                          <span className="font-bold">{lastClosedShiftForPrint.cashier_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Buka:</span>
+                          <span className="font-medium">{new Date(lastClosedShiftForPrint.start_time).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Tutup:</span>
+                          <span className="font-medium">{lastClosedShiftForPrint.end_time ? new Date(lastClosedShiftForPrint.end_time).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-xs border-b border-dashed border-slate-300 pb-3 mb-3">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Modal Awal</span>
+                        <span className="font-bold">{formatRupiah(lastClosedShiftForPrint.starting_cash)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Pendapatan Tunai</span>
+                        <span className="font-bold text-slate-800">
+                          +{formatRupiah(lastClosedShiftForPrint.cash_sales ?? Math.max(0, (lastClosedShiftForPrint.expected_ending_cash || 0) - lastClosedShiftForPrint.starting_cash))}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Non Tunai (QRIS)</span>
+                        <span className="font-bold text-slate-800">
+                          {formatRupiah(lastClosedShiftForPrint.non_cash_sales || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Pengeluaran</span>
+                        <span className="font-bold text-slate-800">
+                          -{formatRupiah(lastClosedShiftForPrint.expenses || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs pt-2 border-t border-dashed border-slate-200">
+                        <span className="font-bold text-slate-700">Total Uang Laci Seharusnya</span>
+                        <span className="font-black text-slate-900">{formatRupiah(lastClosedShiftForPrint.expected_ending_cash || 0)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs pt-1">
+                        <span className="font-bold text-slate-700">Uang Fisik Kasir</span>
+                        <span className="font-black text-slate-900">{formatRupiah(lastClosedShiftForPrint.actual_ending_cash || 0)}</span>
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const diff = (lastClosedShiftForPrint.actual_ending_cash || 0) - (lastClosedShiftForPrint.expected_ending_cash || 0);
+                      return (
+                        <div className="text-center py-2.5 px-3 bg-slate-50 border-y border-dashed border-slate-300 mb-5 text-[11px] font-bold tracking-wide">
+                          <span className="text-slate-500">STATUS SELISIH: </span>
+                          {diff === 0 ? (
+                            <span className="text-emerald-700">SESUAI (Rp 0)</span>
+                          ) : diff > 0 ? (
+                            <span className="text-blue-700">LEBIH (+{formatRupiah(diff)})</span>
+                          ) : (
+                            <span className="text-red-700">KURANG (-{formatRupiah(Math.abs(diff))})</span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    <div className="mt-8 pt-4 text-center text-[10px] text-slate-500 font-medium">
+                      <p className="mb-8">Tanda Tangan Kasir,</p>
+                      <p className="font-bold border-b border-slate-400 pb-1 inline-block min-w-[140px] text-slate-700">({lastClosedShiftForPrint.cashier_name})</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white p-4 border-t border-slate-100 flex gap-3 flex-shrink-0">
+                  <Button 
+                    onClick={() => printElement("blocker-last-shift-printable", "Laporan Shift Kasir")}
+                    className="flex-1 bg-[#0b172a] hover:bg-slate-800 text-white font-bold rounded-xl h-11"
+                  >
+                    <Printer className="size-4 mr-2" />
+                    Cetak Struk
+                  </Button>
+                  <Button onClick={() => setIsLastLastShiftModalOpen(false)} variant="outline" className="flex-1 font-bold rounded-xl h-11 border-slate-200">
+                    Tutup
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

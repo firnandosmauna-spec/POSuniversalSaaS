@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
+import { printElement } from "@/shared/utils/printHelper";
 import { PrintingSalesView } from "@/domains/printing/SalesView";
 import { toast } from "sonner";
 
@@ -322,13 +323,7 @@ export function SalesView() {
   };
 
   const printDocument = (elementId: string) => {
-    const printContent = document.getElementById(elementId);
-    if (!printContent) return;
-    const originalContent = document.body.innerHTML;
-    document.body.innerHTML = printContent.innerHTML;
-    window.print();
-    document.body.innerHTML = originalContent;
-    window.location.reload();
+    printElement(elementId, "Struk Transaksi Penjualan");
   };
 
   // CRUD Actions

@@ -13,6 +13,7 @@ import {
 import { supabase } from "@/shared/lib/supabase";
 import { printWithWebBluetoothSafe } from "@/shared/lib/bluetoothPrinterSafe";
 import { useAuth } from "@/shared/auth/AuthContext";
+import { printElement } from "@/shared/utils/printHelper";
 
 type Shift = {
   id: string;
@@ -467,13 +468,7 @@ export function ShiftsView() {
   };
 
   const printDocument = (elementId: string) => {
-    const printContent = document.getElementById(elementId);
-    if (!printContent) return;
-    const originalContent = document.body.innerHTML;
-    document.body.innerHTML = printContent.innerHTML;
-    window.print();
-    document.body.innerHTML = originalContent;
-    window.location.reload();
+    printElement(elementId, "Laporan Shift Kasir");
   };
 
   const filteredShifts = shifts.filter(shift => {
@@ -1005,7 +1000,7 @@ export function ShiftsView() {
                     window.dispatchEvent(new CustomEvent('shiftClosed'));
                   }
                 }} variant="outline" className="flex-1 font-bold rounded-xl h-11 border-slate-200">
-                  Tutup
+                  Selesai / Lanjut Shift Baru
                 </Button>
               </div>
             </div>
