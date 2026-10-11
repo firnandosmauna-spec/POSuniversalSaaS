@@ -408,6 +408,18 @@ export function SalesView() {
       const { error } = await supabase.from("transactions").delete().eq("id", id);
       if (error) throw error;
 
+      // Hapus juga dari localStorage agar tidak di-merge kembali
+      try {
+        const saved = localStorage.getItem(`pos_transactions_${user?.id}`);
+        if (saved) {
+          let localTrx = JSON.parse(saved);
+          localTrx = localTrx.filter((t: any) => t.id !== id);
+          localStorage.setItem(`pos_transactions_${user?.id}`, JSON.stringify(localTrx));
+        }
+      } catch (e) {
+        console.error("Error clearing local transaction:", e);
+      }
+
       toast.success("Transaksi berhasil dihapus.");
       setConfirmDeleteId(null);
       fetchTransactions();
