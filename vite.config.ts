@@ -15,16 +15,28 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    server: {
+      watch: {
+        ignored: [
+          "**/android/**",
+          "**/mobile-pos/**",
+          "**/.output/**",
+          "**/dist/**",
+          "**/scratch/**",
+          "**/.git/**"
+        ]
+      }
+    },
     build: {
       chunkSizeWarningLimit: 2000,
     },
     plugins: [
-      basicSsl(),
+      ...(process.env.HTTPS === 'true' ? [basicSsl()] : []),
       VitePWA({
         registerType: "autoUpdate",
         injectRegister: false,
         devOptions: {
-          enabled: true
+          enabled: false
         },
         includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
         outDir: ".output/public",

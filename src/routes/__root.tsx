@@ -130,7 +130,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator && import.meta.env.PROD) {
       // @ts-ignore
       import("virtual:pwa-register")
         .then(({ registerSW }) => {

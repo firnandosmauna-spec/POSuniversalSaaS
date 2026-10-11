@@ -67,14 +67,45 @@ function createDefaultBranch(tenantId?: string): Branch {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const savedUserStr = localStorage.getItem("pos_active_user");
+      return savedUserStr ? JSON.parse(savedUserStr) : null;
+    } catch {
+      return null;
+    }
+  });
 
-  // Multi Branch state — starts empty, filled from localStorage or generated on first login
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [activeBranchId, setActiveBranchId] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    try {
+      // If user info is already saved locally, don't show full-screen blocking loader
+      return !localStorage.getItem("pos_active_user");
+    } catch {
+      return true;
+    }
+  });
 
-  // Load branches & active branch from localStorage
+  // Multi Branch state — starts populated from localStorage immediately
+  const [branches, setBranches] = useState<Branch[]>(() => {
+    try {
+      const savedBranches = localStorage.getItem("pos_tenant_branches");
+      if (savedBranches) {
+        const parsed = JSON.parse(savedBranches);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+
+  const [activeBranchId, setActiveBranchId] = useState<string>(() => {
+    try {
+      return localStorage.getItem("pos_active_branch_id") || "";
+    } catch {
+      return "";
+    }
+  });
+
+  // Load branches & active branch from localStorage if updated
   useEffect(() => {
     try {
       const savedBranches = localStorage.getItem("pos_tenant_branches");
@@ -189,7 +220,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch (e) {}
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
+        // Timeout after 3 seconds so slow or unreachable Supabase never hangs localhost loading
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<any>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null }, error: new Error("Auth timeout") }), 3000)
+        );
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
         if (session?.user) {
           const userMeta = session.user.user_metadata || {};
           const bType = (userMeta["businessType"] as BusinessType) || savedType || localUserObj?.businessType || "FNB";
