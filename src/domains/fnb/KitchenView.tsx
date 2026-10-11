@@ -272,8 +272,9 @@ export function KitchenView() {
   }));
 
   const filteredOrders = processedOrders.filter(order => {
-    // Exclude hold orders unless needed
+    // Exclude hold orders and already served orders from active KDS
     if (order.status === "hold") return false;
+    if (order.effectiveStatus === "served") return false;
 
     // Search filter
     const matchesSearch = 
