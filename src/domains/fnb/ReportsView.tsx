@@ -480,37 +480,6 @@ export function ReportsView() {
 
           <div className="flex flex-col md:flex-row justify-between w-full gap-3">
             <div className="flex flex-wrap items-center gap-2 flex-1">
-              <div className="shrink-0 relative flex items-center justify-between bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-medium w-auto cursor-pointer">
-                <div className="flex items-center gap-1.5 text-slate-700">
-                  <span>{startDate ? formatShortDate(startDate) : "Mulai"}</span>
-                  <span className="text-slate-400 font-normal">-</span>
-                  <span>{endDate ? formatShortDate(endDate) : "Akhir"}</span>
-                </div>
-                <Calendar className="size-3.5 text-slate-600 ml-2" />
-                
-                {/* Invisible native inputs to handle clicks on mobile */}
-                <div className="absolute inset-0 flex opacity-0 cursor-pointer">
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      setDateFilter("custom");
-                    }}
-                    className="w-1/2 h-full cursor-pointer"
-                  />
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => {
-                      setEndDate(e.target.value);
-                      setDateFilter("custom");
-                    }}
-                    className="w-1/2 h-full cursor-pointer"
-                  />
-                </div>
-              </div>
-
               <button
                 onClick={() => setDateFilter("today")}
                 className={`shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${
@@ -541,6 +510,37 @@ export function ReportsView() {
               >
                 1 Bulan
               </button>
+
+              <div className="shrink-0 relative flex items-center justify-between bg-white border border-slate-200 px-3 py-1.5 rounded-full text-xs font-medium w-auto cursor-pointer">
+                <div className="flex items-center gap-1.5 text-slate-700">
+                  <span>{startDate ? formatShortDate(startDate) : "Mulai"}</span>
+                  <span className="text-slate-400 font-normal">-</span>
+                  <span>{endDate ? formatShortDate(endDate) : "Akhir"}</span>
+                </div>
+                <Calendar className="size-3.5 text-slate-600 ml-2" />
+                
+                {/* Invisible native inputs to handle clicks on mobile */}
+                <div className="absolute inset-0 flex opacity-0 cursor-pointer">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setDateFilter("custom");
+                    }}
+                    className="w-1/2 h-full cursor-pointer"
+                  />
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setDateFilter("custom");
+                    }}
+                    className="w-1/2 h-full cursor-pointer"
+                  />
+                </div>
+              </div>
             </div>
 
           </div>
