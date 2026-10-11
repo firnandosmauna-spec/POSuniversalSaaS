@@ -260,16 +260,16 @@ export function ShiftsView() {
     const nowIso = new Date().toISOString();
 
     // 1. Update local state & LocalStorage immediately
+    const updatedShift = {
+      ...activeShift,
+      expected_ending_cash: expected,
+      actual_ending_cash: actual,
+      end_time: nowIso,
+      status: "closed" as const
+    };
+
     const updatedShifts = shifts.map((s) =>
-      s.id === activeShift.id
-        ? {
-            ...s,
-            expected_ending_cash: expected,
-            actual_ending_cash: actual,
-            end_time: nowIso,
-            status: "closed" as const
-          }
-        : s
+      s.id === activeShift.id ? updatedShift : s
     );
 
     setShifts(updatedShifts);
@@ -278,6 +278,9 @@ export function ShiftsView() {
     
     setIsCloseShiftModalOpen(false);
     setActualEndingCash("");
+
+    // Buka otomatis pratinjau cetak struk
+    openShiftReportPrint(updatedShift);
 
     // 2. Sync to Supabase asynchronously
     try {
