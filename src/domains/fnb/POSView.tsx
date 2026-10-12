@@ -19,6 +19,7 @@ import {
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { getInvoiceSettings, generateInvoiceCode } from "@/shared/utils/invoiceGenerator";
+import { getFnBPaymentSettings, FnBPaymentSettings, PaymentMethodItem } from "@/shared/utils/fnbPaymentSettings";
 import { generateUUID, isValidUUID } from "@/shared/utils/uuid";
 import BarcodeScannerModal from "@/components/pos/BarcodeScannerModal";
 import { Capacitor } from "@capacitor/core";
@@ -88,6 +89,7 @@ export default function FnbPOSView() {
 
   // Fitur Pajak & Diskon
   const [taxRate, setTaxRate] = useState<number>(0);
+  const [serviceChargeRate, setServiceChargeRate] = useState<number>(0);
   const [enableDineIn, setEnableDineIn] = useState<boolean>(true);
   const [discount, setDiscount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<"nominal" | "percent">("nominal");
@@ -98,6 +100,9 @@ export default function FnbPOSView() {
   // Tax State
   const [isTaxOpen, setIsTaxOpen] = useState(false);
   const [tempTaxRate, setTempTaxRate] = useState<number>(0);
+
+  // FnB Payment Settings
+  const [paymentConfig, setPaymentConfig] = useState<FnBPaymentSettings>(() => getFnBPaymentSettings(user?.id));
 
   // Fitur Struk / Receipt
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
@@ -142,8 +147,13 @@ export default function FnbPOSView() {
   // Kalkulasi
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
   const discountAmount = discountType === "nominal" ? discount : (subtotal * discount) / 100;
-  const taxableAmount = Math.max(0, subtotal - discountAmount);
-  const taxAmount = (taxableAmount * taxRate) / 100;
+  const afterDiscount = Math.max(0, subtotal - discountAmount);
+  // Service charge hanya untuk Dine In jika diaktifkan
+  const serviceChargeAmount = (orderType === "dine_in" && paymentConfig.enableServiceCharge) 
+    ? Math.round((afterDiscount * serviceChargeRate) / 100) 
+    : 0;
+  const taxableAmount = afterDiscount + serviceChargeAmount;
+  const taxAmount = (taxRate > 0) ? Math.round((taxableAmount * taxRate) / 100) : 0;
   const total = taxableAmount + taxAmount;
 
 
@@ -221,10 +231,16 @@ export default function FnbPOSView() {
   const fetchSettings = async () => {
     if (!user) return;
     try {
+      const pConf = getFnBPaymentSettings(user.id);
+      setPaymentConfig(pConf);
+      setServiceChargeRate(pConf.enableServiceCharge ? pConf.serviceChargeRate : 0);
+
       const { data } = await supabase.from("store_settings").select("tax_rate, enable_dine_in").eq("tenant_id", user.id).maybeSingle();
       if (data) {
-        setTaxRate(data.tax_rate);
+        setTaxRate(data.tax_rate !== undefined ? data.tax_rate : (pConf.enableTax ? pConf.taxRate : 0));
         if (data.enable_dine_in !== undefined) setEnableDineIn(data.enable_dine_in);
+      } else {
+        setTaxRate(pConf.enableTax ? pConf.taxRate : 0);
       }
     } catch (error) {}
   };
@@ -733,6 +749,7 @@ export default function FnbPOSView() {
         setSelectedCustomerId("");
         fetchTables();
       } else {
+        const selectedMethodObj = paymentConfig.paymentMethods.find(m => m.id === method);
         const receiptData = {
           transaction_id: transaction.id,
           invoice_code: transaction.invoice_code || generatedInvoiceCode,
@@ -744,11 +761,12 @@ export default function FnbPOSView() {
           items: [...cart],
           subtotal: subtotal,
           discount_amount: discountAmount,
+          service_charge_amount: serviceChargeAmount,
           tax_amount: taxAmount,
           total: total,
-          payment_method: method,
-          amount_received: method === "cash" ? receivedAmount : total,
-          change_amount: method === "cash" ? receivedAmount - total : 0
+          payment_method: selectedMethodObj ? selectedMethodObj.name : (method === "cash" ? "Tunai" : method === "qris" ? "QRIS" : method),
+          amount_received: (method === "cash" || selectedMethodObj?.type === "cash") ? receivedAmount : total,
+          change_amount: (method === "cash" || selectedMethodObj?.type === "cash") ? Math.max(0, receivedAmount - total) : 0
         };
         setLastReceipt(receiptData);
         setIsPaymentOpen(false);
@@ -1356,6 +1374,13 @@ export default function FnbPOSView() {
                     <ChevronRight className="size-4 text-slate-500" />
                   </div>
                 </div>
+
+                {serviceChargeAmount > 0 && (
+                  <div className="flex justify-between items-center text-xs text-slate-600">
+                    <span>Layanan ({serviceChargeRate}%)</span>
+                    <span className="font-bold text-slate-800">{formatRupiah(serviceChargeAmount)}</span>
+                  </div>
+                )}
               </div>
             )}
             </div>
@@ -1548,33 +1573,68 @@ export default function FnbPOSView() {
               </button>
             </div>
 
-            <div className="mt-auto pt-2 sm:pt-8 flex flex-col flex-1 justify-end">
-              <p className="text-[11px] text-slate-400 text-center mb-3 font-medium">Pilih Metode Pembayaran</p>
-              <div className="grid grid-cols-3 gap-2.5 mb-6">
-                <button
-                  onClick={() => setPaymentMethod("qris")}
-                  className={`flex flex-col items-center justify-center py-2 sm:py-3 border rounded-xl transition-all ${paymentMethod === "qris" ? "border-[#0b172a] bg-cyan-50/50 shadow-sm" : "border-slate-200 bg-slate-50/50 hover:bg-slate-100"}`}
-                >
-                  <QrCode className="size-5 sm:size-6 mb-1 text-slate-800" />
-                  <span className="font-bold text-[9px] sm:text-[10px] text-slate-800">QRIS</span>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod("cash")}
-                  className={`flex flex-col items-center justify-center py-2 sm:py-3 border rounded-xl transition-all ${paymentMethod === "cash" ? "border-[#0b172a] bg-cyan-50/50 shadow-sm" : "border-slate-200 bg-slate-50/50 hover:bg-slate-100"}`}
-                >
-                  <Banknote className="size-5 sm:size-6 mb-1 text-slate-800" />
-                  <span className="font-bold text-[9px] sm:text-[10px] text-slate-800">Tunai</span>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod("other")}
-                  className={`flex flex-col items-center justify-center py-2 sm:py-3 border rounded-xl transition-all ${paymentMethod === "other" ? "border-[#0b172a] bg-cyan-50/50 shadow-sm" : "border-slate-200 bg-slate-50/50 hover:bg-slate-100"}`}
-                >
-                  <MoreHorizontal className="size-5 sm:size-6 mb-1 text-slate-800" />
-                  <span className="font-bold text-[9px] sm:text-[10px] text-slate-800">Lainnya</span>
-                </button>
+            <div className="mt-auto pt-2 sm:pt-4 flex flex-col flex-1 justify-end">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] text-slate-500 font-bold">Pilih Metode Pembayaran</p>
+                <Link to="/app/settings" className="text-[10px] text-indigo-600 hover:underline font-semibold">
+                  Kelola Metode
+                </Link>
               </div>
 
-              {paymentMethod === "cash" && (
+              {/* Grid Metode Pembayaran Dinamis */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4 max-h-40 overflow-y-auto pr-1">
+                {(paymentConfig.paymentMethods.filter(m => m.enabled).length > 0
+                  ? paymentConfig.paymentMethods.filter(m => m.enabled)
+                  : [
+                      { id: "cash", name: "Tunai", type: "cash", enabled: true },
+                      { id: "qris", name: "QRIS", type: "qris", enabled: true },
+                      { id: "other", name: "Lainnya", type: "other", enabled: true },
+                    ]
+                ).map((method) => {
+                  const isSelected = paymentMethod === method.id || (paymentMethod === "cash" && method.type === "cash") || (paymentMethod === "qris" && method.type === "qris");
+                  return (
+                    <button
+                      key={method.id}
+                      type="button"
+                      onClick={() => setPaymentMethod(method.id)}
+                      className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                        paymentMethod === method.id
+                          ? "border-[#0b172a] bg-slate-900 text-white shadow-sm ring-1 ring-slate-900"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                      }`}
+                    >
+                      {method.type === "qris" ? (
+                        <QrCode className={`size-5 mb-1 ${paymentMethod === method.id ? "text-cyan-300" : "text-slate-700"}`} />
+                      ) : method.type === "cash" ? (
+                        <Banknote className={`size-5 mb-1 ${paymentMethod === method.id ? "text-emerald-300" : "text-slate-700"}`} />
+                      ) : (
+                        <CreditCard className={`size-5 mb-1 ${paymentMethod === method.id ? "text-indigo-300" : "text-slate-700"}`} />
+                      )}
+                      <span className="font-bold text-[10px] truncate max-w-full leading-tight">
+                        {method.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Box Info Khusus QRIS */}
+              {(paymentMethod === "qris" || paymentConfig.paymentMethods.find(m => m.id === paymentMethod)?.type === "qris") && (
+                <div className="mb-4 p-3 rounded-xl bg-cyan-50/60 border border-cyan-200 text-cyan-950 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">QRIS Toko</div>
+                    <div className="text-xs font-bold text-slate-800">{paymentConfig.qrisMerchantName || "QRIS Universal POS"}</div>
+                    {paymentConfig.qrisNmid && (
+                      <div className="text-[9px] text-slate-500 font-mono">NMID: {paymentConfig.qrisNmid}</div>
+                    )}
+                  </div>
+                  <div className="size-10 bg-white rounded-lg border border-cyan-200 grid place-items-center shrink-0">
+                    <QrCode className="size-6 text-slate-800" />
+                  </div>
+                </div>
+              )}
+
+              {(paymentMethod === "cash" || paymentConfig.paymentMethods.find(m => m.id === paymentMethod)?.type === "cash") && (
                 <div className="space-y-3 mb-4">
                   <div>
                     <label className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 block">Uang Diterima</label>
@@ -1697,9 +1757,15 @@ export default function FnbPOSView() {
                         <span>-{formatRupiah(lastReceipt.discount_amount)}</span>
                       </div>
                     )}
+                    {lastReceipt.service_charge_amount > 0 && (
+                      <div className="flex justify-between text-slate-600">
+                        <span>Biaya Layanan</span>
+                        <span>{formatRupiah(lastReceipt.service_charge_amount)}</span>
+                      </div>
+                    )}
                     {lastReceipt.tax_amount > 0 && (
                       <div className="flex justify-between text-slate-600">
-                        <span>Pajak</span>
+                        <span>Pajak (PB1)</span>
                         <span>{formatRupiah(lastReceipt.tax_amount)}</span>
                       </div>
                     )}

@@ -1,0 +1,72 @@
+export type PaymentMethodItem = {
+  id: string;
+  name: string;
+  type: "cash" | "qris" | "transfer" | "debit" | "ewallet" | "other";
+  enabled: boolean;
+  accountNumber?: string;
+  accountName?: string;
+  bankName?: string;
+};
+
+export type FnBPaymentSettings = {
+  taxRate: number; // PB1 Resto, e.g. 10%
+  serviceChargeRate: number; // e.g. 5%
+  enableServiceCharge: boolean;
+  enableTax: boolean;
+  roundingEnabled: boolean; // pembulatan nominal ratusan
+  qrisImageUrl?: string;
+  qrisMerchantName?: string;
+  qrisNmid?: string;
+  paymentMethods: PaymentMethodItem[];
+};
+
+export const DEFAULT_FNB_PAYMENT_METHODS: PaymentMethodItem[] = [
+  { id: "cash", name: "Tunai (Cash)", type: "cash", enabled: true },
+  { id: "qris", name: "QRIS", type: "qris", enabled: true },
+  { id: "debit_bca", name: "Debit BCA", type: "debit", enabled: true, bankName: "BCA" },
+  { id: "debit_mandiri", name: "Debit Mandiri", type: "debit", enabled: true, bankName: "Mandiri" },
+  { id: "transfer_bca", name: "Transfer Bank", type: "transfer", enabled: true, bankName: "BCA" },
+  { id: "gopay", name: "GoPay", type: "ewallet", enabled: true },
+  { id: "ovo", name: "OVO / DANA / ShopeePay", type: "ewallet", enabled: true },
+];
+
+export const DEFAULT_FNB_PAYMENT_SETTINGS: FnBPaymentSettings = {
+  taxRate: 10,
+  serviceChargeRate: 5,
+  enableServiceCharge: false,
+  enableTax: false,
+  roundingEnabled: false,
+  qrisImageUrl: "",
+  qrisMerchantName: "CAFE & RESTO",
+  qrisNmid: "",
+  paymentMethods: DEFAULT_FNB_PAYMENT_METHODS,
+};
+
+export function getFnBPaymentSettings(tenantId?: string): FnBPaymentSettings {
+  try {
+    const key = tenantId ? `pos_fnb_payment_settings_${tenantId}` : "pos_fnb_payment_settings";
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...DEFAULT_FNB_PAYMENT_SETTINGS,
+        ...parsed,
+        paymentMethods: parsed.paymentMethods || DEFAULT_FNB_PAYMENT_METHODS,
+      };
+    }
+  } catch (e) {
+    console.error("Gagal memuat pengaturan pembayaran F&B:", e);
+  }
+  return DEFAULT_FNB_PAYMENT_SETTINGS;
+}
+
+export function saveFnBPaymentSettings(settings: FnBPaymentSettings, tenantId?: string): void {
+  try {
+    const key = tenantId ? `pos_fnb_payment_settings_${tenantId}` : "pos_fnb_payment_settings";
+    localStorage.setItem(key, JSON.stringify(settings));
+    // Simpan juga ke key umum agar kompatibel
+    localStorage.setItem("pos_fnb_payment_settings", JSON.stringify(settings));
+  } catch (e) {
+    console.error("Gagal menyimpan pengaturan pembayaran F&B:", e);
+  }
+}

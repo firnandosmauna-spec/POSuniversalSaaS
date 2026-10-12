@@ -320,6 +320,8 @@ export function SalesView() {
   const totalTxCount = filteredTransactions.filter(t => t.status !== 'cancelled').length;
   const totalRevenue = netSales;
   const avgOrderValue = totalTxCount > 0 ? totalRevenue / totalTxCount : 0;
+  const holdCount = filteredTransactions.filter(t => t.status === 'hold').length;
+  const completedCount = filteredTransactions.filter(t => t.status === 'completed').length;
 
   const openReceipt = (t: any) => {
     setSelectedReceipt(t);
@@ -682,6 +684,104 @@ export function SalesView() {
               </div>
             </div>
 
+          </div>
+        </div>
+      </div>
+
+      {/* Kartu Metrik Ringkasan Penjualan */}
+      <div className="mb-3 md:mb-6 grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 px-2 md:px-0">
+        {/* Card 1: Total Omzet / Penjualan */}
+        <div className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-1.5 md:mb-3">
+            <span className="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Total Penjualan
+            </span>
+            <div className="size-7 md:size-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900 group-hover:scale-105 transition-transform shadow-xs">
+              <DollarSign className="size-3.5 md:size-5" />
+            </div>
+          </div>
+          <h2 className="text-sm md:text-2xl font-black font-mono text-slate-900 dark:text-white leading-tight tracking-tight">
+            {formatRupiah(totalRevenue)}
+          </h2>
+          <div className="mt-2 flex items-center gap-1.5 text-[9px] md:text-xs text-emerald-700 dark:text-emerald-300 font-semibold">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/60 dark:border-emerald-800 text-[9px] md:text-[10px]">
+              ✓ {completedCount} Berhasil
+            </span>
+            <span className="text-slate-400 font-normal hidden sm:inline">• Periode aktif</span>
+          </div>
+        </div>
+
+        {/* Card 2: Total Transaksi */}
+        <div className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-1.5 md:mb-3">
+            <span className="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Total Transaksi
+            </span>
+            <div className="size-7 md:size-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-900 group-hover:scale-105 transition-transform shadow-xs">
+              <ShoppingBag className="size-3.5 md:size-5" />
+            </div>
+          </div>
+          <h2 className="text-sm md:text-2xl font-black font-mono text-slate-900 dark:text-white leading-tight tracking-tight">
+            {totalTxCount} <span className="text-[10px] md:text-sm font-semibold text-slate-400">Order</span>
+          </h2>
+          <div className="mt-2 flex flex-wrap items-center gap-1 text-[9px] md:text-xs">
+            {holdCount > 0 ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800 font-semibold text-[9px] md:text-[10px]">
+                {holdCount} Hold
+              </span>
+            ) : (
+              <span className="text-slate-400 font-normal text-[9px] md:text-[10px]">
+                {filteredTransactions.length} Total struk
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Card 3: Rata-rata Transaksi (AOV) */}
+        <div className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-1.5 md:mb-3">
+            <span className="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Rata-rata Order
+            </span>
+            <div className="size-7 md:size-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-100 dark:border-amber-900 group-hover:scale-105 transition-transform shadow-xs">
+              <TrendingUp className="size-3.5 md:size-5" />
+            </div>
+          </div>
+          <h2 className="text-sm md:text-2xl font-black font-mono text-slate-900 dark:text-white leading-tight tracking-tight">
+            {formatRupiah(avgOrderValue)}
+          </h2>
+          <div className="mt-2 flex items-center text-[9px] md:text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <span>Rata-rata per struk</span>
+          </div>
+        </div>
+
+        {/* Card 4: Metode Pembayaran (Tunai vs Non-Tunai) */}
+        <div className="bg-white dark:bg-slate-900 p-3 md:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-1.5 md:mb-3">
+            <span className="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Metode Bayar
+            </span>
+            <div className="size-7 md:size-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-100 dark:border-purple-900 group-hover:scale-105 transition-transform shadow-xs">
+              <CreditCard className="size-3.5 md:size-5" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[10px] md:text-xs">
+              <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1 font-medium">
+                <span className="size-1.5 rounded-full bg-emerald-500"></span> Tunai:
+              </span>
+              <span className="font-bold font-mono text-slate-800 dark:text-slate-200">
+                {formatRupiah(cashTotal)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[10px] md:text-xs">
+              <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1 font-medium">
+                <span className="size-1.5 rounded-full bg-purple-500"></span> Non-Tunai:
+              </span>
+              <span className="font-bold font-mono text-slate-800 dark:text-slate-200">
+                {formatRupiah(nonCashTotal)}
+              </span>
+            </div>
           </div>
         </div>
       </div>

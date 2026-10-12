@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { getInvoiceSettings, saveInvoiceSettings, generateInvoiceCode, InvoiceSettings } from "@/shared/utils/invoiceGenerator";
+import { getFnBPaymentSettings, saveFnBPaymentSettings, PaymentMethodItem, FnBPaymentSettings, DEFAULT_FNB_PAYMENT_METHODS } from "@/shared/utils/fnbPaymentSettings";
 import { toast } from "sonner";
 import { PrintingSettingsView } from "@/domains/printing/SettingsView";
 import { LaundrySettingsView } from "@/domains/laundry/SettingsView";
@@ -46,7 +47,7 @@ export function SettingsView() {
   const [branchPhone, setBranchPhone] = useState("");
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<"langganan" | "meja" | "kategori" | "cabang" | "umum" | "invoice" | "printing_calc" | "printing_spk" | "printer">("langganan");
+  const [activeTab, setActiveTab] = useState<"langganan" | "meja" | "kategori" | "pembayaran" | "cabang" | "umum" | "invoice" | "printing_calc" | "printing_spk" | "printer">("langganan");
 
   // Subscription
   const [subscriptionData, setSubscriptionData] = useState<{
@@ -72,6 +73,12 @@ export function SettingsView() {
   const [taxRate, setTaxRate] = useState<number>(0);
   const [enableDineIn, setEnableDineIn] = useState<boolean>(true);
   const [settingsId, setSettingsId] = useState<string | null>(null);
+
+  // Payment Settings for FnB
+  const [paymentSettings, setPaymentSettings] = useState<FnBPaymentSettings>(() => getFnBPaymentSettings(user?.id));
+  const [newMethodName, setNewMethodName] = useState("");
+  const [newMethodType, setNewMethodType] = useState<PaymentMethodItem["type"]>("debit");
+  const [newMethodBank, setNewMethodBank] = useState("");
 
   // Invoice Code Settings
   const [invoicePrefix, setInvoicePrefix] = useState("INV");
@@ -161,6 +168,14 @@ export function SettingsView() {
           if (settingsData.invoice_counter_reset) setInvoiceCounterReset(settingsData.invoice_counter_reset);
           setSettingsId(settingsData.id);
         }
+
+        // Fetch FnB Payment Settings
+        const loadedPay = getFnBPaymentSettings(user.id);
+        if (settingsData && settingsData.tax_rate !== undefined) {
+          loadedPay.taxRate = settingsData.tax_rate;
+          loadedPay.enableTax = settingsData.tax_rate > 0;
+        }
+        setPaymentSettings(loadedPay);
       } catch (error) {
         console.error(error);
       } finally {
@@ -362,6 +377,68 @@ export function SettingsView() {
     }
   };
 
+  const handleSavePaymentSettings = async () => {
+    if (!user) return;
+    setIsSubmitting(true);
+    try {
+      saveFnBPaymentSettings(paymentSettings, user.id);
+      // Sinkronkan juga pajak ke store_settings di Supabase
+      if (settingsId) {
+        await supabase.from("store_settings").update({ 
+          tax_rate: paymentSettings.enableTax ? paymentSettings.taxRate : 0,
+          updated_at: new Date().toISOString() 
+        }).eq("id", settingsId);
+      }
+      setTaxRate(paymentSettings.enableTax ? paymentSettings.taxRate : 0);
+      toast.success("Pengaturan metode pembayaran & biaya resto berhasil disimpan!");
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Gagal menyimpan pengaturan pembayaran.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTogglePaymentMethod = (id: string) => {
+    setPaymentSettings(prev => ({
+      ...prev,
+      paymentMethods: prev.paymentMethods.map(m => m.id === id ? { ...m, enabled: !m.enabled } : m)
+    }));
+  };
+
+  const handleAddCustomPaymentMethod = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMethodName.trim()) {
+      toast.error("Nama metode pembayaran wajib diisi!");
+      return;
+    }
+    const newId = `custom_${Date.now()}`;
+    const newMethod: PaymentMethodItem = {
+      id: newId,
+      name: newMethodName.trim(),
+      type: newMethodType,
+      enabled: true,
+      bankName: newMethodBank.trim() || undefined
+    };
+    setPaymentSettings(prev => ({
+      ...prev,
+      paymentMethods: [...prev.paymentMethods, newMethod]
+    }));
+    setNewMethodName("");
+    setNewMethodBank("");
+    toast.success(`Metode "${newMethod.name}" berhasil ditambahkan!`);
+  };
+
+  const handleDeleteCustomPaymentMethod = (id: string) => {
+    if (confirm("Hapus metode pembayaran ini?")) {
+      setPaymentSettings(prev => ({
+        ...prev,
+        paymentMethods: prev.paymentMethods.filter(m => m.id !== id)
+      }));
+      toast.success("Metode pembayaran dihapus.");
+    }
+  };
+
   const handleCreateBranch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!branchName.trim()) return;
@@ -380,16 +457,26 @@ export function SettingsView() {
   };
 
   return (
-    <div className="p-2 md:p-6 h-full flex flex-col gap-2 md:gap-6 overflow-hidden bg-slate-50 md:bg-transparent">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-lg md:text-2xl font-bold text-slate-900">
-          Pengaturan Toko
-        </h1>
+    <div className="p-3 md:p-6 h-full flex flex-col gap-3 md:gap-6 overflow-hidden bg-slate-50 dark:bg-slate-950">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <h1 className="font-display text-lg md:text-2xl font-extrabold text-slate-900 dark:text-white">
+            Pengaturan Toko & Resto
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Kelola meja, menu, metode pembayaran, kasir printer, dan outlet bisnis Anda.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Modul F&B Resto & Cafe
+          </span>
+        </div>
       </div>
       
-      <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-6 flex-1 overflow-hidden">
-        {/* Sidebar Kiri - Menu Pengaturan */}
-        <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-slate-100 pb-2 md:pb-0 md:pr-4 flex overflow-x-auto md:flex-col gap-1.5 md:space-y-1.5 shrink-0 scrollbar-hide">
+      <div className="flex flex-col md:grid md:grid-cols-4 gap-3 md:gap-6 flex-1 overflow-hidden">
+        {/* Sidebar Kiri / Tab Bar Horizontal di Layar Kecil */}
+        <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 pb-2 md:pb-0 md:pr-4 flex md:flex-col gap-1.5 md:space-y-1.5 shrink-0 overflow-x-auto overflow-y-hidden md:overflow-y-auto">
           <button 
             onClick={() => setActiveTab("langganan")}
             className={`shrink-0 w-auto md:w-full text-left px-2.5 md:px-3 py-1.5 md:py-2.5 font-bold rounded-xl flex items-center gap-1.5 md:gap-2 transition-all text-[10px] md:text-sm ${activeTab === "langganan" ? "bg-[#0b172a] text-white shadow-sm" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
@@ -446,6 +533,13 @@ export function SettingsView() {
           >
             <Tags className={`size-3.5 md:size-4 ${activeTab === "kategori" ? "text-white" : "text-slate-400"}`} />
             Kategori Produk
+          </button>
+          <button 
+            onClick={() => setActiveTab("pembayaran")}
+            className={`shrink-0 w-auto md:w-full text-left px-2.5 md:px-3 py-1.5 md:py-2.5 font-bold rounded-xl flex items-center gap-1.5 md:gap-2 transition-all text-[10px] md:text-sm ${activeTab === "pembayaran" ? "bg-[#0b172a] text-white shadow-sm" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
+          >
+            <CreditCard className={`size-3.5 md:size-4 ${activeTab === "pembayaran" ? "text-white" : "text-slate-400"}`} />
+            Metode Pembayaran
           </button>
           <button 
             onClick={() => setActiveTab("printer")}
@@ -1518,6 +1612,232 @@ export function SettingsView() {
                 >
                   {isSubmitting ? <Loader2 className="size-3 md:size-4 animate-spin mr-1.5 md:mr-2" /> : null}
                   Simpan Pengaturan Invoice
+                </Button>
+              </div>
+            </div>
+          ) : activeTab === "pembayaran" ? (
+            <div className="flex flex-col h-full overflow-y-auto space-y-4 md:space-y-6 pr-1">
+              <div className="border-b border-slate-100 pb-2 md:pb-4 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-sm md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <CreditCard className="size-4 md:size-5 text-indigo-600" />
+                    Metode Pembayaran & Biaya Kafe
+                  </h2>
+                  <p className="text-[9px] md:text-xs text-slate-500">
+                    Atur opsi metode pembayaran yang aktif di kasir, biaya layanan (service charge), pajak resto (PB1), dan QRIS toko.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleSavePaymentSettings}
+                  disabled={isSubmitting}
+                  className="bg-[#0b172a] hover:bg-slate-800 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-sm self-start md:self-auto"
+                >
+                  {isSubmitting ? <Loader2 className="size-3.5 animate-spin mr-1.5" /> : <CheckCircle2 className="size-3.5 mr-1.5 text-emerald-400" />}
+                  Simpan Pengaturan Pembayaran
+                </Button>
+              </div>
+
+              {/* Seksi 1: Pajak & Service Charge */}
+              <div className="p-3.5 md:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4">
+                <h3 className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Receipt className="size-4 text-slate-600" />
+                  Pajak Resto (PB1) & Biaya Layanan (Service Charge)
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Pajak PB1 */}
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-700">Pajak Resto (PB1 / PPN)</span>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={paymentSettings.enableTax}
+                          onChange={(e) => setPaymentSettings(prev => ({ ...prev, enableTax: e.target.checked }))}
+                          className="size-4 rounded text-brand focus:ring-brand accent-brand cursor-pointer"
+                        />
+                        Aktif
+                      </label>
+                    </div>
+                    <p className="text-[10px] text-slate-500">Dikenakan pada subtotal pesanan sebelum/sesudah diskon.</p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        disabled={!paymentSettings.enableTax}
+                        value={paymentSettings.taxRate}
+                        onChange={(e) => setPaymentSettings(prev => ({ ...prev, taxRate: Number(e.target.value) }))}
+                        className="h-9 w-24 font-bold text-xs rounded-xl bg-slate-50 border-slate-200"
+                      />
+                      <span className="text-xs font-bold text-slate-500">%</span>
+                    </div>
+                  </div>
+
+                  {/* Service Charge */}
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-700">Service Charge (Layanan)</span>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={paymentSettings.enableServiceCharge}
+                          onChange={(e) => setPaymentSettings(prev => ({ ...prev, enableServiceCharge: e.target.checked }))}
+                          className="size-4 rounded text-brand focus:ring-brand accent-brand cursor-pointer"
+                        />
+                        Aktif
+                      </label>
+                    </div>
+                    <p className="text-[10px] text-slate-500">Biaya servis untuk pesanan Dine-In (Makan di Tempat).</p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        disabled={!paymentSettings.enableServiceCharge}
+                        value={paymentSettings.serviceChargeRate}
+                        onChange={(e) => setPaymentSettings(prev => ({ ...prev, serviceChargeRate: Number(e.target.value) }))}
+                        className="h-9 w-24 font-bold text-xs rounded-xl bg-slate-50 border-slate-200"
+                      />
+                      <span className="text-xs font-bold text-slate-500">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seksi 2: Informasi QRIS Kafe */}
+              <div className="p-3.5 md:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <h3 className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Sparkles className="size-4 text-indigo-600" />
+                  Informasi QRIS Kasir (Tampil di Layar Pembayaran)
+                </h3>
+                <p className="text-[10px] text-slate-500">
+                  Data ini membantu kasir memverifikasi pembayaran saat pelanggan memilih metode bayar QRIS.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 mb-1">Nama Merchant / Toko QRIS</label>
+                    <Input
+                      type="text"
+                      placeholder="Contoh: Kopi Senja Resto"
+                      value={paymentSettings.qrisMerchantName || ""}
+                      onChange={(e) => setPaymentSettings(prev => ({ ...prev, qrisMerchantName: e.target.value }))}
+                      className="h-9 text-xs rounded-xl bg-white border-slate-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 mb-1">NMID / Catatan QRIS (Opsional)</label>
+                    <Input
+                      type="text"
+                      placeholder="Contoh: ID1020304050"
+                      value={paymentSettings.qrisNmid || ""}
+                      onChange={(e) => setPaymentSettings(prev => ({ ...prev, qrisNmid: e.target.value }))}
+                      className="h-9 text-xs rounded-xl bg-white border-slate-200"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Seksi 3: Daftar Metode Pembayaran Aktif */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs md:text-sm font-bold text-slate-800">
+                    Daftar Metode Pembayaran ({paymentSettings.paymentMethods.filter(m => m.enabled).length} Aktif)
+                  </h3>
+                  <span className="text-[10px] text-slate-500">Klik toggle untuk mengaktifkan/menonaktifkan</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {paymentSettings.paymentMethods.map((method) => (
+                    <div
+                      key={method.id}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                        method.enabled
+                          ? "bg-white border-slate-200 shadow-sm"
+                          : "bg-slate-50/60 border-slate-200/60 opacity-60"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={method.enabled}
+                          onChange={() => handleTogglePaymentMethod(method.id)}
+                          className="size-4 rounded text-brand focus:ring-brand accent-brand cursor-pointer"
+                        />
+                        <div>
+                          <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            {method.name}
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">
+                              {method.type}
+                            </span>
+                          </div>
+                          {method.bankName && (
+                            <div className="text-[10px] text-slate-500">Bank / Provider: {method.bankName}</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {method.id.startsWith("custom_") && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCustomPaymentMethod(method.id)}
+                          className="text-rose-500 hover:text-rose-700 p-1 text-xs"
+                          title="Hapus metode ini"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Form Tambah Metode Pembayaran Kustom */}
+                <form
+                  onSubmit={handleAddCustomPaymentMethod}
+                  className="mt-3 p-3.5 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 flex flex-col md:flex-row gap-2.5 items-end"
+                >
+                  <div className="w-full md:flex-1">
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Tambah Metode Baru</label>
+                    <Input
+                      type="text"
+                      placeholder="Contoh: EDC BRI, ShopeePay, Kasbon Staff"
+                      value={newMethodName}
+                      onChange={(e) => setNewMethodName(e.target.value)}
+                      className="h-9 text-xs bg-white rounded-xl border-slate-200"
+                    />
+                  </div>
+                  <div className="w-full md:w-36">
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Tipe</label>
+                    <select
+                      value={newMethodType}
+                      onChange={(e) => setNewMethodType(e.target.value as any)}
+                      className="w-full h-9 text-xs rounded-xl border border-slate-200 bg-white px-2.5 font-semibold text-slate-700"
+                    >
+                      <option value="debit">Kartu / Debit</option>
+                      <option value="ewallet">E-Wallet</option>
+                      <option value="transfer">Transfer Bank</option>
+                      <option value="other">Lainnya</option>
+                    </select>
+                  </div>
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    className="h-9 text-xs font-bold rounded-xl border-slate-300 hover:bg-slate-100 text-slate-700 w-full md:w-auto shrink-0"
+                  >
+                    <Plus className="size-3.5 mr-1" /> Tambah
+                  </Button>
+                </form>
+              </div>
+
+              {/* Tombol Simpan Bawah */}
+              <div className="pt-2">
+                <Button
+                  onClick={handleSavePaymentSettings}
+                  disabled={isSubmitting}
+                  className="bg-[#0b172a] hover:bg-slate-800 text-white font-bold text-xs md:text-sm px-6 h-10 rounded-xl shadow-sm w-full md:w-auto transition-all"
+                >
+                  {isSubmitting ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+                  Simpan Semua Pengaturan Pembayaran
                 </Button>
               </div>
             </div>

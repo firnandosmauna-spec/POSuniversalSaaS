@@ -1071,9 +1071,21 @@ function AppLayout() {
               </Button>
             </Link>
 
-            {/* Badge Indicator Domain POS Tenant Aktif */}
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-[#0b172a]/10 border border-[#0b172a]/30 text-[#0b172a] font-extrabold text-xs rounded-xl">
-              {DOMAIN_LABELS[user.businessType] || `POS ${user.businessType}`}
+            {/* Domain Switcher Dropdown (Pilihan Tipe Bisnis POS: F&B, Percetakan, dll) */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+              <Store className="size-3.5 text-[#0b172a] dark:text-cyan-400" />
+              <select
+                value={user.businessType}
+                onChange={(e) => switchBusinessType(e.target.value as any)}
+                className="bg-transparent text-xs font-extrabold text-[#0b172a] dark:text-slate-100 focus:outline-none cursor-pointer"
+                title="Ganti Tipe Bisnis Aktif"
+              >
+                <option value="FNB" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">🍽️ POS F&B Resto</option>
+                <option value="CAFE" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">☕ POS Cafe & Coffee</option>
+                <option value="PRINTING" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">🖨️ POS Percetakan</option>
+                <option value="RETAIL" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">🛍️ POS Retail & Toko</option>
+                <option value="LAUNDRY" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">🧺 POS Laundry</option>
+              </select>
             </div>
             
             <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block"></div>
