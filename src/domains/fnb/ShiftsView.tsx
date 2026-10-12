@@ -210,6 +210,27 @@ export function ShiftsView() {
 
   useEffect(() => {
     fetchShifts();
+
+    if (!user) return;
+    const channel = supabase
+      .channel(`realtime_shifts_view_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cashier_shifts",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        () => {
+          fetchShifts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const handleOpenShift = async (e: React.FormEvent) => {
@@ -430,29 +451,32 @@ export function ShiftsView() {
 
     // 2. Sync to Supabase asynchronously
     try {
-      const { error: updErr } = await supabase
+      const { data: updatedRows, error: updErr } = await supabase
         .from("cashier_shifts")
         .update({
           expected_ending_cash: expected,
           actual_ending_cash: actual,
           end_time: nowIso,
-          status: "closed",
-          cash_sales: cashSales,
-          non_cash_sales: nonCashSales,
-          expenses: expenses
+          status: "closed"
         })
-        .eq("id", activeShift.id);
+        .eq("id", activeShift.id)
+        .select();
 
-      if (updErr) {
+      if (updErr || !updatedRows || updatedRows.length === 0) {
+        // If row did not exist in DB yet, upsert it as closed
         await supabase
           .from("cashier_shifts")
-          .update({
+          .upsert({
+            id: activeShift.id,
+            tenant_id: user.id,
+            cashier_name: activeShift.cashier_name,
+            starting_cash: activeShift.starting_cash || 0,
             expected_ending_cash: expected,
             actual_ending_cash: actual,
+            start_time: activeShift.start_time || nowIso,
             end_time: nowIso,
             status: "closed"
-          })
-          .eq("id", activeShift.id);
+          });
       }
     } catch (error) {
       console.warn("Supabase shift update optional sync failure:", error);

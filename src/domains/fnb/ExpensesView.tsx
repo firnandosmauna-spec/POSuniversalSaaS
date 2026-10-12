@@ -70,6 +70,17 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Lain-lain": "bg-slate-100 text-slate-700 border-slate-200",
 };
 
+const isValidUUID = (id?: string) =>
+  !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+
+const generateUUID = () => {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+};
+
 export function ExpensesView() {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
@@ -159,12 +170,24 @@ export function ExpensesView() {
         .order("created_at", { ascending: false });
 
       if (error) {
+        console.warn("fetchExpenses error:", error);
         const localItems = getLocalExpenses();
         setExpenses(localItems);
         if (localItems.length === 0) setFetchError("Koneksi database gagal. Data lokal ditampilkan.");
       } else {
-        setExpenses(data || []);
-        saveLocalExpenses(data || []);
+        const mapped: ExpenseItem[] = (data || []).map((row: any) => ({
+          id: row.id,
+          created_at: row.created_at,
+          title: row.title || row.description || "Pengeluaran",
+          category: row.category || "Lain-lain",
+          amount: Number(row.amount || 0),
+          payment_method: row.payment_method || "Kas Laci (Petty Cash)",
+          staff_name: row.staff_name || row.recorded_by || "Staf",
+          notes: row.notes || row.description || "",
+          invoice_code: row.invoice_code || "",
+        }));
+        setExpenses(mapped);
+        saveLocalExpenses(mapped);
       }
     } catch {
       const localItems = getLocalExpenses();
@@ -177,6 +200,27 @@ export function ExpensesView() {
 
   useEffect(() => {
     fetchExpenses();
+
+    if (!user) return;
+    const expChannel = supabase
+      .channel(`realtime_expenses_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "store_expenses",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        () => {
+          fetchExpenses();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(expChannel);
+    };
   }, [user]);
 
   const handleOpenForm = (item?: ExpenseItem) => {
@@ -209,8 +253,10 @@ export function ExpensesView() {
     setIsSubmitting(true);
     const numAmount = parseFloat(amount) || 0;
 
+    const safeId = editingExpense?.id && isValidUUID(editingExpense.id) ? editingExpense.id : generateUUID();
+
     const newItem: ExpenseItem = {
-      id: editingExpense?.id || `exp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: safeId,
       created_at: editingExpense?.created_at || new Date().toISOString(),
       title: title.trim(),
       category,
@@ -223,17 +269,55 @@ export function ExpensesView() {
 
     try {
       if (editingExpense) {
-        await supabase.from("store_expenses").update({
+        const { error } = await supabase.from("store_expenses").update({
           title: newItem.title,
+          description: newItem.title,
           category: newItem.category,
           amount: newItem.amount,
           payment_method: newItem.payment_method,
           staff_name: newItem.staff_name,
+          recorded_by: newItem.staff_name,
           notes: newItem.notes,
           invoice_code: newItem.invoice_code,
         }).eq("id", editingExpense.id);
+
+        if (error) {
+          await supabase.from("store_expenses").update({
+            description: newItem.title,
+            category: newItem.category,
+            amount: newItem.amount,
+            payment_method: newItem.payment_method,
+            recorded_by: newItem.staff_name,
+          }).eq("id", editingExpense.id);
+        }
       } else {
-        await supabase.from("store_expenses").insert([{ ...newItem, tenant_id: user.id }]);
+        const { error } = await supabase.from("store_expenses").insert([{
+          id: newItem.id,
+          tenant_id: user.id,
+          title: newItem.title,
+          description: newItem.title,
+          category: newItem.category,
+          amount: newItem.amount,
+          payment_method: newItem.payment_method,
+          staff_name: newItem.staff_name,
+          recorded_by: newItem.staff_name,
+          notes: newItem.notes,
+          invoice_code: newItem.invoice_code,
+          created_at: newItem.created_at,
+        }]);
+
+        if (error) {
+          await supabase.from("store_expenses").insert([{
+            id: newItem.id,
+            tenant_id: user.id,
+            description: newItem.title,
+            category: newItem.category,
+            amount: newItem.amount,
+            payment_method: newItem.payment_method,
+            recorded_by: newItem.staff_name,
+            created_at: newItem.created_at,
+          }]);
+        }
       }
     } catch (e) {
       console.error("DB error, fallback local storage:", e);

@@ -109,6 +109,27 @@ export function CustomersView() {
 
   useEffect(() => {
     fetchCustomers();
+
+    if (!user) return;
+    const custChannel = supabase
+      .channel(`realtime_customers_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "customers",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        () => {
+          fetchCustomers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(custChannel);
+    };
   }, [user]);
 
   const handleOpenModal = (customer?: Customer) => {

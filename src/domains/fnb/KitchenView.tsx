@@ -196,6 +196,27 @@ export function KitchenView() {
 
   useEffect(() => {
     fetchOrders();
+
+    if (!user) return;
+    const channel = supabase
+      .channel(`kitchen_orders_realtime_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Polling auto refresh every 6 seconds

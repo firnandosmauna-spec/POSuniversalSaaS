@@ -214,6 +214,26 @@ export function ProductsView() {
       fetchProducts().then(loaded => {
         fetchCategories(loaded);
       });
+
+      const prodChannel = supabase
+        .channel(`realtime_products_${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "products",
+            filter: `tenant_id=eq.${user.id}`,
+          },
+          () => {
+            fetchProducts();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(prodChannel);
+      };
     }
   }, [user]);
 

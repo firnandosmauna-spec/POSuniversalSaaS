@@ -242,6 +242,44 @@ function AppLayout() {
     };
   }, [user, isKasir]);
 
+  // Realtime subscription for cashier_shifts so Web and Mobile shift state stays 100% in sync
+  useEffect(() => {
+    if (!user) return;
+    const shiftChannel = supabase
+      .channel(`realtime_app_shifts_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cashier_shifts",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        async () => {
+          try {
+            const { data } = await supabase
+              .from("cashier_shifts")
+              .select("id, cashier_name, starting_cash, status, start_time")
+              .eq("tenant_id", user.id)
+              .eq("status", "open")
+              .order("start_time", { ascending: false })
+              .limit(1);
+
+            if (data && data.length > 0) {
+              setHasActiveShift(true);
+            } else {
+              setHasActiveShift(false);
+            }
+          } catch (e) {}
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(shiftChannel);
+    };
+  }, [user]);
+
   const handleOpenShift = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;

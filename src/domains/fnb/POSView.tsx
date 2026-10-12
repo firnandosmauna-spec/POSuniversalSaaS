@@ -327,6 +327,39 @@ export default function FnbPOSView() {
     fetchHeldOrders();
     fetchCustomers();
     fetchActiveShift();
+
+    if (!user) return;
+    const posChannel = supabase
+      .channel(`realtime_pos_sync_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cashier_shifts",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        () => {
+          fetchActiveShift();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "tables",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        () => {
+          fetchTables();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(posChannel);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -752,7 +785,7 @@ export default function FnbPOSView() {
     const staffName = activeShift?.cashier_name || user.name || "Kasir";
 
     const newItem = {
-      id: `exp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       created_at: new Date().toISOString(),
       title: expenseTitle.trim(),
       category: expenseCategory,
@@ -763,15 +796,32 @@ export default function FnbPOSView() {
     };
 
     try {
-      await supabase.from("store_expenses").insert([{
+      const { error: expErr } = await supabase.from("store_expenses").insert([{
+        id: newItem.id,
         tenant_id: user.id,
         title: newItem.title,
+        description: newItem.title,
         category: newItem.category,
         amount: newItem.amount,
         payment_method: newItem.payment_method,
         staff_name: newItem.staff_name,
-        notes: newItem.notes
+        recorded_by: newItem.staff_name,
+        notes: newItem.notes,
+        created_at: newItem.created_at
       }]);
+
+      if (expErr) {
+        await supabase.from("store_expenses").insert([{
+          id: newItem.id,
+          tenant_id: user.id,
+          description: newItem.title,
+          category: newItem.category,
+          amount: newItem.amount,
+          payment_method: newItem.payment_method,
+          recorded_by: newItem.staff_name,
+          created_at: newItem.created_at
+        }]);
+      }
 
       const saved = localStorage.getItem("pos_store_expenses");
       const currentItems = saved ? JSON.parse(saved) : [];
