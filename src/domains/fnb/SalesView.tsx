@@ -113,7 +113,8 @@ export function SalesView() {
               for (const trx of newLocalTrx) {
                 try {
                   const syncId = isValidUUID(trx.id) ? trx.id : generateUUID();
-                  const { error: insErr } = await supabase.from("transactions").insert({
+                  let insErr: any = null;
+                  const res = await supabase.from("transactions").insert({
                     id: syncId,
                     tenant_id: user.id,
                     created_at: trx.created_at,
@@ -130,6 +131,22 @@ export function SalesView() {
                     cashier_name: trx.cashier_name || "Kasir",
                     shift_id: (trx.shift_id && isValidUUID(trx.shift_id)) ? trx.shift_id : null
                   });
+                  insErr = res.error;
+
+                  if (insErr) {
+                    // Retry with minimum required fields
+                    const retryRes = await supabase.from("transactions").insert({
+                      id: syncId,
+                      tenant_id: user.id,
+                      created_at: trx.created_at,
+                      order_type: trx.order_type || "take_away",
+                      payment_method: trx.payment_method || "cash",
+                      status: trx.status || "completed",
+                      total_amount: trx.total_amount || 0,
+                      cashier_name: trx.cashier_name || "Kasir"
+                    });
+                    insErr = retryRes.error;
+                  }
 
                   if (!insErr && trx.transaction_items && trx.transaction_items.length > 0) {
                     const itemsToInsert = trx.transaction_items.map((it: any) => ({

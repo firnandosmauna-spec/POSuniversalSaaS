@@ -469,17 +469,21 @@ export default function FnbPOSView() {
 
       // 1. Simpan Transaksi Induk (resilient to missing invoice_code column or DB schema difference)
       try {
+        const validShiftId = (activeShift && isValidUUID(activeShift.id)) ? activeShift.id : null;
+        const validTableId = (orderType === "dine_in" && selectedTable !== "no_table" && isValidUUID(selectedTable)) ? selectedTable : null;
+        const validCustomerId = (selectedCustomerId && isValidUUID(selectedCustomerId)) ? selectedCustomerId : null;
+
         if (activeHoldId) {
           const { data, error: updateError } = await supabase
             .from("transactions")
             .update({
-              shift_id: (activeShift && isValidUUID(activeShift.id)) ? activeShift.id : null,
+              shift_id: validShiftId,
               branch_id: activeBranchId || null,
               branch_name: activeBranchName || null,
               cashier_name: activeShift?.cashier_name || user.name || "Kasir",
-              order_type: orderType,
-              table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
-              customer_id: selectedCustomerId || null,
+              order_type: orderType || "take_away",
+              table_id: validTableId,
+              customer_id: validCustomerId,
               total_amount: total,
               discount_amount: discountAmount,
               tax_amount: taxAmount,
@@ -493,7 +497,6 @@ export default function FnbPOSView() {
         }
 
         if (!transaction) {
-          const validShiftId = (activeShift && isValidUUID(activeShift.id)) ? activeShift.id : null;
           const { data, error: trxError } = await supabase
             .from("transactions")
             .insert({
@@ -502,9 +505,9 @@ export default function FnbPOSView() {
               branch_id: activeBranchId || null,
               branch_name: activeBranchName || null,
               cashier_name: activeShift?.cashier_name || user.name || "Kasir",
-              order_type: orderType,
-              table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
-              customer_id: selectedCustomerId || null,
+              order_type: orderType || "take_away",
+              table_id: validTableId,
+              customer_id: validCustomerId,
               total_amount: total,
               discount_amount: discountAmount,
               tax_amount: taxAmount,
@@ -516,28 +519,45 @@ export default function FnbPOSView() {
             .single();
 
           if (trxError) {
-            // If invoice_code column doesn't exist in Supabase DB schema, retry without invoice_code
-            if (trxError.message?.includes("invoice_code") || trxError.code === "PGRST204" || trxError.message?.toLowerCase().includes("column")) {
-              const { data: retryData } = await supabase
+            console.warn("Supabase transaction insert initial attempt warning:", trxError.message);
+            // Tier 1 retry: without invoice_code
+            const { data: retryData, error: retryErr } = await supabase
+              .from("transactions")
+              .insert({
+                tenant_id: user.id,
+                shift_id: validShiftId,
+                branch_id: activeBranchId || null,
+                branch_name: activeBranchName || null,
+                cashier_name: activeShift?.cashier_name || user.name || "Kasir",
+                order_type: orderType || "take_away",
+                table_id: validTableId,
+                customer_id: validCustomerId,
+                total_amount: total,
+                discount_amount: discountAmount,
+                tax_amount: taxAmount,
+                payment_method: isHold ? "none" : method,
+                status: isHold ? "hold" : "completed"
+              })
+              .select()
+              .single();
+
+            if (!retryErr && retryData) {
+              transaction = retryData;
+            } else {
+              // Tier 2 retry: minimum essential fields only
+              const { data: minData } = await supabase
                 .from("transactions")
                 .insert({
                   tenant_id: user.id,
-                  shift_id: validShiftId,
-                  branch_id: activeBranchId || null,
-                  branch_name: activeBranchName || null,
                   cashier_name: activeShift?.cashier_name || user.name || "Kasir",
-                  order_type: orderType,
-                  table_id: orderType === "dine_in" && selectedTable !== "no_table" ? selectedTable : null,
-                  customer_id: selectedCustomerId || null,
+                  order_type: orderType || "take_away",
                   total_amount: total,
-                  discount_amount: discountAmount,
-                  tax_amount: taxAmount,
                   payment_method: isHold ? "none" : method,
                   status: isHold ? "hold" : "completed"
                 })
                 .select()
                 .single();
-              transaction = retryData;
+              if (minData) transaction = minData;
             }
           } else {
             transaction = data;
