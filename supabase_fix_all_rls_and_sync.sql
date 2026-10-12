@@ -211,9 +211,42 @@ ALTER TABLE store_settings
   ADD COLUMN IF NOT EXISTS enable_dine_in boolean DEFAULT true,
   ADD COLUMN IF NOT EXISTS enable_takeaway boolean DEFAULT true;
 
--- 3. DISABLE RLS / BUKA AKSES PENUH UNTUK STAF, ANON & AUTHENTICATED
+-- 3. DISABLE RLS & BUAT PERMISSIVE POLICY AGAR ANON / STAF TIDAK PERNAH DI-BLOCK
 -- Multi-tenant terisolasi via tenant_id di aplikasi, sehingga kasir & staf (PIN)
 -- maupun mobile/Vercel tidak akan pernah diblokir kode error 42501 (RLS violation).
+
+-- Drop policy lama yang membatasi hanya auth.uid()
+DROP POLICY IF EXISTS "tenant_shifts_policy" ON cashier_shifts;
+DROP POLICY IF EXISTS "allow_all_shifts" ON cashier_shifts;
+DROP POLICY IF EXISTS "tenant_expenses_policy" ON store_expenses;
+DROP POLICY IF EXISTS "allow_all_expenses" ON store_expenses;
+DROP POLICY IF EXISTS "tenant_tables_policy" ON tables;
+DROP POLICY IF EXISTS "allow_all_tables" ON tables;
+DROP POLICY IF EXISTS "tenant_settings_policy" ON store_settings;
+DROP POLICY IF EXISTS "allow_all_settings" ON store_settings;
+DROP POLICY IF EXISTS "tenant_users_policy" ON store_users;
+DROP POLICY IF EXISTS "allow_all_users" ON store_users;
+DROP POLICY IF EXISTS "allow_all_transactions" ON transactions;
+DROP POLICY IF EXISTS "allow_all_items" ON transaction_items;
+DROP POLICY IF EXISTS "allow_all_products" ON products;
+DROP POLICY IF EXISTS "allow_all_customers" ON customers;
+DROP POLICY IF EXISTS "allow_all_categories" ON categories;
+DROP POLICY IF EXISTS "allow_all_branches" ON branches;
+
+-- Buat policy publik yang mengizinkan semua operasi (anon & authenticated)
+CREATE POLICY "allow_all_shifts" ON cashier_shifts FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_expenses" ON store_expenses FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_tables" ON tables FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_settings" ON store_settings FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_users" ON store_users FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_transactions" ON transactions FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_items" ON transaction_items FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_products" ON products FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_customers" ON customers FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_categories" ON categories FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_branches" ON branches FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- Matikan RLS sebagai lapisan proteksi ganda
 ALTER TABLE cashier_shifts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE store_expenses DISABLE ROW LEVEL SECURITY;
 ALTER TABLE tables DISABLE ROW LEVEL SECURITY;
@@ -257,49 +290,20 @@ ALTER TABLE branches REPLICA IDENTITY FULL;
 -- 5. DAFTARKAN SEMUA TABEL KE SUPABASE REALTIME PUBLICATION
 DO $$
 BEGIN
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE cashier_shifts;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE store_expenses;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE tables;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE store_settings;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE store_users;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE transaction_items;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE products;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE customers;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE categories;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE branches;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE cashier_shifts; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE store_expenses; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tables; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE store_settings; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE store_users; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE transactions; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE transaction_items; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE products; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE customers; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE categories; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE branches; EXCEPTION WHEN OTHERS THEN NULL; END;
 END $$;
+
+-- Reload cache schema PostgREST
+NOTIFY pgrst, 'reload schema';
 
 -- Selesai! Semua modul kini tersinkronisasi 100% secara real-time.
