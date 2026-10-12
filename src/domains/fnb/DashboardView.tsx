@@ -128,6 +128,27 @@ export function DashboardView() {
 
   useEffect(() => {
     fetchData();
+
+    if (!user) return;
+    const channel = supabase
+      .channel(`realtime_fnb_dash_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Update current date and time every second

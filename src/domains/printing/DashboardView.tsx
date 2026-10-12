@@ -111,6 +111,27 @@ export function PrintingDashboardView() {
 
   useEffect(() => {
     loadDashboardData();
+
+    if (!user) return;
+    const channel = supabase
+      .channel(`realtime_print_dash_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        () => {
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Branch Isolation Filter

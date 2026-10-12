@@ -196,6 +196,27 @@ export function PrintingSalesView() {
 
   useEffect(() => {
     loadJobs();
+
+    if (!user) return;
+    const channel = supabase
+      .channel(`realtime_printing_sales_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        () => {
+          loadJobs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Persist update to localStorage + Supabase cloud sync

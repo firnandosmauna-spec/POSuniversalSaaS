@@ -163,6 +163,27 @@ export function SalesView() {
 
   useEffect(() => {
     fetchTransactions();
+
+    if (!user) return;
+    const channel = supabase
+      .channel(`realtime_sales_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          filter: `tenant_id=eq.${user.id}`,
+        },
+        () => {
+          fetchTransactions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const formatRupiah = (num: number) => {
