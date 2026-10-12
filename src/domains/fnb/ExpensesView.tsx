@@ -158,9 +158,11 @@ export function ExpensesView() {
     } catch {}
   };
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = async (isSilent = false) => {
     if (!user) return;
-    setIsLoading(true);
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     setFetchError(null);
     try {
       const { data, error } = await supabase
@@ -202,6 +204,7 @@ export function ExpensesView() {
     fetchExpenses();
 
     if (!user) return;
+    let timer: any = null;
     const expChannel = supabase
       .channel(`realtime_expenses_${user.id}`)
       .on(
@@ -213,12 +216,16 @@ export function ExpensesView() {
           filter: `tenant_id=eq.${user.id}`,
         },
         () => {
-          fetchExpenses();
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => {
+            fetchExpenses(true);
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(expChannel);
     };
   }, [user]);

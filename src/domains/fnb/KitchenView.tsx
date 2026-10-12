@@ -198,6 +198,7 @@ export function KitchenView() {
     fetchOrders();
 
     if (!user) return;
+    let timer: any = null;
     const channel = supabase
       .channel(`kitchen_orders_realtime_${user.id}`)
       .on(
@@ -209,12 +210,16 @@ export function KitchenView() {
           filter: `tenant_id=eq.${user.id}`,
         },
         () => {
-          fetchOrders();
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => {
+            fetchOrders();
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [user]);

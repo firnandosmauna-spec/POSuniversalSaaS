@@ -71,12 +71,14 @@ export function ReportsView() {
   const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "hold" | "cancelled" | "refund">("all");
   const [filterPayment, setFilterPayment] = useState<"all" | "cash" | "qris" | "non_cash">("all");
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (isSilent = false) => {
     if (!user) {
       setIsLoading(false);
       return;
     }
-    setIsLoading(true);
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     try {
       const { data, error } = await supabase
         .from("transactions")
@@ -122,6 +124,7 @@ export function ReportsView() {
     fetchTransactions();
 
     if (!user) return;
+    let timer: any = null;
     const channel = supabase
       .channel(`realtime_reports_${user.id}`)
       .on(
@@ -133,12 +136,16 @@ export function ReportsView() {
           filter: `tenant_id=eq.${user.id}`,
         },
         () => {
-          fetchTransactions();
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => {
+            fetchTransactions(true);
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [user]);

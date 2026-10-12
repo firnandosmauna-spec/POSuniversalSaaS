@@ -107,9 +107,11 @@ export function ShiftsView() {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   };
 
-  const fetchShifts = async () => {
+  const fetchShifts = async (isSilent = false) => {
     if (!user) return;
-    setIsLoading(true);
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     try {
       let loadedShifts: Shift[] = [];
       let localShifts: Shift[] = [];
@@ -118,17 +120,6 @@ export function ShiftsView() {
       if (saved) {
         try {
           localShifts = JSON.parse(saved) as Shift[];
-          // Migrate any invalid local UUIDs to valid UUIDs
-          let migrated = false;
-          localShifts.forEach(s => {
-            if (!isValidUUID(s.id)) {
-              s.id = generateUUID();
-              migrated = true;
-            }
-          });
-          if (migrated) {
-            localStorage.setItem(tenantStorageKey, JSON.stringify(localShifts));
-          }
         } catch (e) {}
       }
 
@@ -142,45 +133,12 @@ export function ShiftsView() {
       if (!error && data && data.length > 0) {
         const dbShifts = data as Shift[];
         const dbIds = new Set(dbShifts.map(s => s.id));
-        // Include any local shift not yet in DB
+        // Include any local shift not yet in DB for display only
         const extraLocal = localShifts.filter(s => !dbIds.has(s.id));
         loadedShifts = [...dbShifts, ...extraLocal];
         localStorage.setItem(tenantStorageKey, JSON.stringify(loadedShifts));
-
-        // Auto-sync any local shift that was missing from Supabase
-        extraLocal.forEach(async (ls) => {
-          try {
-            await supabase.from("cashier_shifts").upsert({
-              id: ls.id,
-              tenant_id: user.id,
-              cashier_name: ls.cashier_name,
-              starting_cash: ls.starting_cash || 0,
-              expected_ending_cash: ls.expected_ending_cash,
-              actual_ending_cash: ls.actual_ending_cash,
-              status: ls.status,
-              start_time: ls.start_time,
-              end_time: ls.end_time
-            });
-          } catch(e) {}
-        });
       } else {
         loadedShifts = localShifts;
-        // Auto-push any local open shift to Supabase if Supabase has 0 shifts
-        const openLocal = localShifts.find(s => s.status === "open");
-        if (openLocal) {
-          (async () => {
-            try {
-              await supabase.from("cashier_shifts").upsert({
-                id: openLocal.id,
-                tenant_id: user.id,
-                cashier_name: openLocal.cashier_name,
-                starting_cash: openLocal.starting_cash || 0,
-                status: "open",
-                start_time: openLocal.start_time
-              });
-            } catch(e) {}
-          })();
-        }
       }
       
       setShifts(loadedShifts);
@@ -212,6 +170,7 @@ export function ShiftsView() {
     fetchShifts();
 
     if (!user) return;
+    let timer: any = null;
     const channel = supabase
       .channel(`realtime_shifts_view_${user.id}`)
       .on(
@@ -223,12 +182,16 @@ export function ShiftsView() {
           filter: `tenant_id=eq.${user.id}`,
         },
         () => {
-          fetchShifts();
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => {
+            fetchShifts(true);
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [user]);

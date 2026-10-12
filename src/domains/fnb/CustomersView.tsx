@@ -46,8 +46,10 @@ export function CustomersView() {
 
   const isUUID = (str?: string) => Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
 
-  const fetchCustomers = async () => {
-    setIsLoading(true);
+  const fetchCustomers = async (isSilent = false) => {
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     try {
       const deletedIdsStr = localStorage.getItem("pos_deleted_customer_ids");
       const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
@@ -111,6 +113,7 @@ export function CustomersView() {
     fetchCustomers();
 
     if (!user) return;
+    let timer: any = null;
     const custChannel = supabase
       .channel(`realtime_customers_${user.id}`)
       .on(
@@ -122,12 +125,16 @@ export function CustomersView() {
           filter: `tenant_id=eq.${user.id}`,
         },
         () => {
-          fetchCustomers();
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => {
+            fetchCustomers(true);
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(custChannel);
     };
   }, [user]);

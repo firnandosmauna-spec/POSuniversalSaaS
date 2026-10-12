@@ -183,26 +183,6 @@ function AppLayout() {
           const localOpen = localShifts.find((s: any) => s.status === "open");
           if (localOpen) {
             setHasActiveShift(true);
-            // If local shift has invalid UUID, migrate it and sync to Supabase
-            if (!isValidUUID(localOpen.id)) {
-              localOpen.id = generateUUID();
-              localStorage.setItem(tenantKey, JSON.stringify(localShifts));
-            }
-            // Auto-sync local open shift to Supabase
-            (async () => {
-              try {
-                await supabase.from("cashier_shifts").upsert({
-                  id: localOpen.id,
-                  tenant_id: user.id,
-                  cashier_name: localOpen.cashier_name,
-                  starting_cash: localOpen.starting_cash || 0,
-                  status: "open",
-                  start_time: localOpen.start_time || new Date().toISOString()
-                });
-              } catch (syncErr) {
-                console.warn("Background shift sync error:", syncErr);
-              }
-            })();
           } else {
             setHasActiveShift(false);
           }
@@ -245,6 +225,7 @@ function AppLayout() {
   // Realtime subscription for cashier_shifts so Web and Mobile shift state stays 100% in sync
   useEffect(() => {
     if (!user) return;
+    let timer: any = null;
     const shiftChannel = supabase
       .channel(`realtime_app_shifts_${user.id}`)
       .on(
@@ -255,27 +236,26 @@ function AppLayout() {
           table: "cashier_shifts",
           filter: `tenant_id=eq.${user.id}`,
         },
-        async () => {
-          try {
-            const { data } = await supabase
-              .from("cashier_shifts")
-              .select("id, cashier_name, starting_cash, status, start_time")
-              .eq("tenant_id", user.id)
-              .eq("status", "open")
-              .order("start_time", { ascending: false })
-              .limit(1);
+        () => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(async () => {
+            try {
+              const { data } = await supabase
+                .from("cashier_shifts")
+                .select("id, status")
+                .eq("tenant_id", user.id)
+                .eq("status", "open")
+                .limit(1);
 
-            if (data && data.length > 0) {
-              setHasActiveShift(true);
-            } else {
-              setHasActiveShift(false);
-            }
-          } catch (e) {}
+              setHasActiveShift(!!(data && data.length > 0));
+            } catch (e) {}
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(shiftChannel);
     };
   }, [user]);

@@ -59,9 +59,11 @@ export function DashboardView() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  const fetchData = async () => {
+  const fetchData = async (isSilent = false) => {
     if (!user) return;
-    setIsLoading(true);
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     try {
       // 1. Fetch Transactions
       let txData: any[] = [];
@@ -130,6 +132,7 @@ export function DashboardView() {
     fetchData();
 
     if (!user) return;
+    let timer: any = null;
     const channel = supabase
       .channel(`realtime_fnb_dash_${user.id}`)
       .on(
@@ -141,12 +144,16 @@ export function DashboardView() {
           filter: `tenant_id=eq.${user.id}`,
         },
         () => {
-          fetchData();
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => {
+            fetchData(true);
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [user]);

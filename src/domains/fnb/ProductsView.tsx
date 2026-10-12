@@ -121,9 +121,11 @@ export function ProductsView() {
 
   const tenantProductKey = user ? `pos_tenant_${user.id}_products` : "pos_tenant_demo_products";
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (isSilent = false) => {
     if (!user) return;
-    setIsLoading(true);
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     const localStations = getLocalStations();
     const localMinStocks = getLocalMinStocks();
     let loadedProducts: Product[] = [];
@@ -215,6 +217,7 @@ export function ProductsView() {
         fetchCategories(loaded);
       });
 
+      let timer: any = null;
       const prodChannel = supabase
         .channel(`realtime_products_${user.id}`)
         .on(
@@ -226,12 +229,18 @@ export function ProductsView() {
             filter: `tenant_id=eq.${user.id}`,
           },
           () => {
-            fetchProducts();
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+              fetchProducts(true).then(loaded => {
+                fetchCategories(loaded);
+              });
+            }, 300);
           }
         )
         .subscribe();
 
       return () => {
+        if (timer) clearTimeout(timer);
         supabase.removeChannel(prodChannel);
       };
     }

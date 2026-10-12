@@ -329,6 +329,7 @@ export default function FnbPOSView() {
     fetchActiveShift();
 
     if (!user) return;
+    let debounceTimer: any = null;
     const posChannel = supabase
       .channel(`realtime_pos_sync_${user.id}`)
       .on(
@@ -340,7 +341,10 @@ export default function FnbPOSView() {
           filter: `tenant_id=eq.${user.id}`,
         },
         () => {
-          fetchActiveShift();
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchActiveShift();
+          }, 300);
         }
       )
       .on(
@@ -352,12 +356,16 @@ export default function FnbPOSView() {
           filter: `tenant_id=eq.${user.id}`,
         },
         () => {
-          fetchTables();
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchTables();
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(posChannel);
     };
   }, [user]);

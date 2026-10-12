@@ -54,8 +54,10 @@ export function PrintingDashboardView() {
   const [jobs, setJobs] = useState<PrintingJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadDashboardData = async () => {
-    setIsLoading(true);
+  const loadDashboardData = async (isSilent = false) => {
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     try {
       // 1. Try reading local stored SPK jobs
       const savedJobsStr = localStorage.getItem("pos_printing_jobs");
@@ -105,7 +107,7 @@ export function PrintingDashboardView() {
     } catch (e) {
       console.error("Error loading printing dashboard:", e);
     } finally {
-      setIsLoading(false);
+      if (!isSilent) setIsLoading(false);
     }
   };
 
@@ -113,6 +115,7 @@ export function PrintingDashboardView() {
     loadDashboardData();
 
     if (!user) return;
+    let debounceTimer: any = null;
     const channel = supabase
       .channel(`realtime_print_dash_${user.id}`)
       .on(
@@ -124,12 +127,16 @@ export function PrintingDashboardView() {
           filter: `tenant_id=eq.${user.id}`,
         },
         () => {
-          loadDashboardData();
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            loadDashboardData(true);
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [user]);

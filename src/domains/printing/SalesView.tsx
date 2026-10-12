@@ -99,8 +99,10 @@ export function PrintingSalesView() {
   const [payMethodInput, setPayMethodInput] = useState<string>(paymentMethodsList[0] || "Tunai");
 
   // Load SPK Jobs from localStorage and Supabase
-  const loadJobs = async () => {
-    setIsLoading(true);
+  const loadJobs = async (isSilent = false) => {
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     try {
       // 1. Get from localStorage
       const localStr = localStorage.getItem("pos_printing_jobs");
@@ -198,6 +200,7 @@ export function PrintingSalesView() {
     loadJobs();
 
     if (!user) return;
+    let timer: any = null;
     const channel = supabase
       .channel(`realtime_printing_sales_${user.id}`)
       .on(
@@ -209,12 +212,16 @@ export function PrintingSalesView() {
           filter: `tenant_id=eq.${user.id}`,
         },
         () => {
-          loadJobs();
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => {
+            loadJobs(true);
+          }, 300);
         }
       )
       .subscribe();
 
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [user]);
