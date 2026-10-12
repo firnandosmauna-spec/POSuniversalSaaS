@@ -45,7 +45,10 @@ export const DEFAULT_FNB_PAYMENT_SETTINGS: FnBPaymentSettings = {
 export function getFnBPaymentSettings(tenantId?: string): FnBPaymentSettings {
   try {
     const key = tenantId ? `pos_fnb_payment_settings_${tenantId}` : "pos_fnb_payment_settings";
-    const saved = localStorage.getItem(key);
+    let saved = localStorage.getItem(key);
+    if (!saved && tenantId) {
+      saved = localStorage.getItem("pos_fnb_payment_settings");
+    }
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
@@ -66,6 +69,11 @@ export function saveFnBPaymentSettings(settings: FnBPaymentSettings, tenantId?: 
     localStorage.setItem(key, JSON.stringify(settings));
     // Simpan juga ke key umum agar kompatibel
     localStorage.setItem("pos_fnb_payment_settings", JSON.stringify(settings));
+
+    // Dispatch event agar POSView dan komponen lain langsung bereaksi tanpa refresh halaman
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("pos_fnb_payment_settings_updated", { detail: settings }));
+    }
   } catch (e) {
     console.error("Gagal menyimpan pengaturan pembayaran F&B:", e);
   }

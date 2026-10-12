@@ -389,8 +389,14 @@ export default function FnbPOSView() {
       )
       .subscribe();
 
+    const handlePaymentSettingsUpdate = () => {
+      fetchSettings();
+    };
+    window.addEventListener("pos_fnb_payment_settings_updated", handlePaymentSettingsUpdate);
+
     return () => {
       clearTimeout(debounceTimer);
+      window.removeEventListener("pos_fnb_payment_settings_updated", handlePaymentSettingsUpdate);
       supabase.removeChannel(posChannel);
     };
   }, [user]);

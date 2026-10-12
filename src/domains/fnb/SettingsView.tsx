@@ -76,6 +76,7 @@ export function SettingsView() {
 
   // Payment Settings for FnB
   const [paymentSettings, setPaymentSettings] = useState<FnBPaymentSettings>(() => getFnBPaymentSettings(user?.id));
+  const [paymentSaveSuccess, setPaymentSaveSuccess] = useState(false);
   const [newMethodName, setNewMethodName] = useState("");
   const [newMethodType, setNewMethodType] = useState<PaymentMethodItem["type"]>("debit");
   const [newMethodBank, setNewMethodBank] = useState("");
@@ -378,22 +379,46 @@ export function SettingsView() {
   };
 
   const handleSavePaymentSettings = async () => {
-    if (!user) return;
     setIsSubmitting(true);
     try {
-      saveFnBPaymentSettings(paymentSettings, user.id);
-      // Sinkronkan juga pajak ke store_settings di Supabase
-      if (settingsId) {
-        await supabase.from("store_settings").update({ 
-          tax_rate: paymentSettings.enableTax ? paymentSettings.taxRate : 0,
-          updated_at: new Date().toISOString() 
-        }).eq("id", settingsId);
+      // 1. Simpan ke localStorage (tenant aktif & key umum fallback)
+      saveFnBPaymentSettings(paymentSettings, user?.id);
+
+      // 2. Sinkronkan ke database store_settings Supabase jika ada session user
+      if (user?.id) {
+        const taxToSave = paymentSettings.enableTax ? (Number(paymentSettings.taxRate) || 0) : 0;
+        const serviceToSave = paymentSettings.enableServiceCharge ? (Number(paymentSettings.serviceChargeRate) || 0) : 0;
+
+        try {
+          if (settingsId) {
+            await supabase.from("store_settings").update({ 
+              tax_rate: taxToSave,
+              service_charge: serviceToSave,
+              updated_at: new Date().toISOString() 
+            }).eq("id", settingsId);
+          } else {
+            const { data } = await supabase.from("store_settings").upsert({ 
+              tenant_id: user.id,
+              tax_rate: taxToSave,
+              service_charge: serviceToSave,
+              updated_at: new Date().toISOString() 
+            }, { onConflict: "tenant_id" }).select().maybeSingle();
+            if (data?.id) setSettingsId(data.id);
+          }
+          setTaxRate(taxToSave);
+        } catch (dbErr) {
+          console.warn("Sinkronisasi database toko Supabase dilewati (data aman di cache lokal):", dbErr);
+        }
       }
-      setTaxRate(paymentSettings.enableTax ? paymentSettings.taxRate : 0);
+
+      setPaymentSaveSuccess(true);
+      setTimeout(() => setPaymentSaveSuccess(false), 3500);
       toast.success("Pengaturan metode pembayaran & biaya resto berhasil disimpan!");
+      alert("Pengaturan metode pembayaran & biaya resto berhasil disimpan!");
     } catch (error: any) {
-      console.error(error);
-      toast.error("Gagal menyimpan pengaturan pembayaran.");
+      console.error("Gagal simpan pengaturan pembayaran:", error);
+      toast.error("Gagal menyimpan pengaturan: " + (error?.message || error));
+      alert("Gagal menyimpan pengaturan: " + (error?.message || error));
     } finally {
       setIsSubmitting(false);
     }
@@ -1628,12 +1653,23 @@ export function SettingsView() {
                   </p>
                 </div>
                 <Button
+                  type="button"
                   onClick={handleSavePaymentSettings}
                   disabled={isSubmitting}
-                  className="bg-[#0b172a] hover:bg-slate-800 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-sm self-start md:self-auto"
+                  className={`font-bold text-xs h-9 px-4 rounded-xl shadow-sm self-start md:self-auto transition-all ${
+                    paymentSaveSuccess
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      : "bg-[#0b172a] hover:bg-slate-800 text-white"
+                  }`}
                 >
-                  {isSubmitting ? <Loader2 className="size-3.5 animate-spin mr-1.5" /> : <CheckCircle2 className="size-3.5 mr-1.5 text-emerald-400" />}
-                  Simpan Pengaturan Pembayaran
+                  {isSubmitting ? (
+                    <Loader2 className="size-3.5 animate-spin mr-1.5" />
+                  ) : paymentSaveSuccess ? (
+                    <CheckCircle2 className="size-3.5 mr-1.5 text-white" />
+                  ) : (
+                    <CreditCard className="size-3.5 mr-1.5 text-white" />
+                  )}
+                  {paymentSaveSuccess ? "Berhasil Disimpan!" : "Simpan Pengaturan Pembayaran"}
                 </Button>
               </div>
 
@@ -1751,7 +1787,8 @@ export function SettingsView() {
                   {paymentSettings.paymentMethods.map((method) => (
                     <div
                       key={method.id}
-                      className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                      onClick={() => handleTogglePaymentMethod(method.id)}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer select-none ${
                         method.enabled
                           ? "bg-white border-slate-200 shadow-sm"
                           : "bg-slate-50/60 border-slate-200/60 opacity-60"
@@ -1761,7 +1798,10 @@ export function SettingsView() {
                         <input
                           type="checkbox"
                           checked={method.enabled}
-                          onChange={() => handleTogglePaymentMethod(method.id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleTogglePaymentMethod(method.id);
+                          }}
                           className="size-4 rounded text-brand focus:ring-brand accent-brand cursor-pointer"
                         />
                         <div>
@@ -1780,7 +1820,10 @@ export function SettingsView() {
                       {method.id.startsWith("custom_") && (
                         <button
                           type="button"
-                          onClick={() => handleDeleteCustomPaymentMethod(method.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCustomPaymentMethod(method.id);
+                          }}
                           className="text-rose-500 hover:text-rose-700 p-1 text-xs"
                           title="Hapus metode ini"
                         >
@@ -1830,15 +1873,39 @@ export function SettingsView() {
               </div>
 
               {/* Tombol Simpan Bawah */}
-              <div className="pt-2">
+              <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                 <Button
+                  type="button"
                   onClick={handleSavePaymentSettings}
                   disabled={isSubmitting}
-                  className="bg-[#0b172a] hover:bg-slate-800 text-white font-bold text-xs md:text-sm px-6 h-10 rounded-xl shadow-sm w-full md:w-auto transition-all"
+                  className={`font-bold text-xs md:text-sm px-6 h-11 rounded-xl shadow-sm w-full md:w-auto transition-all flex items-center justify-center gap-2 ${
+                    paymentSaveSuccess
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      : "bg-[#0b172a] hover:bg-slate-800 text-white"
+                  }`}
                 >
-                  {isSubmitting ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
-                  Simpan Semua Pengaturan Pembayaran
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : paymentSaveSuccess ? (
+                    <>
+                      <CheckCircle2 className="size-4 text-white" />
+                      Berhasil Disimpan!
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="size-4 text-white" />
+                      Simpan Semua Pengaturan Pembayaran
+                    </>
+                  )}
                 </Button>
+                {paymentSaveSuccess && (
+                  <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 animate-pulse">
+                    <CheckCircle2 className="size-4" /> Pengaturan berhasil disimpan dan aktif di kasir.
+                  </span>
+                )}
               </div>
             </div>
           ) : (
