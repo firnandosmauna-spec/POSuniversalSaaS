@@ -141,44 +141,15 @@ export function PrintingSalesView() {
             };
           });
 
-          // Merge local and remote avoiding duplicate IDs
-          const merged = [...localJobs];
-          remoteJobs.forEach((rj) => {
-            if (!merged.some((lj) => lj.id === rj.id)) {
-              merged.push(rj);
-            }
-          });
-          localJobs = merged;
-
-          // Auto-sync un-synced local jobs to Supabase so Web version gets them
-          const unSynced = localJobs.filter(lj => !remoteJobs.some(rj => rj.id === lj.id) && !lj.id.startsWith("spk_demo"));
-          if (unSynced.length > 0) {
-            (async () => {
-              for (const job of unSynced) {
-                try {
-                  await supabase.from("transactions").insert({
-                    id: job.id,
-                    tenant_id: user.id,
-                    total_amount: job.totalAmount,
-                    payment_method: job.paymentMethod || "Tunai",
-                    status: "completed",
-                    order_type: "take_away",
-                    created_at: job.createdAt,
-                    customer_name: job.customerName,
-                    customer_phone: job.customerPhone,
-                    invoice_no: job.invoiceNo,
-                    dp_amount: job.dpAmount,
-                    remaining_amount: job.remainingAmount,
-                    payment_status: job.paymentStatus,
-                    job_status: job.jobStatus,
-                    items: job.items,
-                    cashier_name: job.cashierName,
-                    branch_name: job.branchName
-                  });
-                } catch (err) {}
-              }
-            })();
-          }
+          // Supabase is source of truth when online
+          const pendingOffline = localJobs.filter((lj: any) => lj.is_offline);
+          localJobs = [...remoteJobs, ...pendingOffline];
+          localStorage.setItem("pos_printing_jobs", JSON.stringify(localJobs));
+        } else if (!txErr) {
+          // Database returned empty (all jobs deleted)
+          const pendingOffline = localJobs.filter((lj: any) => lj.is_offline);
+          localJobs = pendingOffline;
+          localStorage.setItem("pos_printing_jobs", JSON.stringify(localJobs));
         }
       }
 

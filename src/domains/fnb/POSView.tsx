@@ -298,18 +298,27 @@ export default function FnbPOSView() {
         
       let fetchedTransactions = data || [];
 
-      // Merge with localStorage transactions (offline/fallback POS transactions)
-      try {
-        const saved = localStorage.getItem(`pos_transactions_${user.id}`) || localStorage.getItem(`pos_tenant_${user.id}_transactions`);
-        if (saved) {
-          const localTrx = JSON.parse(saved);
-          const existingIds = new Set(fetchedTransactions.map((o: any) => o.id));
-          const newLocalTrx = localTrx.filter((lt: any) => !existingIds.has(lt.id));
-          fetchedTransactions = [...newLocalTrx, ...fetchedTransactions];
-          fetchedTransactions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      if (!error) {
+        try {
+          const saved = localStorage.getItem(`pos_transactions_${user.id}`);
+          if (saved) {
+            const localTrx = JSON.parse(saved);
+            const pendingOffline = localTrx.filter((lt: any) => lt.is_offline);
+            if (pendingOffline.length > 0) {
+              fetchedTransactions = [...pendingOffline, ...fetchedTransactions];
+              fetchedTransactions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            }
+          }
+          localStorage.setItem(`pos_transactions_${user.id}`, JSON.stringify(fetchedTransactions));
+          localStorage.removeItem(`pos_tenant_${user.id}_transactions`);
+        } catch (e) {
+          console.error("Failed to sync local transactions", e);
         }
-      } catch (e) {
-        console.error("Failed to merge local transactions", e);
+      } else {
+        try {
+          const saved = localStorage.getItem(`pos_transactions_${user.id}`);
+          if (saved) fetchedTransactions = JSON.parse(saved);
+        } catch (e) {}
       }
 
       setHistoryTransactions(fetchedTransactions);

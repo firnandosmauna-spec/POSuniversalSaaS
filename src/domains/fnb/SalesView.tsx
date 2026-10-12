@@ -93,33 +93,43 @@ export function SalesView() {
         .eq("tenant_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.warn("Supabase transaction query warning:", error.message);
-      }
-      
-      let fetchedTransactions = data || [];
+      if (!error) {
+        let fetchedTransactions = data || [];
 
-      // Merge with localStorage transactions (offline/fallback POS transactions) for display only
-      try {
-        const saved = localStorage.getItem(`pos_transactions_${user.id}`);
-        if (saved) {
-          const localTrx = JSON.parse(saved);
-          const existingIds = new Set(fetchedTransactions.map((o: any) => o.id));
-          const newLocalTrx = localTrx.filter((lt: any) => !existingIds.has(lt.id));
-          if (newLocalTrx.length > 0) {
-            fetchedTransactions = [...newLocalTrx, ...fetchedTransactions];
-            fetchedTransactions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        // Check if there are true offline-only unsynced transactions (is_offline === true)
+        try {
+          const saved = localStorage.getItem(`pos_transactions_${user.id}`);
+          if (saved) {
+            const localTrx = JSON.parse(saved);
+            const pendingOffline = localTrx.filter((lt: any) => lt.is_offline);
+            if (pendingOffline.length > 0) {
+              fetchedTransactions = [...pendingOffline, ...fetchedTransactions];
+              fetchedTransactions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            }
           }
-        }
-      } catch (e) {
-        console.error("Failed to merge local transactions", e);
-      }
+        } catch (e) {}
 
-      setTransactions(fetchedTransactions);
+        // Keep localStorage strictly synchronized with remote state so deleted items are also purged locally
+        try {
+          localStorage.setItem(`pos_transactions_${user.id}`, JSON.stringify(fetchedTransactions));
+          localStorage.removeItem(`pos_tenant_${user.id}_transactions`);
+        } catch (e) {}
+
+        setTransactions(fetchedTransactions);
+      } else {
+        console.warn("Supabase transaction query warning:", error.message);
+        // Fallback to local cache ONLY on network failure
+        try {
+          const saved = localStorage.getItem(`pos_transactions_${user.id}`);
+          if (saved) {
+            setTransactions(JSON.parse(saved));
+          }
+        } catch (e) {}
+      }
     } catch (error) {
       console.error("Error fetching transactions:", error);
     } finally {
-      setIsLoading(false);
+      if (!isSilent) setIsLoading(false);
     }
   };
 
@@ -426,10 +436,61 @@ export function SalesView() {
     }
   };
 
+  const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
+
+  const handleClearLocalCache = () => {
+    if (!user) return;
+    try {
+      localStorage.removeItem(`pos_transactions_${user.id}`);
+      localStorage.removeItem(`pos_tenant_${user.id}_transactions`);
+      toast.success("Cache transaksi lokal dibersihkan. Memuat ulang data cloud...");
+      fetchTransactions();
+    } catch (e) {
+      toast.error("Gagal membersihkan cache lokal.");
+    }
+  };
+
+  const handleClearAllTransactions = async () => {
+    if (!user) return;
+    setIsClearingAll(true);
+    try {
+      // 1. Ambil seluruh transaksi untuk tenant ini
+      const { data: userTrx } = await supabase
+        .from("transactions")
+        .select("id")
+        .eq("tenant_id", user.id);
+
+      if (userTrx && userTrx.length > 0) {
+        const ids = userTrx.map(t => t.id);
+        // Hapus detail items secara berkala
+        for (let i = 0; i < ids.length; i += 100) {
+          const chunk = ids.slice(i, i + 100);
+          await supabase.from("transaction_items").delete().in("transaction_id", chunk);
+        }
+        await supabase.from("transactions").delete().eq("tenant_id", user.id);
+      }
+
+      // 2. Bersihkan seluruh penyimpanan lokal
+      localStorage.removeItem(`pos_transactions_${user.id}`);
+      localStorage.removeItem(`pos_tenant_${user.id}_transactions`);
+
+      toast.success("Seluruh riwayat transaksi berhasil dihapus dari cloud dan lokal.");
+      setIsClearAllModalOpen(false);
+      setTransactions([]);
+      fetchTransactions(true);
+    } catch (err: any) {
+      console.error("Gagal menghapus seluruh transaksi:", err);
+      toast.error("Gagal menghapus seluruh transaksi: " + (err.message || "Error"));
+    } finally {
+      setIsClearingAll(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const { error: itemError } = await supabase.from("transaction_items").delete().eq("transaction_id", id);
-      if (itemError) throw itemError;
+      if (itemError) console.warn("Delete items warning:", itemError);
 
       const { error } = await supabase.from("transactions").delete().eq("id", id);
       if (error) throw error;
@@ -442,13 +503,19 @@ export function SalesView() {
           localTrx = localTrx.filter((t: any) => t.id !== id);
           localStorage.setItem(`pos_transactions_${user?.id}`, JSON.stringify(localTrx));
         }
+        const legacySaved = localStorage.getItem(`pos_tenant_${user?.id}_transactions`);
+        if (legacySaved) {
+          let legacyTrx = JSON.parse(legacySaved);
+          legacyTrx = legacyTrx.filter((t: any) => t.id !== id);
+          localStorage.setItem(`pos_tenant_${user?.id}_transactions`, JSON.stringify(legacyTrx));
+        }
       } catch (e) {
         console.error("Error clearing local transaction:", e);
       }
 
       toast.success("Transaksi berhasil dihapus.");
       setConfirmDeleteId(null);
-      fetchTransactions();
+      fetchTransactions(true);
     } catch (err: any) {
       console.error("Error deleting transaction:", err);
       toast.error("Gagal menghapus transaksi. Pastikan internet stabil.");
@@ -489,6 +556,24 @@ export function SalesView() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearLocalCache}
+            title="Bersihkan cache lokal & tarik ulang data cloud"
+            className="border-slate-200 text-slate-700 hover:bg-slate-100 font-bold rounded-xl text-[10px] md:text-sm h-9 md:h-11 px-3"
+          >
+            <RefreshCw className="size-3 md:size-4 mr-1.5" /> Sinkronkan Cloud
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsClearAllModalOpen(true)}
+            title="Hapus seluruh riwayat transaksi untuk tenant ini"
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold rounded-xl text-[10px] md:text-sm h-9 md:h-11 px-3"
+          >
+            <Trash2 className="size-3 md:size-4 mr-1.5" /> Hapus Semua
+          </Button>
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-[#0b172a] hover:bg-slate-800 text-white font-bold flex items-center gap-1.5 md:gap-2 shadow-md rounded-xl text-[10px] md:text-sm h-9 md:h-11 px-3 md:px-5"
@@ -1213,6 +1298,45 @@ export function SalesView() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Konfirmasi Hapus Semua Transaksi */}
+      <Dialog open={isClearAllModalOpen} onOpenChange={setIsClearAllModalOpen}>
+        <DialogContent className="max-w-md bg-white dark:bg-slate-900 rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-red-600 flex items-center gap-2">
+              <Trash2 className="size-5" /> Hapus Seluruh Riwayat Transaksi?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-3 text-sm text-slate-600 dark:text-slate-400 space-y-2">
+            <p>
+              Tindakan ini akan <strong>menghapus permanen seluruh data riwayat transaksi</strong> untuk outlet/tenant Anda dari server cloud Supabase dan membersihkan cache lokal pada perangkat ini.
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900">
+              ⚠️ Data yang telah dihapus tidak dapat dipulihkan. Pastikan Anda sudah mengekspor atau mencetak laporan jika diperlukan.
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-3 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsClearAllModalOpen(false)}
+              className="flex-1 rounded-xl font-bold"
+              disabled={isClearingAll}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={handleClearAllTransactions}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold"
+              disabled={isClearingAll}
+            >
+              {isClearingAll ? <Loader2 className="size-4 animate-spin mr-2" /> : <Trash2 className="size-4 mr-2" />}
+              {isClearingAll ? "Menghapus..." : "Ya, Hapus Semua"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

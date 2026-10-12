@@ -86,14 +86,14 @@ export function PrintingDashboardView() {
             createdAt: t.created_at
           }));
 
-          // Merge local and remote
-          const merged = [...localJobs];
-          remoteJobs.forEach((rj) => {
-            if (!merged.some((lj) => lj.id === rj.id)) {
-              merged.push(rj);
-            }
-          });
-          localJobs = merged;
+          // Supabase is source of truth when online
+          const pendingOffline = localJobs.filter((lj: any) => lj.is_offline);
+          localJobs = [...remoteJobs, ...pendingOffline];
+          localStorage.setItem("pos_printing_jobs", JSON.stringify(localJobs));
+        } else {
+          const pendingOffline = localJobs.filter((lj: any) => lj.is_offline);
+          localJobs = pendingOffline;
+          localStorage.setItem("pos_printing_jobs", JSON.stringify(localJobs));
         }
       }
 

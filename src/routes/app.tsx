@@ -179,12 +179,21 @@ function AppLayout() {
             localStorage.setItem(tenantKey, JSON.stringify([activeDbShift, ...localShifts]));
           }
         } else {
-          // Check if there is an open shift in localStorage
-          const localOpen = localShifts.find((s: any) => s.status === "open");
-          if (localOpen) {
-            setHasActiveShift(true);
+          if (!error) {
+            // Database confirms no open shift exists
+            const localOpenOffline = localShifts.find((s: any) => s.status === "open" && s.is_offline);
+            if (localOpenOffline) {
+              setHasActiveShift(true);
+            } else {
+              setHasActiveShift(false);
+              // Update local shifts so remote closed/deleted shifts are synchronized
+              const updatedLocal = localShifts.map((s: any) => s.status === "open" ? { ...s, status: "closed" } : s);
+              localStorage.setItem(tenantKey, JSON.stringify(updatedLocal));
+            }
           } else {
-            setHasActiveShift(false);
+            // Network fallback
+            const localOpen = localShifts.find((s: any) => s.status === "open");
+            setHasActiveShift(!!localOpen);
           }
         }
       } catch (err) {

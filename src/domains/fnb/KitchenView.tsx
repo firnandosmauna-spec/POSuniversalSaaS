@@ -164,18 +164,17 @@ export function KitchenView() {
         };
       });
 
-      // 4. Merge with localStorage fallback transactions
+      // 4. Merge with localStorage fallback transactions (only pending offline)
       let mergedOrders = [...assembledOrders];
       try {
         const saved = localStorage.getItem(`pos_transactions_${user.id}`);
         if (saved) {
           const localTrx = JSON.parse(saved);
-          // Only add local transactions that are not already from Supabase
-          const existingIds = new Set(mergedOrders.map(o => o.id));
-          const newLocalTrx = localTrx.filter((lt: any) => !existingIds.has(lt.id));
-          mergedOrders = [...newLocalTrx, ...mergedOrders];
-          // Sort by created_at descending
-          mergedOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          const pendingOffline = localTrx.filter((lt: any) => lt.is_offline);
+          if (pendingOffline.length > 0) {
+            mergedOrders = [...pendingOffline, ...mergedOrders];
+            mergedOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          }
         }
       } catch (e) {
         console.error("Failed to merge local transactions", e);

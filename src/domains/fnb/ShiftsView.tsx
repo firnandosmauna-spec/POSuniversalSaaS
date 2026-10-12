@@ -130,14 +130,14 @@ export function ShiftsView() {
         .eq("tenant_id", user.id)
         .order("start_time", { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        const dbShifts = data as Shift[];
-        const dbIds = new Set(dbShifts.map(s => s.id));
-        // Include any local shift not yet in DB for display only
-        const extraLocal = localShifts.filter(s => !dbIds.has(s.id));
-        loadedShifts = [...dbShifts, ...extraLocal];
+      if (!error) {
+        const dbShifts = (data || []) as Shift[];
+        // Hanya pertahankan shift yang benar-benar pending offline sync
+        const pendingOffline = localShifts.filter((s: any) => s.is_offline);
+        loadedShifts = [...dbShifts, ...pendingOffline];
         localStorage.setItem(tenantStorageKey, JSON.stringify(loadedShifts));
       } else {
+        console.warn("Supabase fetch shifts error:", error.message);
         loadedShifts = localShifts;
       }
       

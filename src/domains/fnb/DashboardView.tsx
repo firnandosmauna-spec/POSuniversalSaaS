@@ -79,22 +79,29 @@ export function DashboardView() {
           `)
           .eq("tenant_id", user.id)
           .order("created_at", { ascending: false });
-        if (res.data) txData = res.data;
+        if (res.data) {
+          txData = res.data;
+          try {
+            const saved = localStorage.getItem(`pos_transactions_${user.id}`);
+            if (saved) {
+              const localTrx = JSON.parse(saved);
+              const pendingOffline = localTrx.filter((lt: any) => lt.is_offline);
+              if (pendingOffline.length > 0) {
+                txData = [...pendingOffline, ...txData];
+                txData.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+              }
+            }
+            localStorage.setItem(`pos_transactions_${user.id}`, JSON.stringify(txData));
+            localStorage.removeItem(`pos_tenant_${user.id}_transactions`);
+          } catch (e) {}
+        }
       } catch (e) {
         console.warn("Supabase tx failed", e);
+        try {
+          const saved = localStorage.getItem(`pos_transactions_${user.id}`);
+          if (saved) txData = JSON.parse(saved);
+        } catch (err) {}
       }
-
-      // Merge with localStorage transactions
-      try {
-        const saved = localStorage.getItem(`pos_transactions_${user.id}`);
-        if (saved) {
-          const localTrx = JSON.parse(saved);
-          const existingIds = new Set(txData.map((o: any) => o.id));
-          const newLocalTrx = localTrx.filter((lt: any) => !existingIds.has(lt.id));
-          txData = [...newLocalTrx, ...txData];
-          txData.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        }
-      } catch (e) {}
 
       setTransactions(txData);
 
