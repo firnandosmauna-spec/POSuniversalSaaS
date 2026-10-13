@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { Settings, Plus, Trash2, LayoutGrid, Loader2, Tags, Building2, MapPin, Phone, Receipt, FileText, Hash, Sparkles, CreditCard, CheckCircle2, Crown, Zap, ShieldCheck, ArrowRight, Clock, Printer, Layers, Ruler, Scissors, Wrench, ArrowLeft, Bluetooth, Menu, Store, ChevronRight, X, ChevronLeft, Pencil, RotateCcw, Banknote, QrCode, Smartphone, Search, Filter } from "lucide-react";
+import { Settings, Plus, Trash2, LayoutGrid, Loader2, Tags, Building2, MapPin, Phone, Receipt, FileText, Hash, Sparkles, CreditCard, CheckCircle2, Crown, Zap, ShieldCheck, ArrowRight, Clock, Printer, Layers, Ruler, Scissors, Wrench, ArrowLeft, Bluetooth, Menu, Store, ChevronRight, X, ChevronLeft, Pencil, RotateCcw, Banknote, QrCode, Smartphone, Search, Filter, Armchair, Flame, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -23,11 +23,43 @@ import { LaundrySettingsView } from "@/domains/laundry/SettingsView";
 type TableData = {
   id: string;
   name: string;
+  capacity?: number;
   status: string;
+  branch_id?: string | null;
+  qr_code?: string | null;
+  tenant_id?: string;
+  created_at?: string;
 };
 
+type AreaData = {
+  id: string;
+  name: string;
+  type: "smoking" | "non-smoking";
+  branch_id?: string | null;
+  tenant_id?: string;
+  created_at?: string;
+};
+
+function parseTableArea(table: TableData): string {
+  if (table.qr_code) {
+    try {
+      const parsed = JSON.parse(table.qr_code);
+      if (parsed.area) return parsed.area;
+    } catch {}
+  }
+  const match = table.name.match(/^\[(.*?)\]\s*(.*)$/);
+  if (match) return match[1];
+  return "Utama";
+}
+
+function parseTableDisplayName(table: TableData): string {
+  const match = table.name.match(/^\[(.*?)\]\s*(.*)$/);
+  if (match) return match[2];
+  return table.name;
+}
+
 export function SettingsView() {
-  const { user, branches, addBranch, deleteBranch, activeBranchName } = useAuth();
+  const { user, branches, addBranch, deleteBranch, activeBranchName, activeBranchId } = useAuth();
 
   if ((user?.businessType as string) === "PRINTING") {
     return <PrintingSettingsView />;
@@ -36,15 +68,33 @@ export function SettingsView() {
     return <LaundrySettingsView />;
   }
   const [tables, setTables] = useState<TableData[]>([]);
-  const [newTableName, setNewTableName] = useState("");
-  const [newTableCategory, setNewTableCategory] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [areas, setAreas] = useState<AreaData[]>([]);
   const [tableSubTab, setTableSubTab] = useState<"meja" | "area">("meja");
+  const [selectedAreaFilter, setSelectedAreaFilter] = useState<string>("all");
+
+  // Meja Form States
+  const [newTableName, setNewTableName] = useState("");
+  const [newTableArea, setNewTableArea] = useState("");
+  const [newTableCapacity, setNewTableCapacity] = useState<number>(4);
+  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+
+  // Edit Meja Modal States
+  const [isEditTableModalOpen, setIsEditTableModalOpen] = useState(false);
+  const [editingTable, setEditingTable] = useState<TableData | null>(null);
+  const [editTableName, setEditTableName] = useState("");
+  const [editTableArea, setEditTableArea] = useState("");
+  const [editTableCapacity, setEditTableCapacity] = useState<number>(4);
+
+  // Area Form States
   const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState("");
-  const [newAreaType, setNewAreaType] = useState<"smoking" | "non-smoking" | "">("");
+  const [newAreaType, setNewAreaType] = useState<"smoking" | "non-smoking">("non-smoking");
+
+  // Edit Area Modal States
+  const [isEditAreaModalOpen, setIsEditAreaModalOpen] = useState(false);
+  const [editingArea, setEditingArea] = useState<AreaData | null>(null);
+  const [editAreaName, setEditAreaName] = useState("");
+  const [editAreaType, setEditAreaType] = useState<"smoking" | "non-smoking">("non-smoking");
 
   // Categories
   const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
@@ -112,10 +162,38 @@ export function SettingsView() {
     if (!user) return;
     setIsLoading(true);
     try {
-      const { data } = await supabase.from("tables").select("*").order("name");
-      setTables(data || []);
+      const { data, error } = await supabase
+        .from("tables")
+        .select("*")
+        .eq("tenant_id", user.id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+
+      const areaRows: AreaData[] = (data || [])
+        .filter(t => t.status === "_area_def")
+        .map(t => {
+          let type: "smoking" | "non-smoking" = "non-smoking";
+          if (t.qr_code) {
+            try {
+              const parsed = JSON.parse(t.qr_code);
+              if (parsed.type) type = parsed.type;
+            } catch {}
+          }
+          return {
+            id: t.id,
+            name: t.name,
+            type,
+            branch_id: t.branch_id,
+            tenant_id: t.tenant_id,
+            created_at: t.created_at,
+          };
+        });
+
+      const tableRows: TableData[] = (data || []).filter(t => t.status !== "_area_def");
+      setAreas(areaRows);
+      setTables(tableRows);
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching tables & areas:", error);
     } finally {
       setIsLoading(false);
     }
@@ -124,7 +202,7 @@ export function SettingsView() {
   const fetchCategories = async () => {
     if (!user) return;
     try {
-      const { data } = await supabase.from("categories").select("*").order("name");
+      const { data } = await supabase.from("categories").select("*").eq("tenant_id", user.id).order("name");
       setCategories(data || []);
     } catch (error) {}
   };
@@ -134,12 +212,10 @@ export function SettingsView() {
       if (!user) return;
       setIsLoading(true);
       try {
-        // Fetch Tables
-        const { data: tablesData } = await supabase.from("tables").select("*").order("name");
-        setTables(tablesData || []);
+        await fetchTables();
 
         // Fetch Categories
-        const { data: catData } = await supabase.from("categories").select("*").order("name");
+        const { data: catData } = await supabase.from("categories").select("*").eq("tenant_id", user.id).order("name");
         setCategories(catData || []);
 
         // Fetch Invoice Settings from localStorage
@@ -305,46 +381,166 @@ export function SettingsView() {
     }
   };
 
-  const addTable = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const addTable = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!user || !newTableName.trim()) return;
     setIsSubmitting(true);
-    const finalName = newTableCategory.trim() 
-      ? `[${newTableCategory.trim()}] ${newTableName.trim()}` 
+    const chosenArea = newTableArea.trim() || (areas.length > 0 ? areas[0].name : "Utama");
+    const finalName = chosenArea && chosenArea !== "Utama"
+      ? `[${chosenArea}] ${newTableName.trim()}`
       : newTableName.trim();
     try {
-      await supabase.from("tables").insert({
+      const { error } = await supabase.from("tables").insert({
         tenant_id: user.id,
         name: finalName,
-        status: "available"
+        capacity: Number(newTableCapacity) || 4,
+        status: "available",
+        branch_id: activeBranchId || null,
+        qr_code: JSON.stringify({ area: chosenArea, capacity: Number(newTableCapacity) || 4 })
       });
+      if (error) throw error;
+      toast.success("Meja berhasil disimpan ke Supabase");
       setNewTableName("");
-      setNewTableCategory("");
-      fetchTables();
-    } catch (error) {
+      setNewTableArea("");
+      setNewTableCapacity(4);
+      setIsTableModalOpen(false);
+      await fetchTables();
+    } catch (error: any) {
       console.error(error);
-      alert("Gagal menambah meja.");
+      toast.error(`Gagal menambah meja: ${error.message || "Kesalahan server"}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditTable = (table: TableData) => {
+    setEditingTable(table);
+    setEditTableName(parseTableDisplayName(table));
+    setEditTableArea(parseTableArea(table));
+    setEditTableCapacity(table.capacity || 4);
+    setIsEditTableModalOpen(true);
+  };
+
+  const updateTable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !editingTable || !editTableName.trim()) return;
+    setIsSubmitting(true);
+    const chosenArea = editTableArea.trim() || "Utama";
+    const finalName = chosenArea && chosenArea !== "Utama"
+      ? `[${chosenArea}] ${editTableName.trim()}`
+      : editTableName.trim();
+    try {
+      const { error } = await supabase.from("tables").update({
+        name: finalName,
+        capacity: Number(editTableCapacity) || 4,
+        branch_id: activeBranchId || null,
+        qr_code: JSON.stringify({ area: chosenArea, capacity: Number(editTableCapacity) || 4 })
+      }).eq("id", editingTable.id).eq("tenant_id", user.id);
+      if (error) throw error;
+      toast.success("Meja berhasil diperbarui di Supabase");
+      setIsEditTableModalOpen(false);
+      setEditingTable(null);
+      await fetchTables();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(`Gagal mengubah meja: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const deleteTable = async (id: string) => {
-    if (!confirm("Hapus meja ini?")) return;
+    if (!confirm("Hapus meja ini dari database Supabase?")) return;
     try {
-      await supabase.from("tables").delete().eq("id", id);
-      fetchTables();
-    } catch (error) {
+      const { error } = await supabase.from("tables").delete().eq("id", id).eq("tenant_id", user.id);
+      if (error) throw error;
+      toast.success("Meja berhasil dihapus dari Supabase");
+      await fetchTables();
+    } catch (error: any) {
       console.error(error);
+      toast.error(`Gagal menghapus meja: ${error.message}`);
     }
   };
 
   const markAvailable = async (id: string) => {
     try {
-      await supabase.from("tables").update({ status: "available" }).eq("id", id);
-      fetchTables();
-    } catch (error) {
+      const { error } = await supabase.from("tables").update({ status: "available" }).eq("id", id).eq("tenant_id", user.id);
+      if (error) throw error;
+      toast.success("Status meja dikosongkan");
+      await fetchTables();
+    } catch (error: any) {
       console.error(error);
+      toast.error(`Gagal mengubah status: ${error.message}`);
+    }
+  };
+
+  const addArea = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !newAreaName.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from("tables").insert({
+        tenant_id: user.id,
+        name: newAreaName.trim(),
+        status: "_area_def",
+        capacity: 0,
+        branch_id: activeBranchId || null,
+        qr_code: JSON.stringify({ type: newAreaType || "non-smoking", branch_id: activeBranchId || null })
+      });
+      if (error) throw error;
+      toast.success("Area berhasil disimpan ke Supabase");
+      setNewAreaName("");
+      setNewAreaType("non-smoking");
+      setIsAreaModalOpen(false);
+      await fetchTables();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(`Gagal menyimpan area: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditArea = (area: AreaData) => {
+    setEditingArea(area);
+    setEditAreaName(area.name);
+    setEditAreaType(area.type);
+    setIsEditAreaModalOpen(true);
+  };
+
+  const updateArea = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !editingArea || !editAreaName.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from("tables").update({
+        name: editAreaName.trim(),
+        qr_code: JSON.stringify({ type: editAreaType, branch_id: activeBranchId || null })
+      }).eq("id", editingArea.id).eq("tenant_id", user.id);
+      if (error) throw error;
+      toast.success("Area berhasil diperbarui di Supabase");
+      setIsEditAreaModalOpen(false);
+      setEditingArea(null);
+      await fetchTables();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(`Gagal mengubah area: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteArea = async (areaId: string, areaName: string) => {
+    if (!confirm(`Hapus area "${areaName}" dari database Supabase?`)) return;
+    try {
+      const { error } = await supabase.from("tables").delete().eq("id", areaId).eq("tenant_id", user.id);
+      if (error) throw error;
+      toast.success("Area berhasil dihapus dari Supabase");
+      if (selectedAreaFilter === areaName) setSelectedAreaFilter("all");
+      await fetchTables();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(`Gagal menghapus area: ${error.message}`);
     }
   };
 
@@ -1257,259 +1453,698 @@ export function SettingsView() {
             </div>
           ) : activeTab === "meja" ? (
             <div className="flex flex-col h-full bg-white md:bg-transparent overflow-hidden fixed inset-0 z-50 md:relative md:inset-auto md:z-auto pb-14 md:pb-0">
-              {/* Mobile Header matching screenshot */}
-              <div className="md:hidden flex items-center h-14 px-4 bg-white shrink-0">
+              {/* Mobile Header */}
+              <div className="md:hidden flex items-center h-14 px-4 bg-white shrink-0 border-b border-slate-100">
                 <button onClick={() => setActiveTab("langganan")} className="p-2 -ml-2 mr-2 text-slate-800">
                   <Menu className="size-5" />
                 </button>
-                <h1 className="font-extrabold text-slate-900 text-[17px]">Kelola Meja</h1>
+                <h1 className="font-extrabold text-slate-900 text-[17px]">Kelola Meja & Area</h1>
               </div>
 
-              {/* Mobile Branch Selector matching screenshot */}
+              {/* Mobile Branch Selector */}
               <div className="md:hidden px-4 py-3 shrink-0">
                 <div className="flex items-center justify-between bg-slate-100/70 rounded-2xl px-4 py-3">
                   <div className="flex items-center gap-2">
                     <Store className="size-4 text-slate-700" />
                     <span className="font-bold text-slate-800 text-sm">{activeBranchName || "Semua Cabang"}</span>
                   </div>
-                  <ChevronRight className="size-4 text-slate-500" />
+                  <span className="text-xs text-slate-400 font-medium">Outlet Aktif</span>
                 </div>
               </div>
 
               {/* Tabs Meja & Area (Mobile & Desktop) */}
               <div className="flex px-4 md:px-0 border-b border-slate-200 shrink-0">
-                <div onClick={() => setTableSubTab("meja")} className={`flex-1 text-center py-3 font-bold text-sm md:text-base cursor-pointer ${tableSubTab === "meja" ? "border-b-2 border-blue-500 text-blue-500" : "text-slate-300"}`}>
-                  Meja
-                </div>
-                <div onClick={() => setTableSubTab("area")} className={`flex-1 text-center py-3 font-bold text-sm md:text-base cursor-pointer ${tableSubTab === "area" ? "border-b-2 border-blue-500 text-blue-500" : "text-slate-300"}`}>
-                  Area
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setTableSubTab("meja")}
+                  className={`flex-1 text-center py-3 font-bold text-sm md:text-base cursor-pointer transition-colors ${
+                    tableSubTab === "meja" ? "border-b-2 border-[#0b172a] text-[#0b172a] font-extrabold" : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  Daftar Meja ({tables.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTableSubTab("area")}
+                  className={`flex-1 text-center py-3 font-bold text-sm md:text-base cursor-pointer transition-colors ${
+                    tableSubTab === "area" ? "border-b-2 border-[#0b172a] text-[#0b172a] font-extrabold" : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  Kelola Area ({areas.length})
+                </button>
               </div>
 
               {tableSubTab === "meja" ? (
-                <>
+                <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-0">
                   {/* Desktop Header Title */}
-                  <h2 className="hidden md:block text-sm md:text-lg font-bold text-slate-800 mt-4 mb-2 md:mb-4 pb-2 md:pb-4 border-b border-slate-100">Daftar Meja (Dine In)</h2>
-                  
-                  {/* Filter Area Dropdown */}
-                  <div className="px-4 py-4 md:px-0 shrink-0">
-                    <div className="border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between bg-white">
-                      <span className="text-slate-700 text-sm font-bold">Area: <span className="font-bold text-[#0b172a]">Semua Area</span></span>
-                      <ChevronRight className="size-4 text-slate-400 rotate-90" />
+                  <div className="hidden md:flex items-center justify-between mt-4 mb-4 pb-3 border-b border-slate-100">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800">Daftar Meja (Dine In)</h2>
+                      <p className="text-xs text-slate-400">Kelola nomor meja, kapasitas tempat duduk, dan area restoran yang tersimpan di Supabase.</p>
                     </div>
-                  </div>
-
-              {/* Desktop Inline Add Form */}
-              <form onSubmit={addTable} className="hidden md:flex flex-col sm:flex-row gap-2 md:gap-4 mb-4 md:mb-6">
-                <div className="w-full sm:w-1/3">
-                  <Input 
-                    placeholder="Kategori (LT1, VIP)" 
-                    value={newTableCategory}
-                    onChange={(e) => setNewTableCategory(e.target.value)}
-                    className="h-9 md:h-11 text-xs md:text-sm rounded-xl font-medium border-slate-200 bg-slate-50"
-                  />
-                </div>
-                <div className="flex-1">
-                  <Input 
-                    placeholder="Cth: Meja 1, Meja 2" 
-                    value={newTableName}
-                    onChange={(e) => setNewTableName(e.target.value)}
-                    required
-                    className="h-9 md:h-11 text-xs md:text-sm rounded-xl font-bold border-slate-200"
-                  />
-                </div>
-                <Button type="submit" disabled={isSubmitting || !newTableName.trim()} className="bg-[#0b172a] hover:bg-slate-800 text-white shrink-0 h-9 md:h-11 text-xs md:text-sm rounded-xl font-bold px-6 shadow-sm">
-                  <Plus className="size-3.5 md:size-4 mr-1.5 md:mr-2" /> Tambah Meja
-                </Button>
-              </form>
-
-              <div className="flex-1 overflow-auto bg-white flex flex-col md:border md:border-slate-100 md:rounded-2xl md:shadow-sm">
-                {isLoading ? (
-                  <div className="flex justify-center items-center flex-1">
-                    <Loader2 className="size-6 animate-spin text-slate-400" />
-                  </div>
-                ) : tables.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center flex-1 text-slate-500 mb-20 md:mb-0">
-                    <p className="text-[17px] font-extrabold text-slate-800 mb-1">Belum Ada Meja</p>
-                    <p className="text-[13px] text-slate-400 font-medium">Meja yang terdaftar akan muncul di sini.</p>
-                  </div>
-                ) : (
-                  <table className="w-full text-left text-xs md:text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-100 text-slate-600 sticky top-0">
-                      <tr>
-                        <th className="p-3 md:p-4 font-bold uppercase tracking-wider text-[10px] md:text-xs">Nama Meja</th>
-                        <th className="p-3 md:p-4 font-bold uppercase tracking-wider text-[10px] md:text-xs text-center w-20 md:w-32">Status</th>
-                        <th className="p-3 md:p-4 font-bold uppercase tracking-wider text-[10px] md:text-xs text-right w-12 md:w-24">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tables.map(table => (
-                        <tr key={table.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
-                          <td className="p-3 md:p-4 font-bold text-slate-800">{table.name}</td>
-                          <td className="p-3 md:p-4 text-center">
-                            {table.status === 'available' ? (
-                              <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] md:text-xs font-bold border border-emerald-200">Tersedia</span>
-                            ) : (
-                              <div className="flex flex-col items-center gap-1 md:gap-1.5">
-                                <span className="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-md text-[10px] md:text-xs font-bold border border-amber-200">Terisi</span>
-                                <button onClick={() => markAvailable(table.id)} className="text-[10px] text-indigo-600 font-semibold hover:underline">Kosongkan</button>
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-3 md:p-4 text-right">
-                            <Button variant="ghost" size="icon" onClick={() => deleteTable(table.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 size-8 md:size-10 rounded-xl">
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-              
-              {/* Fixed Bottom Button for Mobile (Meja) */}
-              <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-50 pb-safe">
-                <Button 
-                  onClick={() => setIsTableModalOpen(true)}
-                  className="w-full bg-[#0b172a] hover:bg-slate-800 text-white h-12 rounded-[14px] font-bold text-[15px] shadow-sm"
-                >
-                  <Plus className="size-5 mr-2" /> Tambah Meja
-                </Button>
-              </div>
-
-              {/* Mobile Add Table Modal */}
-              {isTableModalOpen && (
-                <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-slate-900/60 backdrop-blur-sm">
-                  <div className="bg-white rounded-t-3xl p-5 shadow-2xl animate-in slide-in-from-bottom-full pb-safe">
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="font-bold text-lg text-slate-800">Tambah Meja</h2>
-                      <button onClick={() => setIsTableModalOpen(false)} className="p-2 text-slate-400 bg-slate-100 rounded-full">
-                        <X className="size-4" />
-                      </button>
-                    </div>
-                    <form onSubmit={(e) => { addTable(e); if(newTableName.trim()) setIsTableModalOpen(false); }} className="flex flex-col gap-3">
-                      <Input 
-                        placeholder="Kategori (opsional, cth: VIP)" 
-                        value={newTableCategory}
-                        onChange={(e) => setNewTableCategory(e.target.value)}
-                        className="h-12 rounded-xl"
-                      />
-                      <Input 
-                        placeholder="Nama Meja (cth: Meja 1)" 
-                        value={newTableName}
-                        onChange={(e) => setNewTableName(e.target.value)}
-                        required
-                        className="h-12 rounded-xl font-bold"
-                      />
-                      <Button type="submit" disabled={isSubmitting || !newTableName.trim()} className="mt-2 h-12 rounded-xl bg-[#0b172a] text-white font-bold w-full">
-                        Simpan Meja
-                      </Button>
-                    </form>
-                  </div>
-                </div>
-              )}
-              </>
-              ) : (
-                <>
-                  <div className="flex-1 overflow-auto bg-white flex flex-col items-center justify-center mb-20 md:mb-0 text-slate-500">
-                    <p className="text-[17px] font-extrabold text-slate-800 mb-1">Belum Ada Area</p>
-                    <p className="text-[13px] text-slate-400 font-medium">Area yang terdaftar akan muncul di sini.</p>
-                  </div>
-
-                  {/* Fixed Bottom Button for Mobile (Area) */}
-                  <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-50 pb-safe">
                     <Button 
-                      onClick={() => setIsAreaModalOpen(true)}
-                      className="w-full bg-[#0b172a] hover:bg-slate-800 text-white h-12 rounded-[14px] font-bold text-[15px] shadow-sm"
+                      onClick={() => setIsTableModalOpen(true)}
+                      className="bg-[#0b172a] hover:bg-slate-800 text-white rounded-xl text-xs md:text-sm font-bold shadow-sm"
                     >
-                      <Plus className="size-5 mr-2" /> Tambah Area
+                      <Plus className="size-4 mr-1.5" /> Tambah Meja
                     </Button>
                   </div>
 
-                  {/* Mobile Add Area Modal (Full Screen) */}
-                  {isAreaModalOpen && (
-                    <div className="fixed inset-0 z-[60] bg-white flex flex-col animate-in slide-in-from-right md:slide-in-from-bottom">
-                      {/* Header */}
-                      <div className="flex items-center h-14 px-4 bg-white border-b border-slate-100 shrink-0">
-                        <button onClick={() => setIsAreaModalOpen(false)} className="p-2 -ml-2 mr-2 text-slate-800">
-                          <ChevronLeft className="size-6" />
-                        </button>
-                        <h1 className="font-extrabold text-slate-900 text-[17px] flex-1 text-center pr-8">Tambah Area</h1>
-                      </div>
-
-                      {/* Store Info Banner */}
-                      <div className="flex items-center justify-between px-4 py-3 bg-slate-50 shrink-0 border-b border-slate-100">
-                        <div className="flex items-center gap-2">
-                          <Store className="size-4 text-slate-700" />
-                          <span className="font-bold text-slate-800 text-sm">{activeBranchName || "Semua Cabang"}</span>
-                        </div>
-                        <button className="text-blue-500 font-bold text-sm hover:underline">
-                          Ubah Outlet
-                        </button>
-                      </div>
-
-                      {/* Form */}
-                      <form onSubmit={(e) => { e.preventDefault(); toast.success("Area ditambahkan (mock)"); setIsAreaModalOpen(false); setNewAreaName(""); setNewAreaType(""); }} className="flex-1 flex flex-col p-4 bg-white">
-                        <div className="mb-5">
-                          <label className="block text-slate-800 font-medium mb-2 text-[15px]">Nama Area</label>
-                          <Input 
-                            placeholder="Contoh: Indoor" 
-                            value={newAreaName}
-                            onChange={(e) => setNewAreaName(e.target.value)}
-                            required
-                            className="h-12 rounded-xl text-base border-slate-200 placeholder:text-slate-300 focus-visible:ring-blue-500 focus-visible:border-blue-500"
-                          />
-                        </div>
-
-                        <div className="mb-6">
-                          <label className="block text-slate-800 font-medium mb-2 text-[15px]">Tipe Area</label>
-                          <div className="flex gap-3">
-                            <label className={`flex-1 flex items-center gap-3 p-3 rounded-xl border ${newAreaType === "smoking" ? "border-blue-500 bg-blue-50/50" : "border-slate-200 bg-white"} cursor-pointer transition-all`}>
-                              <div className={`size-5 rounded-full border-2 flex items-center justify-center ${newAreaType === "smoking" ? "border-blue-500" : "border-slate-300"}`}>
-                                {newAreaType === "smoking" && <div className="size-2.5 bg-blue-500 rounded-full" />}
-                              </div>
-                              <span className={`text-[15px] ${newAreaType === "smoking" ? "font-bold text-slate-800" : "font-medium text-slate-600"}`}>Smoking Area</span>
-                              <input 
-                                type="radio" 
-                                name="areaType" 
-                                className="hidden" 
-                                checked={newAreaType === "smoking"} 
-                                onChange={() => setNewAreaType("smoking")} 
-                              />
-                            </label>
-
-                            <label className={`flex-1 flex items-center gap-3 p-3 rounded-xl border ${newAreaType === "non-smoking" ? "border-blue-500 bg-blue-50/50" : "border-slate-200 bg-white"} cursor-pointer transition-all`}>
-                              <div className={`size-5 rounded-full border-2 flex items-center justify-center ${newAreaType === "non-smoking" ? "border-blue-500" : "border-slate-300"}`}>
-                                {newAreaType === "non-smoking" && <div className="size-2.5 bg-blue-500 rounded-full" />}
-                              </div>
-                              <span className={`text-[15px] ${newAreaType === "non-smoking" ? "font-bold text-slate-800" : "font-medium text-slate-600"}`}>Non-Smoking</span>
-                              <input 
-                                type="radio" 
-                                name="areaType" 
-                                className="hidden" 
-                                checked={newAreaType === "non-smoking"} 
-                                onChange={() => setNewAreaType("non-smoking")} 
-                              />
-                            </label>
-                          </div>
-                        </div>
-
-                        {/* Bottom Sticky Button */}
-                        <div className="mt-auto pt-4 pb-safe">
-                          <Button 
-                            type="submit" 
-                            disabled={!newAreaName.trim() || !newAreaType}
-                            className="w-full h-12 rounded-[14px] font-bold text-[15px] transition-all disabled:bg-[#d4d4d4] disabled:text-slate-500 bg-[#0b172a] hover:bg-slate-800 text-white shadow-sm"
+                  {/* Filter Area Pills */}
+                  <div className="mb-4 shrink-0 overflow-x-auto pb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                        <Filter className="size-3" /> Area:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAreaFilter("all")}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                          selectedAreaFilter === "all"
+                            ? "bg-[#0b172a] text-white shadow-sm"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        Semua Area ({tables.length})
+                      </button>
+                      {areas.map(a => {
+                        const count = tables.filter(t => parseTableArea(t) === a.name).length;
+                        return (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => setSelectedAreaFilter(a.name)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                              selectedAreaFilter === a.name
+                                ? "bg-[#0b172a] text-white shadow-sm"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
                           >
-                            Simpan
-                          </Button>
-                        </div>
-                      </form>
+                            <span>{a.name}</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                              selectedAreaFilter === a.name ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                            }`}>
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
-                </>
+                  </div>
+
+                  {/* Desktop Inline Add Form */}
+                  <form onSubmit={addTable} className="hidden md:flex items-center gap-3 mb-5 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <div className="w-48">
+                      <select
+                        value={newTableArea}
+                        onChange={(e) => setNewTableArea(e.target.value)}
+                        className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0b172a]/20"
+                      >
+                        <option value="">Pilih Area ({areas.length > 0 ? areas[0].name : "Utama"})</option>
+                        {areas.map(a => (
+                          <option key={a.id} value={a.name}>{a.name} ({a.type === 'smoking' ? 'Smoking' : 'Non-Smoking'})</option>
+                        ))}
+                        <option value="Utama">Area Utama</option>
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <Input 
+                        placeholder="Nama Meja (cth: Meja 1, VIP 2)" 
+                        value={newTableName}
+                        onChange={(e) => setNewTableName(e.target.value)}
+                        required
+                        className="h-10 text-xs md:text-sm rounded-xl font-bold border-slate-200 bg-white"
+                      />
+                    </div>
+                    <div className="w-32">
+                      <Input 
+                        type="number"
+                        min="1"
+                        placeholder="Kapasitas (4)" 
+                        value={newTableCapacity}
+                        onChange={(e) => setNewTableCapacity(Number(e.target.value))}
+                        className="h-10 text-xs md:text-sm rounded-xl font-medium border-slate-200 bg-white"
+                      />
+                    </div>
+                    <Button type="submit" disabled={isSubmitting || !newTableName.trim()} className="bg-[#0b172a] hover:bg-slate-800 text-white shrink-0 h-10 text-xs rounded-xl font-bold px-5 shadow-sm">
+                      <Plus className="size-3.5 mr-1.5" /> Tambah Meja
+                    </Button>
+                  </form>
+
+                  {/* Table List Container */}
+                  <div className="flex-1 overflow-auto bg-white flex flex-col md:border md:border-slate-100 md:rounded-2xl md:shadow-sm">
+                    {isLoading ? (
+                      <div className="flex justify-center items-center flex-1 py-12">
+                        <Loader2 className="size-6 animate-spin text-slate-400" />
+                      </div>
+                    ) : (
+                      (() => {
+                        const filtered = selectedAreaFilter === "all"
+                          ? tables
+                          : tables.filter(t => parseTableArea(t) === selectedAreaFilter);
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="flex flex-col items-center justify-center flex-1 text-slate-500 py-16 text-center">
+                              <LayoutGrid className="size-12 text-slate-300 mb-3" />
+                              <p className="text-[17px] font-extrabold text-slate-800 mb-1">
+                                {selectedAreaFilter === "all" ? "Belum Ada Meja" : `Belum Ada Meja di Area "${selectedAreaFilter}"`}
+                              </p>
+                              <p className="text-[13px] text-slate-400 font-medium mb-4 max-w-sm">
+                                Tambahkan meja baru untuk dine-in agar kasir dapat mencatat pesanan per meja.
+                              </p>
+                              <Button
+                                onClick={() => {
+                                  if (selectedAreaFilter !== "all") setNewTableArea(selectedAreaFilter);
+                                  setIsTableModalOpen(true);
+                                }}
+                                className="bg-[#0b172a] hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
+                              >
+                                <Plus className="size-4 mr-1.5" /> Tambah Meja Sekarang
+                              </Button>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <table className="w-full text-left text-xs md:text-sm">
+                            <thead className="bg-slate-50 border-b border-slate-100 text-slate-600 sticky top-0">
+                              <tr>
+                                <th className="p-3 md:p-4 font-bold uppercase tracking-wider text-[10px] md:text-xs">Nama Meja</th>
+                                <th className="p-3 md:p-4 font-bold uppercase tracking-wider text-[10px] md:text-xs">Area / Lokasi</th>
+                                <th className="p-3 md:p-4 font-bold uppercase tracking-wider text-[10px] md:text-xs text-center">Kapasitas</th>
+                                <th className="p-3 md:p-4 font-bold uppercase tracking-wider text-[10px] md:text-xs text-center w-28">Status</th>
+                                <th className="p-3 md:p-4 font-bold uppercase tracking-wider text-[10px] md:text-xs text-right w-28">Aksi</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filtered.map(table => {
+                                const displayName = parseTableDisplayName(table);
+                                const tableArea = parseTableArea(table);
+                                return (
+                                  <tr key={table.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                    <td className="p-3 md:p-4">
+                                      <div className="font-bold text-slate-800 text-sm">{displayName}</div>
+                                      <div className="text-[10px] text-slate-400 font-mono">ID: {table.id.substring(0, 8)}</div>
+                                    </td>
+                                    <td className="p-3 md:p-4">
+                                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg text-xs font-bold">
+                                        <MapPin className="size-3 text-slate-400" />
+                                        {tableArea}
+                                      </span>
+                                    </td>
+                                    <td className="p-3 md:p-4 text-center">
+                                      <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
+                                        <Armchair className="size-3.5 text-slate-400" />
+                                        {table.capacity || 4} Kursi
+                                      </span>
+                                    </td>
+                                    <td className="p-3 md:p-4 text-center">
+                                      {table.status === 'available' ? (
+                                        <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] md:text-xs font-bold border border-emerald-200">
+                                          Tersedia
+                                        </span>
+                                      ) : (
+                                        <div className="flex flex-col items-center gap-1">
+                                          <span className="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-md text-[10px] md:text-xs font-bold border border-amber-200">
+                                            Terisi
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => markAvailable(table.id)}
+                                            className="text-[10px] text-indigo-600 font-semibold hover:underline"
+                                          >
+                                            Kosongkan
+                                          </button>
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td className="p-3 md:p-4 text-right">
+                                      <div className="flex items-center justify-end gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => openEditTable(table)}
+                                          title="Ubah Meja"
+                                          className="text-slate-500 hover:text-slate-800 hover:bg-slate-100 size-8 md:size-9 rounded-xl"
+                                        >
+                                          <Pencil className="size-3.5 md:size-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => deleteTable(table.id)}
+                                          title="Hapus Meja"
+                                          className="text-red-500 hover:text-red-700 hover:bg-red-50 size-8 md:size-9 rounded-xl"
+                                        >
+                                          <Trash2 className="size-3.5 md:size-4" />
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        );
+                      })()
+                    )}
+                  </div>
+
+                  {/* Fixed Bottom Button for Mobile (Meja) */}
+                  <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 pb-safe z-10">
+                    <Button 
+                      onClick={() => setIsTableModalOpen(true)}
+                      className="w-full bg-[#0b172a] hover:bg-slate-800 text-white h-12 rounded-[14px] font-bold text-[15px] shadow-sm"
+                    >
+                      <Plus className="size-5 mr-2" /> Tambah Meja
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Area SubTab */
+                <div className="flex-1 flex flex-col overflow-hidden p-4 md:p-0">
+                  {/* Desktop Header */}
+                  <div className="hidden md:flex items-center justify-between mt-4 mb-4 pb-3 border-b border-slate-100">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800">Kelola Area / Ruangan</h2>
+                      <p className="text-xs text-slate-400">Kelompokkan meja berdasarkan zona seperti Indoor, Outdoor, Lantai 2, atau Smoking Area.</p>
+                    </div>
+                    <Button 
+                      onClick={() => { setNewAreaName(""); setNewAreaType("non-smoking"); setIsAreaModalOpen(true); }}
+                      className="bg-[#0b172a] hover:bg-slate-800 text-white rounded-xl text-xs md:text-sm font-bold shadow-sm"
+                    >
+                      <Plus className="size-4 mr-1.5" /> Tambah Area Baru
+                    </Button>
+                  </div>
+
+                  {/* Area List Container */}
+                  <div className="flex-1 overflow-auto bg-white flex flex-col md:bg-transparent">
+                    {isLoading ? (
+                      <div className="flex justify-center items-center flex-1 py-12">
+                        <Loader2 className="size-6 animate-spin text-slate-400" />
+                      </div>
+                    ) : areas.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center flex-1 text-slate-500 py-16 text-center">
+                        <Building2 className="size-14 text-slate-300 mb-3" />
+                        <p className="text-[17px] font-extrabold text-slate-800 mb-1">Belum Ada Area</p>
+                        <p className="text-[13px] text-slate-400 font-medium mb-4 max-w-sm">
+                          Area yang terdaftar di Supabase akan muncul di sini. Tambahkan area seperti Indoor, Outdoor, atau VIP.
+                        </p>
+                        <Button
+                          onClick={() => { setNewAreaName(""); setNewAreaType("non-smoking"); setIsAreaModalOpen(true); }}
+                          className="bg-[#0b172a] hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
+                        >
+                          <Plus className="size-4 mr-1.5" /> Tambah Area Pertama
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20 md:pb-6">
+                        {areas.map(area => {
+                          const tableCount = tables.filter(t => parseTableArea(t) === area.name).length;
+                          return (
+                            <div key={area.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                              <div>
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="size-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+                                      <Building2 className="size-5" />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-bold text-slate-800 text-base">{area.name}</h3>
+                                      <p className="text-[11px] text-slate-400 font-medium">{activeBranchName || "Semua Cabang"}</p>
+                                    </div>
+                                  </div>
+                                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1 ${
+                                    area.type === "smoking"
+                                      ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                      : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  }`}>
+                                    {area.type === "smoking" ? (
+                                      <>
+                                        <Flame className="size-3 text-amber-500" /> Smoking Area
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ShieldCheck className="size-3 text-emerald-500" /> Non-Smoking
+                                      </>
+                                    )}
+                                  </span>
+                                </div>
+
+                                <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between text-xs text-slate-600 mb-4">
+                                  <span className="font-medium">Jumlah Meja Terdaftar:</span>
+                                  <span className="font-bold text-slate-900 bg-white px-2.5 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
+                                    {tableCount} Meja
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openEditArea(area)}
+                                  className="h-8 rounded-lg text-xs font-bold text-slate-700 border-slate-200 hover:bg-slate-50"
+                                >
+                                  <Pencil className="size-3.5 mr-1" /> Ubah
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteArea(area.id, area.name)}
+                                  className="h-8 rounded-lg text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="size-3.5 mr-1" /> Hapus
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Fixed Bottom Button for Mobile (Area) */}
+                  <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 pb-safe z-10">
+                    <Button 
+                      onClick={() => { setNewAreaName(""); setNewAreaType("non-smoking"); setIsAreaModalOpen(true); }}
+                      className="w-full bg-[#0b172a] hover:bg-slate-800 text-white h-12 rounded-[14px] font-bold text-[15px] shadow-sm"
+                    >
+                      <Plus className="size-5 mr-2" /> Tambah Area Baru
+                    </Button>
+                  </div>
+                </div>
               )}
+
+              {/* Add Table Modal (Mobile / Dialog) */}
+              <Dialog open={isTableModalOpen} onOpenChange={setIsTableModalOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle className="font-bold text-lg text-slate-800">Tambah Meja Baru</DialogTitle>
+                    <DialogDescription className="text-xs text-slate-500">
+                      Masukkan detail meja untuk disimpan langsung ke database Supabase.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={addTable} className="space-y-4 py-2">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Nama / Nomor Meja *</label>
+                      <Input 
+                        placeholder="Contoh: Meja 1, VIP 01" 
+                        value={newTableName}
+                        onChange={(e) => setNewTableName(e.target.value)}
+                        required
+                        className="h-11 rounded-xl font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Pilih Area</label>
+                      <select
+                        value={newTableArea}
+                        onChange={(e) => setNewTableArea(e.target.value)}
+                        className="w-full h-11 px-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0b172a]/20"
+                      >
+                        <option value="">Area Utama (Default)</option>
+                        {areas.map(a => (
+                          <option key={a.id} value={a.name}>{a.name} ({a.type === 'smoking' ? 'Smoking' : 'Non-Smoking'})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Kapasitas Kursi (Orang)</label>
+                      <Input 
+                        type="number"
+                        min="1"
+                        placeholder="4" 
+                        value={newTableCapacity}
+                        onChange={(e) => setNewTableCapacity(Number(e.target.value))}
+                        className="h-11 rounded-xl"
+                      />
+                    </div>
+                    <DialogFooter className="pt-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsTableModalOpen(false)}
+                        className="rounded-xl"
+                      >
+                        Batal
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting || !newTableName.trim()}
+                        className="bg-[#0b172a] hover:bg-slate-800 text-white rounded-xl font-bold"
+                      >
+                        {isSubmitting ? <Loader2 className="size-4 animate-spin mr-2" /> : <Plus className="size-4 mr-2" />}
+                        Simpan ke Supabase
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* Edit Table Modal */}
+              <Dialog open={isEditTableModalOpen} onOpenChange={setIsEditTableModalOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle className="font-bold text-lg text-slate-800">Ubah Data Meja</DialogTitle>
+                    <DialogDescription className="text-xs text-slate-500">
+                      Perbarui nomor meja, kapasitas, dan area penempatan di database Supabase.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={updateTable} className="space-y-4 py-2">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Nama / Nomor Meja *</label>
+                      <Input 
+                        placeholder="Contoh: Meja 1" 
+                        value={editTableName}
+                        onChange={(e) => setEditTableName(e.target.value)}
+                        required
+                        className="h-11 rounded-xl font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Pilih Area</label>
+                      <select
+                        value={editTableArea}
+                        onChange={(e) => setEditTableArea(e.target.value)}
+                        className="w-full h-11 px-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0b172a]/20"
+                      >
+                        <option value="Utama">Area Utama</option>
+                        {areas.map(a => (
+                          <option key={a.id} value={a.name}>{a.name} ({a.type === 'smoking' ? 'Smoking' : 'Non-Smoking'})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Kapasitas Kursi (Orang)</label>
+                      <Input 
+                        type="number"
+                        min="1"
+                        value={editTableCapacity}
+                        onChange={(e) => setEditTableCapacity(Number(e.target.value))}
+                        className="h-11 rounded-xl"
+                      />
+                    </div>
+                    <DialogFooter className="pt-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsEditTableModalOpen(false)}
+                        className="rounded-xl"
+                      >
+                        Batal
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting || !editTableName.trim()}
+                        className="bg-[#0b172a] hover:bg-slate-800 text-white rounded-xl font-bold"
+                      >
+                        {isSubmitting ? <Loader2 className="size-4 animate-spin mr-2" /> : "Perbarui di Supabase"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* Add Area Modal */}
+              <Dialog open={isAreaModalOpen} onOpenChange={setIsAreaModalOpen}>
+                <DialogContent className="sm:max-w-[460px]">
+                  <DialogHeader>
+                    <DialogTitle className="font-bold text-lg text-slate-800">Tambah Area Baru</DialogTitle>
+                    <DialogDescription className="text-xs text-slate-500">
+                      Area akan disimpan ke database Supabase dan dapat dipilih saat menambah meja.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={addArea} className="space-y-4 py-2">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Nama Area *</label>
+                      <Input 
+                        placeholder="Contoh: Indoor, Outdoor, Lantai 2, VIP Room" 
+                        value={newAreaName}
+                        onChange={(e) => setNewAreaName(e.target.value)}
+                        required
+                        className="h-11 rounded-xl font-bold text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-2">Tipe Area</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                          newAreaType === "non-smoking" ? "border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500" : "border-slate-200 bg-white hover:bg-slate-50"
+                        }`}>
+                          <input 
+                            type="radio" 
+                            name="newAreaType" 
+                            className="hidden" 
+                            checked={newAreaType === "non-smoking"} 
+                            onChange={() => setNewAreaType("non-smoking")} 
+                          />
+                          <div className={`size-4 rounded-full border flex items-center justify-center ${
+                            newAreaType === "non-smoking" ? "border-emerald-600 bg-emerald-600" : "border-slate-300"
+                          }`}>
+                            {newAreaType === "non-smoking" && <div className="size-1.5 bg-white rounded-full" />}
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold text-slate-800">Non-Smoking</span>
+                            <span className="block text-[10px] text-slate-400">Area Bebas Asap</span>
+                          </div>
+                        </label>
+
+                        <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                          newAreaType === "smoking" ? "border-amber-500 bg-amber-50/50 ring-1 ring-amber-500" : "border-slate-200 bg-white hover:bg-slate-50"
+                        }`}>
+                          <input 
+                            type="radio" 
+                            name="newAreaType" 
+                            className="hidden" 
+                            checked={newAreaType === "smoking"} 
+                            onChange={() => setNewAreaType("smoking")} 
+                          />
+                          <div className={`size-4 rounded-full border flex items-center justify-center ${
+                            newAreaType === "smoking" ? "border-amber-600 bg-amber-600" : "border-slate-300"
+                          }`}>
+                            {newAreaType === "smoking" && <div className="size-1.5 bg-white rounded-full" />}
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold text-slate-800">Smoking Area</span>
+                            <span className="block text-[10px] text-slate-400">Area Merokok</span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="pt-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsAreaModalOpen(false)}
+                        className="rounded-xl"
+                      >
+                        Batal
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting || !newAreaName.trim()}
+                        className="bg-[#0b172a] hover:bg-slate-800 text-white rounded-xl font-bold"
+                      >
+                        {isSubmitting ? <Loader2 className="size-4 animate-spin mr-2" /> : <Plus className="size-4 mr-2" />}
+                        Simpan ke Supabase
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* Edit Area Modal */}
+              <Dialog open={isEditAreaModalOpen} onOpenChange={setIsEditAreaModalOpen}>
+                <DialogContent className="sm:max-w-[460px]">
+                  <DialogHeader>
+                    <DialogTitle className="font-bold text-lg text-slate-800">Ubah Data Area</DialogTitle>
+                    <DialogDescription className="text-xs text-slate-500">
+                      Perbarui nama dan tipe area di database Supabase.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={updateArea} className="space-y-4 py-2">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Nama Area *</label>
+                      <Input 
+                        placeholder="Contoh: Indoor" 
+                        value={editAreaName}
+                        onChange={(e) => setEditAreaName(e.target.value)}
+                        required
+                        className="h-11 rounded-xl font-bold text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-2">Tipe Area</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                          editAreaType === "non-smoking" ? "border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500" : "border-slate-200 bg-white hover:bg-slate-50"
+                        }`}>
+                          <input 
+                            type="radio" 
+                            name="editAreaType" 
+                            className="hidden" 
+                            checked={editAreaType === "non-smoking"} 
+                            onChange={() => setEditAreaType("non-smoking")} 
+                          />
+                          <div className={`size-4 rounded-full border flex items-center justify-center ${
+                            editAreaType === "non-smoking" ? "border-emerald-600 bg-emerald-600" : "border-slate-300"
+                          }`}>
+                            {editAreaType === "non-smoking" && <div className="size-1.5 bg-white rounded-full" />}
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold text-slate-800">Non-Smoking</span>
+                            <span className="block text-[10px] text-slate-400">Area Bebas Asap</span>
+                          </div>
+                        </label>
+
+                        <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                          editAreaType === "smoking" ? "border-amber-500 bg-amber-50/50 ring-1 ring-amber-500" : "border-slate-200 bg-white hover:bg-slate-50"
+                        }`}>
+                          <input 
+                            type="radio" 
+                            name="editAreaType" 
+                            className="hidden" 
+                            checked={editAreaType === "smoking"} 
+                            onChange={() => setEditAreaType("smoking")} 
+                          />
+                          <div className={`size-4 rounded-full border flex items-center justify-center ${
+                            editAreaType === "smoking" ? "border-amber-600 bg-amber-600" : "border-slate-300"
+                          }`}>
+                            {editAreaType === "smoking" && <div className="size-1.5 bg-white rounded-full" />}
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold text-slate-800">Smoking Area</span>
+                            <span className="block text-[10px] text-slate-400">Area Merokok</span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="pt-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsEditAreaModalOpen(false)}
+                        className="rounded-xl"
+                      >
+                        Batal
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting || !editAreaName.trim()}
+                        className="bg-[#0b172a] hover:bg-slate-800 text-white rounded-xl font-bold"
+                      >
+                        {isSubmitting ? <Loader2 className="size-4 animate-spin mr-2" /> : "Perbarui di Supabase"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           ) : activeTab === "kategori" ? (
             <div className="flex flex-col h-full overflow-y-auto pr-1">

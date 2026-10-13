@@ -38,7 +38,24 @@ type TableData = {
   id: string;
   name: string;
   status: string;
+  capacity?: number;
+  qr_code?: string | null;
+  branch_id?: string | null;
 };
+
+function parseTableInfo(t: TableData) {
+  let area = "";
+  if (t.qr_code) {
+    try {
+      const p = JSON.parse(t.qr_code);
+      if (p.area) area = p.area;
+    } catch {}
+  }
+  const match = t.name.match(/^\[(.*?)\]\s*(.*)$/);
+  const displayName = match ? match[2] : t.name;
+  if (!area && match) area = match[1];
+  return { displayName, area, capacity: t.capacity || 4 };
+}
 
 type CustomerData = {
   id: string;
@@ -220,6 +237,8 @@ export default function FnbPOSView() {
       const { data } = await supabase
         .from("tables")
         .select("*")
+        .eq("tenant_id", user.id)
+        .neq("status", "_area_def")
         .eq("status", "available")
         .order("name");
       setTables(data || []);
@@ -1419,7 +1438,11 @@ export default function FnbPOSView() {
               className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-lg relative overflow-hidden transition-all ${(orderType === "dine_in" && selectedTable) ? "bg-cyan-50/70 text-slate-800" : "bg-slate-50/80 text-slate-500 hover:bg-slate-100"}`}
             >
               <LayoutDashboard className={`size-4 ${(orderType === "dine_in" && selectedTable) ? "text-slate-800" : "text-slate-500"}`} />
-              <span className="text-[9px] font-medium">Nomor Meja</span>
+              <span className="text-[9px] font-medium">
+                {selectedTable && selectedTable !== "no_table"
+                  ? (tables.find(t => t.id === selectedTable) ? parseTableInfo(tables.find(t => t.id === selectedTable)!).displayName : "Meja Terpilih")
+                  : "Nomor Meja"}
+              </span>
             </button>
           </div>
           
@@ -2146,23 +2169,38 @@ export default function FnbPOSView() {
               {selectedTable === "no_table" && <Check className="size-5 text-cyan-600 dark:text-cyan-400" />}
             </button>
 
-            {tables.map(t => (
-              <button
-                key={t.id}
-                onClick={() => { setSelectedTable(t.id); setIsTableDrawerOpen(false); }}
-                className={`flex items-center justify-between p-4 rounded-xl transition-all mb-2 ${
-                  selectedTable === t.id
-                    ? "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400"
-                    : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 border border-slate-100"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <LayoutDashboard className={`size-5 ${selectedTable === t.id ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400"}`} />
-                  <span className="font-medium text-[15px]">{t.name}</span>
-                </div>
-                {selectedTable === t.id && <Check className="size-5 text-cyan-600 dark:text-cyan-400" />}
-              </button>
-            ))}
+            {tables.map(t => {
+              const info = parseTableInfo(t);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => { setSelectedTable(t.id); setIsTableDrawerOpen(false); }}
+                  className={`flex items-center justify-between p-4 rounded-xl transition-all mb-2 ${
+                    selectedTable === t.id
+                      ? "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400"
+                      : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 border border-slate-100"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <LayoutDashboard className={`size-5 ${selectedTable === t.id ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400"}`} />
+                    <div className="flex flex-col text-left">
+                      <span className="font-medium text-[15px]">{info.displayName}</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {info.area && info.area !== "Utama" && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            {info.area}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-slate-400">
+                          {info.capacity} Kursi
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {selectedTable === t.id && <Check className="size-5 text-cyan-600 dark:text-cyan-400" />}
+                </button>
+              );
+            })}
           </div>
         </DrawerContent>
       </Drawer>

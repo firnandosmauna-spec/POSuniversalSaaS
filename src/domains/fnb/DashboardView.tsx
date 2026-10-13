@@ -116,7 +116,8 @@ export function DashboardView() {
       const { data: tableData } = await supabase
         .from("tables")
         .select("*")
-        .eq("tenant_id", user.id);
+        .eq("tenant_id", user.id)
+        .neq("status", "_area_def");
       setTables(tableData || []);
 
       // 4. Fetch Active Shift
