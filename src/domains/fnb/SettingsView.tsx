@@ -1,12 +1,21 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { Settings, Plus, Trash2, LayoutGrid, Loader2, Tags, Building2, MapPin, Phone, Receipt, FileText, Hash, Sparkles, CreditCard, CheckCircle2, Crown, Zap, ShieldCheck, ArrowRight, Clock, Printer, Layers, Ruler, Scissors, Wrench, ArrowLeft, Bluetooth, Menu, Store, ChevronRight, X, ChevronLeft } from "lucide-react";
+import { Settings, Plus, Trash2, LayoutGrid, Loader2, Tags, Building2, MapPin, Phone, Receipt, FileText, Hash, Sparkles, CreditCard, CheckCircle2, Crown, Zap, ShieldCheck, ArrowRight, Clock, Printer, Layers, Ruler, Scissors, Wrench, ArrowLeft, Bluetooth, Menu, Store, ChevronRight, X, ChevronLeft, Pencil, RotateCcw, Banknote, QrCode, Smartphone, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { supabase } from "@/shared/lib/supabase";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { getInvoiceSettings, saveInvoiceSettings, generateInvoiceCode, InvoiceSettings } from "@/shared/utils/invoiceGenerator";
-import { getFnBPaymentSettings, saveFnBPaymentSettings, PaymentMethodItem, FnBPaymentSettings, DEFAULT_FNB_PAYMENT_METHODS } from "@/shared/utils/fnbPaymentSettings";
+import { getFnBPaymentSettings, saveFnBPaymentSettings, resetPaymentMethodsToDefault, PaymentMethodItem, FnBPaymentSettings, DEFAULT_FNB_PAYMENT_METHODS } from "@/shared/utils/fnbPaymentSettings";
 import { toast } from "sonner";
 import { PrintingSettingsView } from "@/domains/printing/SettingsView";
 import { LaundrySettingsView } from "@/domains/laundry/SettingsView";
@@ -77,9 +86,21 @@ export function SettingsView() {
   // Payment Settings for FnB
   const [paymentSettings, setPaymentSettings] = useState<FnBPaymentSettings>(() => getFnBPaymentSettings(user?.id));
   const [paymentSaveSuccess, setPaymentSaveSuccess] = useState(false);
-  const [newMethodName, setNewMethodName] = useState("");
-  const [newMethodType, setNewMethodType] = useState<PaymentMethodItem["type"]>("debit");
-  const [newMethodBank, setNewMethodBank] = useState("");
+
+  // Payment Method Modal State (Create / Update CRUD)
+  const [isMethodModalOpen, setIsMethodModalOpen] = useState(false);
+  const [editingMethodId, setEditingMethodId] = useState<string | null>(null);
+  const [methodFormName, setMethodFormName] = useState("");
+  const [methodFormType, setMethodFormType] = useState<PaymentMethodItem["type"]>("debit");
+  const [methodFormBank, setMethodFormBank] = useState("");
+  const [methodFormAccountNumber, setMethodFormAccountNumber] = useState("");
+  const [methodFormAccountName, setMethodFormAccountName] = useState("");
+  const [methodFormNotes, setMethodFormNotes] = useState("");
+  const [methodFormEnabled, setMethodFormEnabled] = useState(true);
+
+  // Search & Filter State for Payment Methods
+  const [methodSearchQuery, setMethodSearchQuery] = useState("");
+  const [methodFilterTab, setMethodFilterTab] = useState<"all" | "active" | "inactive">("all");
 
   // Invoice Code Settings
   const [invoicePrefix, setInvoicePrefix] = useState("INV");
@@ -424,44 +445,122 @@ export function SettingsView() {
     }
   };
 
-  const handleTogglePaymentMethod = (id: string) => {
-    setPaymentSettings(prev => ({
-      ...prev,
-      paymentMethods: prev.paymentMethods.map(m => m.id === id ? { ...m, enabled: !m.enabled } : m)
-    }));
+  // === CRUD METODE PEMBAYARAN F&B ===
+  const handleOpenCreateMethodModal = () => {
+    setEditingMethodId(null);
+    setMethodFormName("");
+    setMethodFormType("debit");
+    setMethodFormBank("");
+    setMethodFormAccountNumber("");
+    setMethodFormAccountName("");
+    setMethodFormNotes("");
+    setMethodFormEnabled(true);
+    setIsMethodModalOpen(true);
   };
 
-  const handleAddCustomPaymentMethod = (e: React.FormEvent) => {
+  const handleOpenEditMethodModal = (method: PaymentMethodItem) => {
+    setEditingMethodId(method.id);
+    setMethodFormName(method.name);
+    setMethodFormType(method.type);
+    setMethodFormBank(method.bankName || "");
+    setMethodFormAccountNumber(method.accountNumber || "");
+    setMethodFormAccountName(method.accountName || "");
+    setMethodFormNotes(method.notes || "");
+    setMethodFormEnabled(method.enabled);
+    setIsMethodModalOpen(true);
+  };
+
+  const handleSaveMethodModal = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMethodName.trim()) {
+    if (!methodFormName.trim()) {
       toast.error("Nama metode pembayaran wajib diisi!");
       return;
     }
-    const newId = `custom_${Date.now()}`;
-    const newMethod: PaymentMethodItem = {
-      id: newId,
-      name: newMethodName.trim(),
-      type: newMethodType,
-      enabled: true,
-      bankName: newMethodBank.trim() || undefined
-    };
-    setPaymentSettings(prev => ({
-      ...prev,
-      paymentMethods: [...prev.paymentMethods, newMethod]
-    }));
-    setNewMethodName("");
-    setNewMethodBank("");
-    toast.success(`Metode "${newMethod.name}" berhasil ditambahkan!`);
+
+    if (editingMethodId) {
+      // UPDATE: Ubah metode yang ada
+      const updatedMethods = paymentSettings.paymentMethods.map(m => {
+        if (m.id === editingMethodId) {
+          return {
+            ...m,
+            name: methodFormName.trim(),
+            type: methodFormType,
+            bankName: methodFormBank.trim() || undefined,
+            accountNumber: methodFormAccountNumber.trim() || undefined,
+            accountName: methodFormAccountName.trim() || undefined,
+            notes: methodFormNotes.trim() || undefined,
+            enabled: methodFormEnabled,
+          };
+        }
+        return m;
+      });
+      const nextSettings = { ...paymentSettings, paymentMethods: updatedMethods };
+      setPaymentSettings(nextSettings);
+      saveFnBPaymentSettings(nextSettings, user?.id);
+      toast.success(`Metode "${methodFormName.trim()}" berhasil diperbarui!`);
+    } else {
+      // CREATE: Tambah metode baru
+      const newId = `pay_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const newMethod: PaymentMethodItem = {
+        id: newId,
+        name: methodFormName.trim(),
+        type: methodFormType,
+        bankName: methodFormBank.trim() || undefined,
+        accountNumber: methodFormAccountNumber.trim() || undefined,
+        accountName: methodFormAccountName.trim() || undefined,
+        notes: methodFormNotes.trim() || undefined,
+        enabled: methodFormEnabled,
+      };
+      const nextSettings = {
+        ...paymentSettings,
+        paymentMethods: [...paymentSettings.paymentMethods, newMethod]
+      };
+      setPaymentSettings(nextSettings);
+      saveFnBPaymentSettings(nextSettings, user?.id);
+      toast.success(`Metode baru "${newMethod.name}" berhasil ditambahkan!`);
+    }
+
+    setIsMethodModalOpen(false);
   };
 
-  const handleDeleteCustomPaymentMethod = (id: string) => {
-    if (confirm("Hapus metode pembayaran ini?")) {
-      setPaymentSettings(prev => ({
-        ...prev,
-        paymentMethods: prev.paymentMethods.filter(m => m.id !== id)
-      }));
-      toast.success("Metode pembayaran dihapus.");
+  const handleTogglePaymentMethod = (id: string) => {
+    const updatedMethods = paymentSettings.paymentMethods.map(m =>
+      m.id === id ? { ...m, enabled: !m.enabled } : m
+    );
+    const nextSettings = { ...paymentSettings, paymentMethods: updatedMethods };
+    setPaymentSettings(nextSettings);
+    saveFnBPaymentSettings(nextSettings, user?.id);
+    const target = updatedMethods.find(m => m.id === id);
+    if (target) {
+      toast.success(`Metode "${target.name}" ${target.enabled ? "diaktifkan" : "dinonaktifkan"}`);
     }
+  };
+
+  const handleDeletePaymentMethod = (method: PaymentMethodItem) => {
+    if (paymentSettings.paymentMethods.length <= 1) {
+      alert("Minimal harus ada 1 metode pembayaran yang tersisa agar kasir tetap dapat beroperasi.");
+      return;
+    }
+
+    if (!confirm(`Hapus metode pembayaran "${method.name}"?\nMetode ini akan dihapus dari opsi kasir POS.`)) {
+      return;
+    }
+
+    const updatedMethods = paymentSettings.paymentMethods.filter(m => m.id !== method.id);
+    const nextSettings = { ...paymentSettings, paymentMethods: updatedMethods };
+    setPaymentSettings(nextSettings);
+    saveFnBPaymentSettings(nextSettings, user?.id);
+    toast.success(`Metode "${method.name}" berhasil dihapus.`);
+  };
+
+  const handleResetPaymentMethods = () => {
+    if (!confirm("Kembalikan daftar metode pembayaran ke konfigurasi standar F&B (Tunai, QRIS, BCA, Mandiri, Transfer, GoPay, OVO)?\nMetode kustom yang ditambahkan akan dihapus.")) {
+      return;
+    }
+    const resetList = resetPaymentMethodsToDefault(user?.id);
+    const nextSettings = { ...paymentSettings, paymentMethods: resetList };
+    setPaymentSettings(nextSettings);
+    toast.success("Daftar metode pembayaran telah di-reset ke standar F&B!");
   };
 
   const handleCreateBranch = async (e: React.FormEvent) => {
@@ -478,6 +577,40 @@ export function SettingsView() {
       alert("Gagal menambahkan cabang: " + e.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const filteredPaymentMethods = paymentSettings.paymentMethods.filter((method) => {
+    if (methodFilterTab === "active" && !method.enabled) return false;
+    if (methodFilterTab === "inactive" && method.enabled) return false;
+    if (methodSearchQuery.trim()) {
+      const q = methodSearchQuery.toLowerCase();
+      const matchName = method.name.toLowerCase().includes(q);
+      const matchBank = method.bankName?.toLowerCase().includes(q);
+      const matchAcc = method.accountNumber?.toLowerCase().includes(q);
+      const matchType = method.type.toLowerCase().includes(q);
+      return matchName || matchBank || matchAcc || matchType;
+    }
+    return true;
+  });
+
+  const activePaymentCount = paymentSettings.paymentMethods.filter((m) => m.enabled).length;
+  const totalPaymentCount = paymentSettings.paymentMethods.length;
+
+  const getMethodTypeInfo = (type: PaymentMethodItem["type"]) => {
+    switch (type) {
+      case "cash":
+        return { label: "Tunai", Icon: Banknote, colorClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800" };
+      case "qris":
+        return { label: "QRIS", Icon: QrCode, colorClass: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800" };
+      case "debit":
+        return { label: "Kartu / Debit", Icon: CreditCard, colorClass: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800" };
+      case "transfer":
+        return { label: "Transfer Bank", Icon: Building2, colorClass: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-400 dark:border-violet-800" };
+      case "ewallet":
+        return { label: "E-Wallet", Icon: Smartphone, colorClass: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800" };
+      default:
+        return { label: "Lainnya", Icon: Layers, colorClass: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700" };
     }
   };
 
@@ -1774,103 +1907,358 @@ export function SettingsView() {
                 </div>
               </div>
 
-              {/* Seksi 3: Daftar Metode Pembayaran Aktif */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs md:text-sm font-bold text-slate-800">
-                    Daftar Metode Pembayaran ({paymentSettings.paymentMethods.filter(m => m.enabled).length} Aktif)
-                  </h3>
-                  <span className="text-[10px] text-slate-500">Klik toggle untuk mengaktifkan/menonaktifkan</span>
+              {/* Seksi 3: Daftar Metode Pembayaran (CRUD Lengkap) */}
+              <div className="space-y-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div>
+                    <h3 className="text-xs md:text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                      Daftar Metode Pembayaran
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        {activePaymentCount} Aktif / {totalPaymentCount} Total
+                      </span>
+                    </h3>
+                    <p className="text-[10px] md:text-xs text-slate-500">
+                      Metode yang diaktifkan otomatis muncul pada tombol bayar kasir POS.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResetPaymentMethods}
+                      className="h-8 text-xs font-semibold rounded-xl text-slate-600 hover:text-slate-900 border-slate-200 bg-white"
+                      title="Kembalikan daftar metode ke konfigurasi standar F&B"
+                    >
+                      <RotateCcw className="size-3 mr-1" /> Reset Default
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleOpenCreateMethodModal}
+                      className="h-8 text-xs font-bold rounded-xl bg-[#0b172a] hover:bg-slate-800 text-white shadow-sm"
+                    >
+                      <Plus className="size-3.5 mr-1" /> Tambah Metode
+                    </Button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  {paymentSettings.paymentMethods.map((method) => (
-                    <div
-                      key={method.id}
-                      onClick={() => handleTogglePaymentMethod(method.id)}
-                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer select-none ${
-                        method.enabled
-                          ? "bg-white border-slate-200 shadow-sm"
-                          : "bg-slate-50/60 border-slate-200/60 opacity-60"
+                {/* Filter Tabs & Search Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setMethodFilterTab("all")}
+                      className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                        methodFilterTab === "all"
+                          ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                          : "text-slate-500 hover:text-slate-800"
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={method.enabled}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            handleTogglePaymentMethod(method.id);
-                          }}
-                          className="size-4 rounded text-brand focus:ring-brand accent-brand cursor-pointer"
-                        />
-                        <div>
-                          <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                            {method.name}
-                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">
-                              {method.type}
-                            </span>
-                          </div>
-                          {method.bankName && (
-                            <div className="text-[10px] text-slate-500">Bank / Provider: {method.bankName}</div>
-                          )}
-                        </div>
-                      </div>
+                      Semua ({totalPaymentCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMethodFilterTab("active")}
+                      className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                        methodFilterTab === "active"
+                          ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      Aktif ({activePaymentCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMethodFilterTab("inactive")}
+                      className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                        methodFilterTab === "inactive"
+                          ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      Nonaktif ({totalPaymentCount - activePaymentCount})
+                    </button>
+                  </div>
 
-                      {method.id.startsWith("custom_") && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteCustomPaymentMethod(method.id);
-                          }}
-                          className="text-rose-500 hover:text-rose-700 p-1 text-xs"
-                          title="Hapus metode ini"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Form Tambah Metode Pembayaran Kustom */}
-                <form
-                  onSubmit={handleAddCustomPaymentMethod}
-                  className="mt-3 p-3.5 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 flex flex-col md:flex-row gap-2.5 items-end"
-                >
-                  <div className="w-full md:flex-1">
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Tambah Metode Baru</label>
+                  <div className="relative w-full sm:w-56">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
                     <Input
                       type="text"
-                      placeholder="Contoh: EDC BRI, ShopeePay, Kasbon Staff"
-                      value={newMethodName}
-                      onChange={(e) => setNewMethodName(e.target.value)}
-                      className="h-9 text-xs bg-white rounded-xl border-slate-200"
+                      placeholder="Cari metode, bank, no rek..."
+                      value={methodSearchQuery}
+                      onChange={(e) => setMethodSearchQuery(e.target.value)}
+                      className="pl-8 h-8 text-xs rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
                     />
                   </div>
-                  <div className="w-full md:w-36">
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Tipe</label>
-                    <select
-                      value={newMethodType}
-                      onChange={(e) => setNewMethodType(e.target.value as any)}
-                      className="w-full h-9 text-xs rounded-xl border border-slate-200 bg-white px-2.5 font-semibold text-slate-700"
-                    >
-                      <option value="debit">Kartu / Debit</option>
-                      <option value="ewallet">E-Wallet</option>
-                      <option value="transfer">Transfer Bank</option>
-                      <option value="other">Lainnya</option>
-                    </select>
+                </div>
+
+                {/* Grid Kartu Metode Pembayaran */}
+                {filteredPaymentMethods.length === 0 ? (
+                  <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 flex flex-col items-center justify-center gap-2">
+                    <CreditCard className="size-8 text-slate-300" />
+                    <p className="text-xs font-semibold text-slate-600">Tidak ada metode pembayaran yang cocok.</p>
+                    {methodSearchQuery || methodFilterTab !== "all" ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setMethodSearchQuery("");
+                          setMethodFilterTab("all");
+                        }}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-bold"
+                      >
+                        Reset Pencarian & Filter
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleOpenCreateMethodModal}
+                        className="text-xs bg-[#0b172a] hover:bg-slate-800 text-white font-bold rounded-xl mt-1"
+                      >
+                        <Plus className="size-3.5 mr-1" /> Tambah Metode Pertama
+                      </Button>
+                    )}
                   </div>
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    className="h-9 text-xs font-bold rounded-xl border-slate-300 hover:bg-slate-100 text-slate-700 w-full md:w-auto shrink-0"
-                  >
-                    <Plus className="size-3.5 mr-1" /> Tambah
-                  </Button>
-                </form>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {filteredPaymentMethods.map((method) => {
+                      const typeInfo = getMethodTypeInfo(method.type);
+                      const IconComponent = typeInfo.Icon;
+
+                      return (
+                        <div
+                          key={method.id}
+                          className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
+                            method.enabled
+                              ? "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm"
+                              : "bg-slate-50/70 dark:bg-slate-900/40 border-slate-200/70 dark:border-slate-800/60 opacity-65"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
+                            {/* Icon Kotak Tipe */}
+                            <div className={`size-9 rounded-xl border flex items-center justify-center shrink-0 ${typeInfo.colorClass}`}>
+                              <IconComponent className="size-4" />
+                            </div>
+
+                            {/* Info Metode */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h4 className="text-xs md:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                                  {method.name}
+                                </h4>
+                                <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border uppercase ${typeInfo.colorClass}`}>
+                                  {typeInfo.label}
+                                </span>
+                              </div>
+
+                              {/* Detail Rekening / Bank */}
+                              {(method.bankName || method.accountNumber || method.accountName) && (
+                                <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 flex items-center gap-1 flex-wrap">
+                                  {method.bankName && <span className="font-semibold text-slate-700 dark:text-slate-300">Bank {method.bankName}</span>}
+                                  {method.bankName && method.accountNumber && <span>•</span>}
+                                  {method.accountNumber && <span className="font-mono">No: {method.accountNumber}</span>}
+                                  {method.accountName && <span className="italic text-slate-500">({method.accountName})</span>}
+                                </div>
+                              )}
+
+                              {/* Catatan */}
+                              {method.notes && (
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 line-clamp-1">
+                                  Catatan: {method.notes}
+                                </p>
+                              )}
+
+                              {/* Status Badge */}
+                              <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+                                {method.enabled ? (
+                                  <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                    <span className="size-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" /> Aktif di Kasir
+                                  </span>
+                                ) : (
+                                  <span className="font-medium text-slate-400 flex items-center gap-1">
+                                    <span className="size-1.5 rounded-full bg-slate-300 inline-block" /> Nonaktif
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Tombol Aksi Kanan (Switch, Edit, Delete) */}
+                          <div className="flex items-center gap-1.5 shrink-0 self-center">
+                            <Switch
+                              checked={method.enabled}
+                              onCheckedChange={() => handleTogglePaymentMethod(method.id)}
+                              title={method.enabled ? "Nonaktifkan metode ini di kasir" : "Aktifkan metode ini di kasir"}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenEditMethodModal(method)}
+                              title="Ubah rincian metode pembayaran"
+                              className="size-8 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeletePaymentMethod(method)}
+                              title="Hapus metode pembayaran"
+                              className="size-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+
+              {/* Modal Dialog CRUD (Tambah / Ubah Metode Pembayaran) */}
+              <Dialog open={isMethodModalOpen} onOpenChange={setIsMethodModalOpen}>
+                <DialogContent className="max-w-md p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      {editingMethodId ? (
+                        <Pencil className="size-4 text-indigo-600" />
+                      ) : (
+                        <Plus className="size-4 text-emerald-600" />
+                      )}
+                      {editingMethodId ? "Ubah Metode Pembayaran" : "Tambah Metode Pembayaran Baru"}
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-slate-500">
+                      {editingMethodId
+                        ? "Perbarui rincian atau nomor rekening metode pembayaran kasir."
+                        : "Tambahkan opsi pembayaran baru yang dapat dipilih pelanggan di kasir F&B."}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <form onSubmit={handleSaveMethodModal} className="space-y-3.5 pt-2">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Nama Metode Pembayaran <span className="text-rose-500">*</span>
+                      </label>
+                      <Input
+                        required
+                        placeholder="Contoh: EDC Bank Mandiri, ShopeePay Kasir, Kasbon Staff"
+                        value={methodFormName}
+                        onChange={(e) => setMethodFormName(e.target.value)}
+                        className="h-10 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-semibold"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Kategori Pembayaran
+                        </label>
+                        <select
+                          value={methodFormType}
+                          onChange={(e) => setMethodFormType(e.target.value as any)}
+                          className="w-full h-10 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
+                        >
+                          <option value="cash">Tunai (Cash)</option>
+                          <option value="qris">QRIS</option>
+                          <option value="debit">Kartu / Debit EDC</option>
+                          <option value="transfer">Transfer Bank</option>
+                          <option value="ewallet">E-Wallet</option>
+                          <option value="other">Lainnya / Kasbon</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Bank / Provider (Opsional)
+                        </label>
+                        <Input
+                          placeholder="Contoh: BCA, Mandiri, Shopee"
+                          value={methodFormBank}
+                          onChange={(e) => setMethodFormBank(e.target.value)}
+                          className="h-10 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          No. Rekening / Akun (Opsional)
+                        </label>
+                        <Input
+                          placeholder="Contoh: 1234567890"
+                          value={methodFormAccountNumber}
+                          onChange={(e) => setMethodFormAccountNumber(e.target.value)}
+                          className="h-10 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Atas Nama (Opsional)
+                        </label>
+                        <Input
+                          placeholder="Contoh: a.n Kopi Senja"
+                          value={methodFormAccountName}
+                          onChange={(e) => setMethodFormAccountName(e.target.value)}
+                          className="h-10 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Catatan / Instruksi Kasir (Opsional)
+                      </label>
+                      <Input
+                        placeholder="Contoh: Masukkan nomor approval slip EDC atau foto struk"
+                        value={methodFormNotes}
+                        onChange={(e) => setMethodFormNotes(e.target.value)}
+                        className="h-10 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                      />
+                    </div>
+
+                    <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between">
+                      <div>
+                        <span className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                          Status Langsung Aktif di Kasir
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          Tampilkan opsi metode ini saat kasir menyelesaikan pesanan
+                        </span>
+                      </div>
+                      <Switch
+                        checked={methodFormEnabled}
+                        onCheckedChange={setMethodFormEnabled}
+                      />
+                    </div>
+
+                    <DialogFooter className="pt-2 flex gap-2 sm:justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsMethodModalOpen(false)}
+                        className="h-10 rounded-xl text-xs font-bold border-slate-300"
+                      >
+                        Batal
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="h-10 rounded-xl text-xs font-bold bg-[#0b172a] hover:bg-slate-800 text-white px-5 shadow-sm"
+                      >
+                        {editingMethodId ? "Simpan Perubahan" : "Tambahkan Metode"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
 
               {/* Tombol Simpan Bawah */}
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">

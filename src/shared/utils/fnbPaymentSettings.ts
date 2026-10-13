@@ -6,6 +6,7 @@ export type PaymentMethodItem = {
   accountNumber?: string;
   accountName?: string;
   bankName?: string;
+  notes?: string;
 };
 
 export type FnBPaymentSettings = {
@@ -25,7 +26,7 @@ export const DEFAULT_FNB_PAYMENT_METHODS: PaymentMethodItem[] = [
   { id: "qris", name: "QRIS", type: "qris", enabled: true },
   { id: "debit_bca", name: "Debit BCA", type: "debit", enabled: true, bankName: "BCA" },
   { id: "debit_mandiri", name: "Debit Mandiri", type: "debit", enabled: true, bankName: "Mandiri" },
-  { id: "transfer_bca", name: "Transfer Bank", type: "transfer", enabled: true, bankName: "BCA" },
+  { id: "transfer_bca", name: "Transfer Bank BCA", type: "transfer", enabled: true, bankName: "BCA" },
   { id: "gopay", name: "GoPay", type: "ewallet", enabled: true },
   { id: "ovo", name: "OVO / DANA / ShopeePay", type: "ewallet", enabled: true },
 ];
@@ -77,4 +78,75 @@ export function saveFnBPaymentSettings(settings: FnBPaymentSettings, tenantId?: 
   } catch (e) {
     console.error("Gagal menyimpan pengaturan pembayaran F&B:", e);
   }
+}
+
+/**
+ * Tambah metode pembayaran baru (Create)
+ */
+export function addPaymentMethodItem(
+  newMethod: Omit<PaymentMethodItem, "id">,
+  tenantId?: string
+): PaymentMethodItem {
+  const current = getFnBPaymentSettings(tenantId);
+  const created: PaymentMethodItem = {
+    ...newMethod,
+    id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+  };
+  const updatedMethods = [...current.paymentMethods, created];
+  saveFnBPaymentSettings({ ...current, paymentMethods: updatedMethods }, tenantId);
+  return created;
+}
+
+/**
+ * Perbarui metode pembayaran (Update)
+ */
+export function updatePaymentMethodItem(
+  id: string,
+  updates: Partial<PaymentMethodItem>,
+  tenantId?: string
+): PaymentMethodItem[] {
+  const current = getFnBPaymentSettings(tenantId);
+  const updatedMethods = current.paymentMethods.map((m) =>
+    m.id === id ? { ...m, ...updates } : m
+  );
+  saveFnBPaymentSettings({ ...current, paymentMethods: updatedMethods }, tenantId);
+  return updatedMethods;
+}
+
+/**
+ * Hapus metode pembayaran (Delete)
+ */
+export function deletePaymentMethodItem(
+  id: string,
+  tenantId?: string
+): PaymentMethodItem[] {
+  const current = getFnBPaymentSettings(tenantId);
+  const updatedMethods = current.paymentMethods.filter((m) => m.id !== id);
+  saveFnBPaymentSettings({ ...current, paymentMethods: updatedMethods }, tenantId);
+  return updatedMethods;
+}
+
+/**
+ * Toggle status aktif/nonaktif metode
+ */
+export function togglePaymentMethodItem(
+  id: string,
+  tenantId?: string
+): PaymentMethodItem[] {
+  const current = getFnBPaymentSettings(tenantId);
+  const updatedMethods = current.paymentMethods.map((m) =>
+    m.id === id ? { ...m, enabled: !m.enabled } : m
+  );
+  saveFnBPaymentSettings({ ...current, paymentMethods: updatedMethods }, tenantId);
+  return updatedMethods;
+}
+
+/**
+ * Reset daftar metode pembayaran ke default F&B
+ */
+export function resetPaymentMethodsToDefault(tenantId?: string): PaymentMethodItem[] {
+  const current = getFnBPaymentSettings(tenantId);
+  const resetMethods = [...DEFAULT_FNB_PAYMENT_METHODS];
+  saveFnBPaymentSettings({ ...current, paymentMethods: resetMethods }, tenantId);
+  return resetMethods;
 }
