@@ -16,7 +16,8 @@ import {
   MapPin,
   CheckCircle2,
   Package,
-  Calendar
+  Calendar,
+  ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,6 +94,18 @@ export default function LaundryPOSView() {
   const [customerName, setCustomerName] = useState<string>("");
   const [customerPhone, setCustomerPhone] = useState<string>("");
   const [cart, setCart] = useState<LaundryOrderItem[]>([]);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+
+  // Close mobile cart on Escape key press (accessibility standard)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isMobileCartOpen) {
+        setIsMobileCartOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileCartOpen]);
 
   // Payment State
   const [paymentType, setPaymentType] = useState<"LUNAS" | "DP">("LUNAS");
@@ -285,7 +298,28 @@ export default function LaundryPOSView() {
   };
 
   return (
-    <div className="flex flex-col landscape:flex-row md:flex-row h-full w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-y-auto landscape:overflow-hidden md:overflow-hidden font-sans pb-16 md:pb-4">
+    <div className="flex flex-col landscape:flex-row md:flex-row h-full w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-y-auto landscape:overflow-hidden md:overflow-hidden font-sans pb-28 md:pb-4 relative">
+      {/* Sticky Bottom Bar Cart (Mobile Only) */}
+      {!isMobileCartOpen && (
+        <div className="md:hidden fixed bottom-[72px] left-3 right-3 grid grid-cols-3 gap-2.5 z-40 mb-safe transition-all pointer-events-none items-stretch">
+          <div className="col-span-2 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 py-1.5 px-3 flex flex-col justify-center shadow-lg pointer-events-auto overflow-hidden">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-none mb-0.5">Total Tagihan Laundry</span>
+            <span className="font-extrabold text-slate-900 dark:text-white text-sm leading-tight truncate">
+              Rp {cartTotalAmount.toLocaleString("id-ID")}
+            </span>
+          </div>
+          <button
+            onClick={() => setIsMobileCartOpen(true)}
+            className="col-span-1 w-full bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white active:scale-95 transition-transform text-white dark:text-slate-900 px-2 py-2 flex items-center justify-center gap-1.5 font-bold text-xs shadow-lg pointer-events-auto overflow-hidden"
+          >
+            <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-black rounded-sm min-w-[20px] h-5 px-1 flex items-center justify-center text-[11px] leading-none shadow-xs shrink-0">
+              {cart.length}
+            </div>
+            <span className="truncate">Nota</span>
+          </button>
+        </div>
+      )}
+
       {/* LEFT COLUMN: Laundry Service Selection & Calculator (60% width) */}
       <div className="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-800 landscape:h-full md:h-full p-3 md:p-6 space-y-4 min-h-[350px]">
         {/* Header Title Banner */}
@@ -299,16 +333,26 @@ export default function LaundryPOSView() {
             </span>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (recentJobs.length > 0 && recentJobs[0]) setSelectedSpkJob(recentJobs[0]);
-            }}
-            className="text-xs h-7 px-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-none"
-          >
-            <Eye className="size-3.5 mr-1" /> Riwayat ({recentJobs.length})
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsMobileCartOpen(true)}
+              className="md:hidden text-xs h-7 px-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-bold rounded-none"
+            >
+              <ShoppingBag className="size-3.5 mr-1 text-slate-900 dark:text-white" /> Nota ({cart.length})
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (recentJobs.length > 0 && recentJobs[0]) setSelectedSpkJob(recentJobs[0]);
+              }}
+              className="text-xs h-7 px-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-none"
+            >
+              <Eye className="size-3.5 mr-1" /> Riwayat ({recentJobs.length})
+            </Button>
+          </div>
         </div>
 
         {/* Category Tabs & Add Service */}
@@ -579,14 +623,37 @@ export default function LaundryPOSView() {
         </div>
       </div>
 
+      {/* Backdrop Overlay saat Mobile Cart Terbuka */}
+      {isMobileCartOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-slate-900/60 z-50 backdrop-blur-xs"
+          onClick={() => setIsMobileCartOpen(false)}
+        />
+      )}
+
       {/* RIGHT COLUMN: Cart / Order Summary (40% width) */}
-      <div className="w-full landscape:w-[350px] sm:landscape:w-[380px] md:w-[420px] lg:w-[450px] bg-white dark:bg-slate-950 flex flex-col h-full max-h-full border-l border-slate-200 dark:border-slate-800 shrink-0 overflow-hidden min-h-0">
+      <div 
+        className={`${
+          isMobileCartOpen 
+            ? "fixed inset-y-0 right-0 z-50 w-full sm:max-w-md shadow-2xl flex" 
+            : "hidden md:flex"
+        } md:static w-full landscape:w-[350px] sm:landscape:w-[380px] md:w-[420px] lg:w-[450px] bg-white dark:bg-slate-950 flex-col h-full max-h-full border-l border-slate-200 dark:border-slate-800 shrink-0 overflow-hidden min-h-0`}
+      >
         {/* Customer Header */}
         <div className="p-3 border-b border-slate-200 dark:border-slate-800 space-y-2 bg-slate-50 dark:bg-slate-900">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold text-sm text-slate-900 dark:text-white">
-              Nota Keranjang
-            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMobileCartOpen(false)}
+                className="md:hidden p-1 -ml-1 text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                aria-label="Tutup Nota Keranjang"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <h2 className="font-bold text-sm text-slate-900 dark:text-white">
+                Nota Keranjang
+              </h2>
+            </div>
             <span className="text-xs text-slate-500">
               {cart.length} Item
             </span>

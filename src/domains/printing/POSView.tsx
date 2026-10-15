@@ -33,7 +33,8 @@ import {
   Phone,
   HardDrive,
   Calculator,
-  Zap
+  Zap,
+  ChevronLeft
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
@@ -281,6 +282,19 @@ const { user, activeBranchId, activeBranchName } = useAuth();
       setSelectedMaterial(materialsList[0] || null);
     }
   }, [materialsList, selectedMaterial]);
+
+  // Mobile cart drawer state & keyboard listener
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isMobileCartOpen) {
+        setIsMobileCartOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileCartOpen]);
 
   // Customer & Cart State
   const [customerName, setCustomerName] = useState("Pelanggan Umum");
@@ -727,7 +741,28 @@ const { user, activeBranchId, activeBranchName } = useAuth();
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-y-auto md:overflow-hidden font-sans">
+    <div className="flex flex-col md:flex-row h-full w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-y-auto md:overflow-hidden font-sans pb-28 md:pb-0 relative">
+      {/* Sticky Bottom Bar Cart (Mobile Only) */}
+      {!isMobileCartOpen && (
+        <div className="md:hidden fixed bottom-[72px] left-3 right-3 grid grid-cols-3 gap-2.5 z-40 mb-safe transition-all pointer-events-none items-stretch">
+          <div className="col-span-2 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 py-1.5 px-3 flex flex-col justify-center shadow-lg pointer-events-auto overflow-hidden">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-none mb-0.5">Total Tagihan SPK</span>
+            <span className="font-extrabold text-brand text-sm leading-tight truncate">
+              Rp {cartTotalAmount.toLocaleString("id-ID")}
+            </span>
+          </div>
+          <button
+            onClick={() => setIsMobileCartOpen(true)}
+            className="col-span-1 w-full bg-brand hover:bg-brand/90 active:scale-95 transition-transform text-white px-2 py-2 flex items-center justify-center gap-1.5 font-bold text-xs shadow-lg pointer-events-auto overflow-hidden"
+          >
+            <div className="bg-white text-brand font-black rounded-sm min-w-[20px] h-5 px-1 flex items-center justify-center text-[11px] leading-none shadow-xs shrink-0">
+              {cart.length}
+            </div>
+            <span className="truncate">Pesanan</span>
+          </button>
+        </div>
+      )}
+
       {/* LEFT COLUMN: Printing Price Calculator & Material Selection (Compact Sleek Layout) */}
       <div className="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-800 h-auto md:h-full p-2.5 md:p-3.5 space-y-2.5 overflow-visible md:overflow-y-auto">
         {/* Compact Header Title Banner */}
@@ -750,8 +785,16 @@ const { user, activeBranchId, activeBranchName } = useAuth();
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => setIsMobileCartOpen(true)}
+                className="md:hidden text-[10px] h-7 px-2 border-brand/40 bg-brand/10 text-brand gap-1 rounded-none font-bold"
+              >
+                <ShoppingBag className="size-3" /> SPK ({cart.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => navigate({ to: "/app/sales" })}
-                className="text-[10px] h-7 px-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 gap-1 rounded-none hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                className="text-[10px] h-7 px-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 gap-1 rounded-none hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors hidden sm:flex"
               >
                 <FileText className="size-3 text-brand" /> SPK & Riwayat Cetak
               </Button>
@@ -1061,14 +1104,37 @@ const { user, activeBranchId, activeBranchName } = useAuth();
         </div>
       </div>
 
+      {/* Backdrop Overlay saat Mobile Cart Terbuka */}
+      {isMobileCartOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-slate-900/60 z-50 backdrop-blur-xs"
+          onClick={() => setIsMobileCartOpen(false)}
+        />
+      )}
+
       {/* RIGHT COLUMN: Cart Order, DP Payment, Checkout & Job Status (Sleek Compact Width) */}
-      <div className="w-full md:w-[350px] lg:w-[380px] xl:w-[400px] bg-white dark:bg-slate-950 flex flex-col h-auto md:h-full border-l border-slate-200 dark:border-slate-800 shrink-0 overflow-visible md:overflow-hidden">
+      <div 
+        className={`${
+          isMobileCartOpen 
+            ? "fixed inset-y-0 right-0 z-50 w-full sm:max-w-md shadow-2xl flex" 
+            : "hidden md:flex"
+        } md:static w-full md:w-[350px] lg:w-[380px] xl:w-[400px] bg-white dark:bg-slate-950 flex-col h-full max-h-full border-l border-slate-200 dark:border-slate-800 shrink-0 overflow-hidden`}
+      >
         {/* Customer Header */}
         <div className="p-2.5 px-3 border-b border-slate-200 dark:border-slate-800 space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="font-display font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-              <ShoppingBag className="size-3.5 text-brand" /> Keranjang Pesanan Cetak
-            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMobileCartOpen(false)}
+                className="md:hidden p-1 -ml-1 text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                aria-label="Tutup Keranjang SPK"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <h2 className="font-display font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                <ShoppingBag className="size-3.5 text-brand" /> Keranjang Pesanan Cetak
+              </h2>
+            </div>
             <span className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[10px] px-2 py-0.2 font-bold font-mono">
               {cart.length} Item
             </span>

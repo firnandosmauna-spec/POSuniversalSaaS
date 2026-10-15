@@ -14,7 +14,8 @@ import {
   Printer,
   Sparkles,
   Tag,
-  PackageCheck
+  PackageCheck,
+  ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,6 +160,18 @@ export default function RetailPOSView() {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<any>(null);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+
+  // Close mobile cart on Escape key press (accessibility standard)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isMobileCartOpen) {
+        setIsMobileCartOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileCartOpen]);
 
   useEffect(() => {
     if (!user) return;
@@ -252,19 +265,53 @@ export default function RetailPOSView() {
   };
 
   return (
-    <div className="flex flex-col landscape:flex-row md:flex-row h-full w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans gap-2 md:gap-4 p-2 md:p-4 overflow-y-auto landscape:overflow-hidden md:overflow-hidden pb-16 md:pb-4">
+    <div className="flex flex-col landscape:flex-row md:flex-row h-full w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans gap-2 md:gap-4 p-2 md:p-4 overflow-y-auto landscape:overflow-hidden md:overflow-hidden pb-28 md:pb-4 relative">
+      {/* Sticky Bottom Bar Cart (Mobile Only) */}
+      {!isMobileCartOpen && (
+        <div className="md:hidden fixed bottom-[72px] left-3 right-3 grid grid-cols-3 gap-2.5 z-40 mb-safe transition-all pointer-events-none items-stretch">
+          <div className="col-span-2 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 py-1.5 px-3 flex flex-col justify-center shadow-lg pointer-events-auto overflow-hidden">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-none mb-0.5">Total Belanja</span>
+            <span className="font-extrabold text-blue-600 dark:text-blue-400 text-sm leading-tight truncate">
+              Rp {subtotal.toLocaleString("id-ID")}
+            </span>
+          </div>
+          <button
+            onClick={() => setIsMobileCartOpen(true)}
+            className="col-span-1 w-full bg-blue-600 hover:bg-blue-700 active:scale-95 transition-transform text-white px-2 py-2 flex items-center justify-center gap-1.5 font-bold text-xs shadow-lg pointer-events-auto border border-blue-700 overflow-hidden"
+          >
+            <div className="bg-white text-blue-600 font-black rounded-sm min-w-[20px] h-5 px-1 flex items-center justify-center text-[11px] leading-none shadow-xs shrink-0">
+              {totalItemsCount}
+            </div>
+            <span className="truncate">Keranjang</span>
+          </button>
+        </div>
+      )}
+
       {/* Left Area: Product Catalog & Search */}
       <div className="flex flex-col flex-1 space-y-3 landscape:h-full md:h-full min-h-[350px]">
         {/* Top Header & Search Bar */}
         <div className="bg-white dark:bg-slate-900 p-3 border border-slate-200 dark:border-slate-800 shadow-xs space-y-2 shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h1 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                <ShoppingBag className="size-4 text-blue-600" /> Kasir Minimarket & Retail
-              </h1>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                Pindai SKU barcode atau cari nama produk untuk transaksi cepat.
-              </p>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h1 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                  <ShoppingBag className="size-4 text-blue-600" /> Kasir Minimarket & Retail
+                </h1>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
+                  Pindai SKU barcode atau cari nama produk untuk transaksi cepat.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsMobileCartOpen(true)}
+                className="md:hidden flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-none shrink-0"
+              >
+                <ShoppingBag className="size-3.5" />
+                <span>Keranjang</span>
+                <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold ml-0.5">
+                  {totalItemsCount}
+                </span>
+              </button>
             </div>
 
             <div className="relative flex-1 max-w-xs">
@@ -357,13 +404,36 @@ export default function RetailPOSView() {
         </div>
       </div>
 
+      {/* Backdrop Overlay saat Mobile Cart Terbuka */}
+      {isMobileCartOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-slate-900/60 z-50 backdrop-blur-xs"
+          onClick={() => setIsMobileCartOpen(false)}
+        />
+      )}
+
       {/* Right Area: Checkout Cart Drawer */}
-      <div className="w-full landscape:w-72 sm:landscape:w-80 md:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 flex flex-col justify-between shadow-xs shrink-0 landscape:h-full md:h-full max-h-full min-h-0 overflow-hidden">
+      <div 
+        className={`${
+          isMobileCartOpen 
+            ? "fixed inset-y-0 right-0 z-50 w-full sm:max-w-md shadow-2xl flex" 
+            : "hidden md:flex"
+        } md:static w-full landscape:w-72 sm:landscape:w-80 md:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 flex-col justify-between shadow-xs shrink-0 landscape:h-full md:h-full max-h-full min-h-0 overflow-hidden`}
+      >
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 mb-2 shrink-0">
-            <h2 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <ShoppingBag className="size-4 text-blue-600" /> Keranjang ({totalItemsCount})
-            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMobileCartOpen(false)}
+                className="md:hidden p-1 -ml-1 text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                aria-label="Tutup Keranjang"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <h2 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <ShoppingBag className="size-4 text-blue-600" /> Keranjang ({totalItemsCount})
+              </h2>
+            </div>
 
             {cart.length > 0 && (
               <button
@@ -398,25 +468,28 @@ export default function RetailPOSView() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => updateQty(item.product.id, -1)}
-                      className="size-5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 grid place-items-center hover:bg-slate-300"
+                      className="size-7 sm:size-6 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 grid place-items-center hover:bg-slate-300 active:scale-95 transition-transform"
+                      aria-label="Kurangi jumlah"
                     >
-                      <Minus className="size-3" />
+                      <Minus className="size-3.5" />
                     </button>
-                    <span className="text-xs font-bold w-4 text-center">{item.qty}</span>
+                    <span className="text-xs font-bold w-5 text-center">{item.qty}</span>
                     <button
                       onClick={() => updateQty(item.product.id, 1)}
-                      className="size-5 bg-blue-600 text-white grid place-items-center hover:bg-blue-700"
+                      className="size-7 sm:size-6 bg-blue-600 text-white grid place-items-center hover:bg-blue-700 active:scale-95 transition-transform"
+                      aria-label="Tambah jumlah"
                     >
-                      <Plus className="size-3" />
+                      <Plus className="size-3.5" />
                     </button>
                     <button
                       onClick={() => removeFromCart(item.product.id)}
-                      className="size-5 text-red-500 hover:text-red-700 grid place-items-center ml-0.5"
+                      className="size-7 sm:size-6 text-red-500 hover:text-red-700 grid place-items-center ml-0.5 active:scale-95 transition-transform"
+                      aria-label="Hapus dari keranjang"
                     >
-                      <Trash2 className="size-3" />
+                      <Trash2 className="size-3.5" />
                     </button>
                   </div>
                 </div>
