@@ -35,8 +35,6 @@ import {
   Eye,
   User,
   ChevronRight,
-  HeadphonesIcon,
-  RefreshCw,
   History
 } from "lucide-react";
 
@@ -890,25 +888,6 @@ function AppLayout() {
               <span>Keluar / Logout</span>
             </button>
           </nav>
-        </div>
-
-        {/* Footer info */}
-        <div className="px-6 py-4 flex flex-col gap-4 mt-auto border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 shrink-0">
-          <Link to="/app/settings" onClick={() => setIsSidebarOpen(false)} className="flex items-center gap-4 text-[13px] font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">
-            <HeadphonesIcon className="size-[18px] text-slate-700 dark:text-slate-400" />
-            Bantuan
-          </Link>
-          
-          <div className="flex items-start gap-2 text-slate-500 mt-2">
-            <RefreshCw className="size-3.5 mt-0.5 shrink-0" />
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-bold text-slate-700 dark:text-slate-400">Pembaruan Terakhir:</span>
-              <span className="text-[10px]">Jumat, 09 Oktober 2026 (08:30)</span>
-            </div>
-          </div>
-          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-wide">
-            APP POST. version v1.54.14
-          </span>
         </div>
       </aside>
 
